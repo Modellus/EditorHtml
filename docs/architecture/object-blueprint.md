@@ -99,12 +99,27 @@ standing at 20 rather than at T — that is where the picked unit is written, si
 no term to carry one.
 
 **A term is read on a chip, and written behind it.** Every surface that names a term shows one chip:
-the colour it is drawn in as a rounded square, the name, the unit after it behind a faded `/`, the
-case it is read from as a badge, and the pair it may name written after the first term. Opening the
-chip gives the whole of it, each thing under a label of its own — `Term`, `Direction` and `Paired
-term` where the row names a pair, `Unit`, `Case`, `Colour`, `Show`, and whatever else the shape hangs
-on a row: a chart's `Type`, a frequency chart's `Series`, a lock. The row around the chip holds
-nothing but the handle it is dragged by, so a row looks the same whatever the shape asks of it.
+whether it is shown, the colour it is drawn in as a rounded square, the name, the unit after it
+behind a faded `/`, the case it is read from as a badge, and the pair it may name written after the
+first term. Opening the chip gives the whole of it, each thing under a label of its own — `Show`,
+`Term`, `Direction` and `Paired term` where the row names a pair, `Unit`, `Case`, `Colour`, and
+whatever else the shape hangs on a row: a chart's `Type`, a frequency chart's `Series`, a table's
+`Values`, a lock. The row around the chip holds nothing but the handle it is dragged by, so a row
+looks the same whatever the shape asks of it.
+
+**Whatever the chip's drop down holds, the chip marks.** Everything a row carries besides the term
+is a feature, and every feature leaves its mark on the closed chip in the order the drop down writes
+them: the eye open or closed, one icon per way a series is drawn, the mark and the function a
+frequency series is read with, the lock open or shut. A reader never has to open a chip to know what
+the row holds. A row that has not been handed a term yet carries no marks at all, so the placeholder
+underneath still reads.
+
+**One term control, switched on and added to.** `TermControl` is shared by every shape. The common
+features are flags — `includeColor`, `includeVisibility`, `includeCase`, `includeLock` — and a shape
+that needs one of its own passes it in `features`: a label, how it is edited (a switch, or a drop
+down with `getItems`), what it reads with `getValue`, what it writes with `onValueChanged`, and
+optionally the `chipTemplate` for the mark it leaves. A feature is given the row, the drop down and
+the chip mark the lock already has, so a shape adds one without touching the control.
 
 **A reading names its unit, it does not spell it out.** Never concatenate a unit into the text: give
 the `text` node a `unit` of its own, and the board writes it the way it writes every unit after a

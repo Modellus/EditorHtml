@@ -77,7 +77,7 @@ async function openTermsMenu(page) {
 async function openSeriesMenu(page) {
     await openTermsMenu(page);
     await openTermChip(page, 0, '.frequency-series-control');
-    await termChipPanel(page).locator('.shape-term-lock-dropdown').first().click();
+    await termChipPanel(page).locator('.shape-term-feature-dropdown').first().click();
     return page.locator('.mdl-nested-dropdown-popup:not(.mdl-term-chip-popup)');
 }
 

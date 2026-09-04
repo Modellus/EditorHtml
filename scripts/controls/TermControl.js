@@ -108,29 +108,36 @@ class TermControl {
         return "Movable / Resizable";
     }
 
-    static updateLockCheckboxIcon(checkboxInstance, iconClassName = "term-packed-lock-icon") {
+    static updateToggleCheckboxIcon(checkboxInstance, getIconClass, iconClassName) {
         if (!checkboxInstance)
             return;
         const iconContainer = checkboxInstance.element().find(".dx-checkbox-icon");
         if (iconContainer.length == 0)
             return;
         iconContainer.empty();
-        const iconClass = TermControl.getLockIconClass(checkboxInstance.option("value") === true);
+        const iconClass = getIconClass(checkboxInstance.option("value") === true);
         $("<i>").addClass(`${iconClass} ${iconClassName}`).appendTo(iconContainer);
     }
 
-    static createLockCheckbox(buttonHost, initialValue, onValueChanged, options = {}) {
+    // Every switch a term row carries is the same checkbox wearing a different pair of icons — the
+    // eye, the lock, the hand — so one builder makes them all and a shape hanging a switch of its own
+    // on a row is given the one the eye and the lock already are.
+    static createToggleCheckbox(buttonHost, initialValue, getIconClass, onValueChanged, options = {}) {
         const checkboxClassName = options.checkboxClassName ?? "term-packed-lock-checkbox";
         const iconClassName = options.iconClassName ?? "term-packed-lock-icon";
         return buttonHost.dxCheckBox({
             value: initialValue === true,
             elementAttr: { class: checkboxClassName },
-            onContentReady: e => TermControl.updateLockCheckboxIcon(e.component, iconClassName),
+            onContentReady: e => TermControl.updateToggleCheckboxIcon(e.component, getIconClass, iconClassName),
             onValueChanged: e => {
-                TermControl.updateLockCheckboxIcon(e.component, iconClassName);
+                TermControl.updateToggleCheckboxIcon(e.component, getIconClass, iconClassName);
                 onValueChanged(e.value === true);
             }
         }).dxCheckBox("instance");
+    }
+
+    static createLockCheckbox(buttonHost, initialValue, onValueChanged, options = {}) {
+        return TermControl.createToggleCheckbox(buttonHost, initialValue, locked => TermControl.getLockIconClass(locked), onValueChanged, options);
     }
 
     static getInteractableIconClass(interactable) {
@@ -145,54 +152,15 @@ class TermControl {
         return "Not Interactable";
     }
 
-    static updateInteractableCheckboxIcon(checkboxInstance, iconClassName = "term-packed-lock-icon") {
-        if (!checkboxInstance)
-            return;
-        const iconContainer = checkboxInstance.element().find(".dx-checkbox-icon");
-        if (iconContainer.length == 0)
-            return;
-        iconContainer.empty();
-        const iconClass = TermControl.getInteractableIconClass(checkboxInstance.option("value") === true);
-        $("<i>").addClass(`${iconClass} ${iconClassName}`).appendTo(iconContainer);
-    }
-
     static createInteractableCheckbox(buttonHost, initialValue, onValueChanged, options = {}) {
-        const checkboxClassName = options.checkboxClassName ?? "term-packed-lock-checkbox";
-        const iconClassName = options.iconClassName ?? "term-packed-lock-icon";
-        return buttonHost.dxCheckBox({
-            value: initialValue === true,
-            elementAttr: { class: checkboxClassName },
-            onContentReady: e => TermControl.updateInteractableCheckboxIcon(e.component, iconClassName),
-            onValueChanged: e => {
-                TermControl.updateInteractableCheckboxIcon(e.component, iconClassName);
-                onValueChanged(e.value === true);
-            }
-        }).dxCheckBox("instance");
-    }
-
-    static updateVisibilityCheckboxIcon(checkboxInstance, iconClassName = "term-packed-checkbox-icon") {
-        if (!checkboxInstance)
-            return;
-        const iconContainer = checkboxInstance.element().find(".dx-checkbox-icon");
-        if (iconContainer.length == 0)
-            return;
-        iconContainer.empty();
-        const iconClass = TermControl.getVisibilityIconClass(checkboxInstance.option("value") === true);
-        $("<i>").addClass(`${iconClass} ${iconClassName}`).appendTo(iconContainer);
+        return TermControl.createToggleCheckbox(buttonHost, initialValue, interactable => TermControl.getInteractableIconClass(interactable), onValueChanged, options);
     }
 
     static createVisibilityCheckbox(buttonHost, initialValue, onValueChanged, options = {}) {
-        const checkboxClassName = options.checkboxClassName ?? "term-packed-checkbox";
-        const iconClassName = options.iconClassName ?? "term-packed-checkbox-icon";
-        return buttonHost.dxCheckBox({
-            value: initialValue === true,
-            elementAttr: { class: checkboxClassName },
-            onContentReady: e => TermControl.updateVisibilityCheckboxIcon(e.component, iconClassName),
-            onValueChanged: e => {
-                TermControl.updateVisibilityCheckboxIcon(e.component, iconClassName);
-                onValueChanged(e.value === true);
-            }
-        }).dxCheckBox("instance");
+        return TermControl.createToggleCheckbox(buttonHost, initialValue, visible => TermControl.getVisibilityIconClass(visible), onValueChanged, {
+            checkboxClassName: options.checkboxClassName ?? "term-packed-checkbox",
+            iconClassName: options.iconClassName ?? "term-packed-checkbox-icon"
+        });
     }
 
     static normalizeBaseShapeTermValue(value) {
@@ -481,6 +449,7 @@ class TermControl {
                     baseShape.board.markDirty(baseShape);
                 }
             },
+            features: options.features,
             lock: includeLock ? {
                 getValue: item => item?.locked === true,
                 onValueChanged: (_, value) => {
@@ -720,14 +689,14 @@ class TermControl {
             getFallbackItems: options.getFallbackItems,
             onChanged: options.onChanged
         };
-        const lockOptions = options.lock !== undefined ? options.lock : {
+        const lockOptions = options.includeLock === true ? {
             getValue: item => item?.locked === true,
             onValueChanged: (index, value) => TermControl.applyShapeTermsCollectionMutation(shape, propertyName, mutationOptions, items => {
                 if (!items[index])
                     return;
                 items[index].locked = value;
             })
-        };
+        } : null;
         return new TermControl({
             hostClassName: options.hostClassName,
             listClassName: options.listClassName,
@@ -820,6 +789,7 @@ class TermControl {
                 })
             } : null,
             lock: lockOptions,
+            features: options.features,
             units: TermControl.createTermUnitsSelection(shape.board)
         });
     }
@@ -1085,59 +1055,81 @@ class TermControl {
         return this.options.extraTerm.getTermItems(item, index);
     }
 
+    // Everything a row carries besides the term itself is a feature: the switches and pickers every
+    // shape may turn on — the eye, the colour, the case, the lock — and the ones a shape hangs on a
+    // row of its own, a chart's Type or a frequency chart's Series. Each of them is written under a
+    // label of its own when the chip is opened and leaves a mark on the chip while it is closed, so
+    // a row says what it holds without being opened. One set of methods serves them all, so a
+    // shape's own feature is given the drop down, the switch and the mark the lock already has.
+    getFeatures() {
+        const injectedFeatures = Array.isArray(this.options.features) ? this.options.features : [];
+        if (!this.hasLock())
+            return injectedFeatures;
+        return [...injectedFeatures, this.getLockFeature()];
+    }
+
     hasLock() {
         return this.options.lock != null;
     }
 
-    shouldShowLockEditor(item, index) {
-        if (!this.hasLock())
-            return false;
+    getLockFeature() {
         const lock = this.options.lock;
-        if (lock.show)
-            return lock.show(item, index);
+        return {
+            ...lock,
+            label: lock.label ?? "Locked",
+            className: lock.className ?? "shape-term-lock",
+            getValue: lock.getValue ?? (item => item?.locked === true),
+            getIconClass: lock.getIconClass ?? (locked => TermControl.getLockIconClass(locked === true))
+        };
+    }
+
+    getFeatureLabel(feature) {
+        return feature.label ?? "";
+    }
+
+    getFeatureClassName(feature) {
+        return feature.className ?? "shape-term-feature";
+    }
+
+    shouldShowFeatureEditor(feature, item, index) {
+        if (feature.show)
+            return feature.show(item, index);
         return this.normalizeTermValue(item?.term) !== "";
     }
 
-    getLockValue(item, index) {
-        const lock = this.options.lock;
-        if (lock?.getValue)
-            return lock.getValue(item, index);
-        return item?.locked === true;
+    getFeatureValue(feature, item, index) {
+        if (feature.getValue)
+            return feature.getValue(item, index);
+        return item?.[feature.key];
     }
 
-    renderLockEditor(host, item, index) {
-        if (!this.hasLock())
-            return;
-        if (this.shouldUseLockDropDownButton())
-            return this.renderLockDropDownButton(host, item, index);
-        TermControl.createLockCheckbox(host, this.getLockValue(item, index), value => this.onLockValueChanged(index, value));
+    renderFeatureEditor(feature, host, item, index) {
+        if (this.shouldUseFeatureDropDownButton(feature))
+            return this.renderFeatureDropDownButton(feature, host, item, index);
+        TermControl.createToggleCheckbox(host, this.getFeatureValue(feature, item, index) === true, feature.getIconClass, value => this.onFeatureValueChanged(feature, index, value));
     }
 
-    shouldUseLockDropDownButton() {
-        const lock = this.options.lock;
-        if (!lock)
-            return false;
-        return lock.editorType === "dxDropDownButton";
+    shouldUseFeatureDropDownButton(feature) {
+        return feature.editorType === "dxDropDownButton";
     }
 
-    renderLockDropDownButton(host, item, index) {
-        host.dxDropDownButton(this.getLockDropDownButtonOptions(item, index));
+    renderFeatureDropDownButton(feature, host, item, index) {
+        host.dxDropDownButton(this.getFeatureDropDownButtonOptions(feature, item, index));
     }
 
-    getLockDropDownButtonOptions(item, index) {
-        const lock = this.options.lock;
-        const selectedValue = this.getLockValue(item, index);
-        const items = typeof lock?.getItems === "function" ? lock.getItems(item, index) : [];
-        const dropDownOptions = typeof lock?.dropDownOptions === "function" ? lock.dropDownOptions(item, index) : (lock?.dropDownOptions ?? {});
+    getFeatureDropDownButtonOptions(feature, item, index) {
+        const selectedValue = this.getFeatureValue(feature, item, index);
+        const items = typeof feature.getItems === "function" ? feature.getItems(item, index) : [];
+        const dropDownOptions = typeof feature.dropDownOptions === "function" ? feature.dropDownOptions(item, index) : (feature.dropDownOptions ?? {});
         return {
             items: items,
             stylingMode: "text",
             useSelectMode: false,
             showArrowIcon: false,
-            elementAttr: { class: "shape-term-lock-dropdown" },
-            template: (_, element) => this.renderLockDropDownButtonTemplate(element, item, index, selectedValue, items),
-            itemTemplate: (itemData, itemIndex, element) => this.renderLockDropDownItemTemplate(itemData, itemIndex, element, item, index),
-            onItemClick: event => this.onLockDropDownItemClick(event, index),
+            elementAttr: { class: "shape-term-feature-dropdown" },
+            template: (_, element) => this.renderFeatureDropDownButtonTemplate(feature, element, item, index, selectedValue, items),
+            itemTemplate: (itemData, itemIndex, element) => this.renderFeatureDropDownItemTemplate(feature, itemData, itemIndex, element, item, index),
+            onItemClick: event => this.onFeatureDropDownItemClick(feature, event, index),
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup"),
@@ -1146,50 +1138,45 @@ class TermControl {
         };
     }
 
-    renderLockDropDownButtonTemplate(element, item, index, selectedValue, items) {
-        const lock = this.options.lock;
-        if (lock?.buttonTemplate)
-            return lock.buttonTemplate(element, item, index, selectedValue, items);
-        const selectedItem = this.findLockSelectedItem(items, selectedValue);
-        const iconClassName = selectedItem?.icon ?? "fa-light fa-chart-line";
-        const content = `<div class="shape-term-secondary-button"><i class="${iconClassName} shape-term-secondary-icon"></i></div>`;
-        $(element).empty().append(content);
+    renderFeatureDropDownButtonTemplate(feature, element, item, index, selectedValue, items) {
+        if (feature.buttonTemplate)
+            return feature.buttonTemplate(element, item, index, selectedValue, items);
+        const iconClassName = this.getFeatureSelectedIconClass(feature, items, selectedValue);
+        $(element).empty().append(`<div class="shape-term-secondary-button"><i class="${iconClassName} shape-term-secondary-icon"></i></div>`);
     }
 
-    renderLockDropDownItemTemplate(itemData, itemIndex, element, item, index) {
-        const lock = this.options.lock;
-        if (lock?.itemTemplate)
-            return lock.itemTemplate(itemData, itemIndex, element, item, index);
+    renderFeatureDropDownItemTemplate(feature, itemData, itemIndex, element, item, index) {
+        if (feature.itemTemplate)
+            return feature.itemTemplate(itemData, itemIndex, element, item, index);
         const itemText = itemData?.text ?? String(itemData ?? "");
         const iconClassName = itemData?.icon ?? "fa-light fa-chart-line";
         const content = `<div class="shape-term-secondary-item" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%"><i class="${iconClassName} shape-term-secondary-icon"></i><span>${itemText}</span></div>`;
         $(element).empty().append(content);
     }
 
-    findLockSelectedItem(items, selectedValue) {
+    getFeatureSelectedIconClass(feature, items, selectedValue) {
+        return this.findFeatureSelectedItem(feature, items, selectedValue)?.icon ?? "fa-light fa-chart-line";
+    }
+
+    findFeatureSelectedItem(feature, items, selectedValue) {
         if (!Array.isArray(items))
             return null;
         for (let index = 0; index < items.length; index++) {
-            const item = items[index];
-            const itemValue = this.resolveLockItemValue(item);
-            if (itemValue === selectedValue)
-                return item;
+            const featureItem = items[index];
+            if (this.resolveFeatureItemValue(feature, featureItem) === selectedValue)
+                return featureItem;
         }
         return null;
     }
 
-    onLockDropDownItemClick(event, index) {
-        const value = this.resolveLockItemValue(event?.itemData);
-        this.onLockValueChanged(index, value);
+    onFeatureDropDownItemClick(feature, event, index) {
+        this.onFeatureValueChanged(feature, index, this.resolveFeatureItemValue(feature, event?.itemData));
         if (event?.component?.close)
             event.component.close();
     }
 
-    resolveLockItemValue(itemData) {
-        const lock = this.options.lock;
-        if (!lock)
-            return itemData;
-        const valueExpr = lock.valueExpr;
+    resolveFeatureItemValue(feature, itemData) {
+        const valueExpr = feature.valueExpr;
         if (typeof valueExpr === "function")
             return valueExpr(itemData);
         if (typeof valueExpr === "string")
@@ -1199,11 +1186,24 @@ class TermControl {
         return itemData;
     }
 
-    onLockValueChanged(index, value) {
-        const lock = this.options.lock;
-        if (lock?.onValueChanged)
-            lock.onValueChanged(index, value);
+    onFeatureValueChanged(feature, index, value) {
+        if (feature.onValueChanged)
+            feature.onValueChanged(index, value);
         this.render();
+    }
+
+    // What a feature leaves on the chip is the mark it is chosen by: the icon of the item standing
+    // against it in the drop down, or the pair of icons a switch is drawn with. A shape whose feature
+    // is worth more than one icon — a chart line that is also an area — writes its own.
+    renderFeatureChipMark(feature, item, index) {
+        const value = this.getFeatureValue(feature, item, index);
+        if (feature.chipTemplate)
+            return feature.chipTemplate(item, index, value);
+        if (this.shouldUseFeatureDropDownButton(feature)) {
+            const items = typeof feature.getItems === "function" ? feature.getItems(item, index) : [];
+            return `<i class="${this.getFeatureSelectedIconClass(feature, items, value)}"></i>`;
+        }
+        return `<i class="${feature.getIconClass(value === true)}"></i>`;
     }
 
     // The row holds the name and the keys that say how the row itself is put together; the unit, the
@@ -1485,8 +1485,10 @@ class TermControl {
             rows.push({ text: "Case", className: "shape-term-secondary", buildControl: host => this.renderSecondaryEditor(host, item, index) });
         if (this.shouldShowColorEditor(item, index))
             rows.push({ text: "Colour", className: "shape-term-color", buildControl: host => this.renderColorEditor(host, item, index) });
-        if (this.shouldShowLockEditor(item, index))
-            rows.push({ text: this.getLockRowLabel(), className: "shape-term-lock", buildControl: host => this.renderLockEditor(host, item, index) });
+        for (const feature of this.getFeatures()) {
+            if (this.shouldShowFeatureEditor(feature, item, index))
+                rows.push({ text: this.getFeatureLabel(feature), className: this.getFeatureClassName(feature), buildControl: host => this.renderFeatureEditor(feature, host, item, index) });
+        }
         return rows;
     }
 
@@ -1504,10 +1506,6 @@ class TermControl {
 
     getVisibilityRowLabel() {
         return this.options.visibility.label ?? "Show";
-    }
-
-    getLockRowLabel() {
-        return this.options.lock.label ?? "Locked";
     }
 
     // The eye was dressed to butt against the field it stood beside; standing on a row of its own it
@@ -1582,10 +1580,12 @@ class TermControl {
         return componentElement?.find?.(".dx-texteditor-container")?.first?.();
     }
 
-    // The chip is the whole of what the row shows: the colour the term is drawn in, its name, the
-    // unit it is measured in behind a faded slash — the way a term is written on a label anywhere
-    // else here — and the case it is read from. The editor's own input is left underneath so the
-    // placeholder still shows through a chip with no term in it yet.
+    // The chip is the whole of what the row shows: whether the term is shown at all, the colour it is
+    // drawn in, its name, the unit it is measured in behind a faded slash — the way a term is written
+    // on a label anywhere else here — the case it is read from, and a mark for every other thing the
+    // chip's own drop down offers, in the order the drop down offers them. Nothing on the chip can be
+    // pressed: it says what the row holds, and the drop down is where it is changed. The editor's own
+    // input is left underneath so the placeholder still shows through a chip with no term in it yet.
     syncTermEditorMathField(component, fallbackValue, system, item = null, index = 0, isPrimary = true) {
         const selectedValue = component.option("value") ?? fallbackValue;
         const inputContainer = this.getTermEditorInputContainer(component);
@@ -1598,6 +1598,11 @@ class TermControl {
             chip = inputContainer.find(".mdl-term-chip").first();
         }
         chip.empty();
+        // A row waiting to be handed a term carries no marks at all: the chip is left empty so the
+        // placeholder underneath still reads.
+        const isNamed = isPrimary && this.normalizeTermValue(selectedValue) !== "";
+        if (isNamed && this.shouldShowVisibility(item, index))
+            chip.append(`<span class="mdl-term-chip__mark mdl-term-chip__visibility"><i class="${TermControl.getVisibilityIconClass(this.getVisibilityValue(item))}"></i></span>`);
         // A row that has been given no colour is written without one rather than with an empty square
         // where a colour would be; the picker inside the chip is still there to give it one.
         const colorValue = isPrimary && this.shouldShowColorEditor(item, index) ? this.getColorValue(item, index) : "";
@@ -1620,6 +1625,15 @@ class TermControl {
         }
         if (this.shouldShowSecondaryEditor(item, index))
             chip.append($('<span class="mdl-term-chip__case">').append(TermControl.createCaseIcon(this.options.secondary.getValue(item, index), "mdl-term-chip__case-icon")));
+        if (isNamed)
+            this.appendTermChipFeatureMarks(chip, item, index);
+    }
+
+    appendTermChipFeatureMarks(chip, item, index) {
+        for (const feature of this.getFeatures()) {
+            if (this.shouldShowFeatureEditor(feature, item, index))
+                chip.append(`<span class="mdl-term-chip__mark ${this.getFeatureClassName(feature)}-mark">${this.renderFeatureChipMark(feature, item, index)}</span>`);
+        }
     }
 
     appendTermChipName(chip, selectedValue, system) {

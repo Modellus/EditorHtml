@@ -27,13 +27,6 @@ class BaseValueTableShape extends BaseTableShape {
         ];
     }
 
-    getColumnValueDisplayModeIcon(value) {
-        const normalizedValue = this.normalizeColumnValueDisplayMode(value);
-        const items = this.getColumnValueDisplayModeItems();
-        const selectedItem = items.find(item => item.value === normalizedValue);
-        return selectedItem?.icon ?? "fa-light fa-chart-simple";
-    }
-
     normalizeColumnListItem(sourceItem, normalizedItem) {
         normalizedItem.valueDisplayMode = this.normalizeColumnValueDisplayMode(sourceItem?.valueDisplayMode);
     }
@@ -100,25 +93,18 @@ class BaseValueTableShape extends BaseTableShape {
                 acceptCustomValue: (item, index) => this.shouldAllowCustomColumnName(item, index),
                 onCustomItemCreating: event => this.onColumnTermCustomItemCreating(event)
             },
-            lock: {
-                width: "42px",
+            features: [{
+                label: "Values",
+                className: "shape-term-value-display",
                 editorType: "dxDropDownButton",
                 getValue: item => this.normalizeColumnValueDisplayMode(item?.valueDisplayMode),
                 getItems: () => this.getColumnValueDisplayModeItems(),
                 valueExpr: "value",
-                displayExpr: "text",
-                buttonTemplate: (element, item, index, selectedValue) => {
-                    const iconClassName = this.getColumnValueDisplayModeIcon(selectedValue);
-                    $(element).empty().append(`<div class="shape-term-secondary-button"><i class="${iconClassName} shape-term-secondary-icon"></i></div>`);
-                },
-                itemTemplate: (itemData, itemIndex, element) => {
-                    $(element).empty().append(`<div class="shape-term-secondary-item" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%"><i class="${itemData.icon} shape-term-secondary-icon"></i><span>${itemData.text}</span></div>`);
-                },
                 dropDownOptions: {
                     width: 180
                 },
                 onValueChanged: (index, value) => this.setColumnValueDisplayModeByIndex(index, value)
-            },
+            }],
             onChanged: () => this.refreshTableColumns()
         });
         return this._columnsControl.createHost();

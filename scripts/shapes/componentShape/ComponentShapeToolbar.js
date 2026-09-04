@@ -465,7 +465,7 @@ var ComponentShapeToolbarMixin = {
                 getValue: (item, index) => this.getComponentTermColor(item, index)
             },
             normalizeItem: (sourceItem, normalizedItem) => this.normalizeComponentTermItem(parameter, sourceItem, normalizedItem),
-            lock: null
+            includeLock: false
         }, this.getComponentTermsDirectionOptions(parameter)));
         return this._componentTermsControls[parameter.id].createHost();
     },

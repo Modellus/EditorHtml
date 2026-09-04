@@ -16,6 +16,10 @@ function getChartYTermsMutationOptions(shape) {
     };
 }
 
+function getChartYTermTypeIcon(chartType) {
+    return getChartYTermTypeItems().find(item => item.value === chartType)?.icon ?? "fa-light fa-chart-line";
+}
+
 function getChartYTermTypeItems() {
     return [
         { value: "scatter", text: "Scatter", icon: "fa-light fa-chart-scatter" },
@@ -43,8 +47,9 @@ var ChartShapeToolbarMixin = {
             normalizeColorValue: value => this.normalizeYTermColor(value),
             normalizeItem: (sourceItem, normalizedItem) => normalizeChartYTermItem(this, sourceItem, normalizedItem),
             createEmptyItem: () => ({ chartTypes: getChartYTermDefaultTypes(this) }),
-            lock: {
+            features: [{
                 label: "Type",
+                className: "shape-term-chart-type",
                 editorType: "dxDropDownButton",
                 valueExpr: "value",
                 getValue: item => item?.chartTypes ?? getChartYTermDefaultTypes(this),
@@ -52,12 +57,12 @@ var ChartShapeToolbarMixin = {
                 buttonTemplate: element => {
                     $(element).empty().append(`<div class="shape-term-secondary-button" style="display:flex;align-items:center;height:100%;"><i class="fa-light fa-chart-mixed shape-term-secondary-icon"></i></div>`);
                 },
+                // A series may be drawn more than one way at once, so the chip carries one mark per
+                // way it is drawn rather than the one mark that stands for all of them on the button.
+                chipTemplate: item => (item?.chartTypes ?? getChartYTermDefaultTypes(this)).map(chartType => `<i class="${getChartYTermTypeIcon(chartType)}"></i>`).join(""),
                 itemTemplate: (itemData, itemIndex, element, item) => {
                     const selectedTypes = item?.chartTypes ?? getChartYTermDefaultTypes(this);
-                    const isSelected = selectedTypes.includes(itemData.value);
-                    const chartTypeIconsLight = { scatter: "fa-light fa-chart-scatter", line: "fa-light fa-chart-line", area: "fa-light fa-chart-area", bar: "fa-light fa-chart-column" };
-                    const chartTypeIconsSolid = { scatter: "fa-solid fa-chart-scatter", line: "fa-solid fa-chart-line", area: "fa-solid fa-chart-area", bar: "fa-solid fa-chart-column" };
-                    const iconClass = isSelected ? (chartTypeIconsSolid[itemData.value] ?? "fa-solid fa-chart-line") : (chartTypeIconsLight[itemData.value] ?? "fa-light fa-chart-line");
+                    const iconClass = selectedTypes.includes(itemData.value) ? itemData.icon.replace("fa-light", "fa-solid") : itemData.icon;
                     $(element).empty().append(`<div class="shape-term-secondary-item" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;"><i class="${iconClass} shape-term-secondary-icon"></i><span>${itemData.text}</span></div>`);
                 },
                 dropDownOptions: { width: 140 },
@@ -75,7 +80,7 @@ var ChartShapeToolbarMixin = {
                         }
                     });
                 }
-            }
+            }]
         });
         return this._yTermsControl.createHost();
     },

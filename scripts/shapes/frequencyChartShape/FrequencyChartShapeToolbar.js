@@ -33,6 +33,11 @@ function getFrequencyMarkItem(mark) {
     return getFrequencyMarkItems().find(entry => entry.value === mark) ?? getFrequencyMarkItems()[0];
 }
 
+function getFrequencySeriesMarkup(item) {
+    const markItem = getFrequencyMarkItem(item?.mark ?? "bar");
+    return `<i class="${markItem.icon} shape-term-secondary-icon"></i><span class="frequency-series-function">${FrequencyAggregation.getMark(item?.aggregate)}</span>`;
+}
+
 var FrequencyChartShapeToolbarMixin = {
     normalizeSeries() {
         const sourceSeries = Array.isArray(this.properties.series) ? this.properties.series : [];
@@ -63,20 +68,23 @@ var FrequencyChartShapeToolbarMixin = {
             normalizeColorValue: value => TermControl.normalizeColorValue(value),
             normalizeItem: (sourceItem, normalizedItem) => normalizeFrequencySeriesItem(sourceItem, normalizedItem),
             createEmptyItem: () => getFrequencySeriesDefaults(),
-            lock: {
+            features: [{
                 label: "Series",
+                className: "shape-term-frequency-series",
                 editorType: "dxDropDownButton",
                 getValue: item => FrequencyAggregation.normalize(item?.aggregate),
                 getItems: () => [],
                 buttonTemplate: (element, item) => {
-                    const markItem = getFrequencyMarkItem(item?.mark ?? "bar");
-                    $(element).empty().append(`<div class="shape-term-secondary-button frequency-series-button"><i class="${markItem.icon} shape-term-secondary-icon"></i><span class="frequency-series-function">${FrequencyAggregation.getMark(item?.aggregate)}</span></div>`);
+                    $(element).empty().append(`<div class="shape-term-secondary-button frequency-series-button">${getFrequencySeriesMarkup(item)}</div>`);
                 },
+                // A series is read as the mark it is drawn with and the function it makes of the
+                // readings under it, so the chip carries the same pair the button behind it does.
+                chipTemplate: item => getFrequencySeriesMarkup(item),
                 dropDownOptions: (item, index) => ({
                     width: 268,
                     contentTemplate: contentElement => this.buildSeriesMenuContent(contentElement, index)
                 })
-            }
+            }]
         });
         return this._seriesControl.createHost();
     },

@@ -432,6 +432,24 @@ math-field {
     flex: none;
 }
 
+/* Whatever else the chip's drop down holds — whether the term is shown, the way a series is drawn,
+   the lock on a row — leaves its mark on the chip, in the order the drop down writes them and faded
+   against the name, so a closed chip says what the row holds without competing with what it names. */
+.mdl-term-chip__mark {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex: none;
+    font-size: 12px;
+    line-height: 1;
+    opacity: 0.55;
+}
+
+.mdl-term-chip__mark .shape-term-secondary-icon {
+    font-size: 12px;
+    line-height: 1;
+}
+
 /* The editor's own input is kept — it carries the placeholder and the typing — but it is not
    allowed to take the room the chip is drawn in. */
 .mdl-term-chip-editor .dx-texteditor-input {
@@ -491,7 +509,8 @@ math-field {
 /* The eye and the lock are switches rather than fields, so they stand where the fields above them
    begin rather than centred in a box of their own. */
 .mdl-term-editor-row-control.shape-term-visibility,
-.mdl-term-editor-row-control.shape-term-lock {
+.mdl-term-editor-row-control.shape-term-lock,
+.mdl-term-editor-row-control.shape-term-feature {
     justify-content: flex-start;
 }
 
