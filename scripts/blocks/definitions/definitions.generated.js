@@ -10618,6 +10618,14 @@ BlockDefinitionLoader.registerAll([
                 "category": "display"
             },
             {
+                "id": "backgroundColor",
+                "label": "Background colour",
+                "valueType": "colour",
+                "defaultValue": "none",
+                "category": "style",
+                "description": "The panel the vector is drawn on. Left unpainted, the board shows through."
+            },
+            {
                 "id": "vectorColor",
                 "label": "Vector colour",
                 "valueType": "colour",
@@ -10630,6 +10638,14 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "colour",
                 "defaultValue": "token:stroke.subtle",
                 "category": "style"
+            },
+            {
+                "id": "circleFillColor",
+                "label": "Circle fill colour",
+                "valueType": "colour",
+                "defaultValue": "none",
+                "category": "style",
+                "description": "The disc inside the reference circle, painted whether or not the circle itself is shown."
             },
             {
                 "id": "projectionColor",
@@ -10703,6 +10719,22 @@ BlockDefinitionLoader.registerAll([
                 "formula": "cy-maxRadius\\cdot\\sin\\left(\\frac{angle\\cdot\\pi}{180}\\right)"
             },
             {
+                "id": "backgroundRead",
+                "value": {
+                    "opaque": {
+                        "parameter": "backgroundColor"
+                    }
+                }
+            },
+            {
+                "id": "circleFillRead",
+                "value": {
+                    "opaque": {
+                        "parameter": "circleFillColor"
+                    }
+                }
+            },
+            {
                 "id": "hairline",
                 "value": {
                     "token": "strokeWidth.hairline"
@@ -10722,6 +10754,53 @@ BlockDefinitionLoader.registerAll([
             "id": "rotating-vector",
             "type": "group",
             "children": [
+                {
+                    "id": "background",
+                    "type": "rect",
+                    "when": {
+                        "parameter": "backgroundRead"
+                    },
+                    "bindings": {
+                        "width": {
+                            "parameter": "w"
+                        },
+                        "height": {
+                            "parameter": "h"
+                        },
+                        "fill": {
+                            "parameter": "backgroundColor"
+                        }
+                    },
+                    "properties": {
+                        "x": 0,
+                        "y": 0,
+                        "stroke": "none"
+                    }
+                },
+                {
+                    "id": "circle-fill",
+                    "type": "circle",
+                    "when": {
+                        "parameter": "circleFillRead"
+                    },
+                    "bindings": {
+                        "centerX": {
+                            "parameter": "cx"
+                        },
+                        "centerY": {
+                            "parameter": "cy"
+                        },
+                        "radius": {
+                            "parameter": "maxRadius"
+                        },
+                        "fill": {
+                            "parameter": "circleFillColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none"
+                    }
+                },
                 {
                     "id": "reference-circle",
                     "type": "circle",

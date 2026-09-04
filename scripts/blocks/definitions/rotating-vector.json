@@ -14,8 +14,10 @@
         { "id": "lengthScale", "label": "Length scale", "valueType": "number", "defaultValue": 1, "category": "scale", "minimum": 0 },
         { "id": "showCircle", "label": "Show reference circle", "valueType": "boolean", "defaultValue": true, "category": "display" },
         { "id": "showProjections", "label": "Show projections", "valueType": "boolean", "defaultValue": false, "category": "display" },
+        { "id": "backgroundColor", "label": "Background colour", "valueType": "colour", "defaultValue": "none", "category": "style", "description": "The panel the vector is drawn on. Left unpainted, the board shows through." },
         { "id": "vectorColor", "label": "Vector colour", "valueType": "colour", "defaultValue": "token:stroke.accent", "category": "style" },
         { "id": "circleColor", "label": "Circle colour", "valueType": "colour", "defaultValue": "token:stroke.subtle", "category": "style" },
+        { "id": "circleFillColor", "label": "Circle fill colour", "valueType": "colour", "defaultValue": "none", "category": "style", "description": "The disc inside the reference circle, painted whether or not the circle itself is shown." },
         { "id": "projectionColor", "label": "Projection colour", "valueType": "colour", "defaultValue": "token:stroke.subtle", "category": "style" }
     ],
     "locals": [
@@ -32,6 +34,8 @@
         { "id": "pointerAngle", "formula": "90-angle" },
         { "id": "grabTipX", "formula": "cx+maxRadius\\cdot\\cos\\left(\\frac{angle\\cdot\\pi}{180}\\right)" },
         { "id": "grabTipY", "formula": "cy-maxRadius\\cdot\\sin\\left(\\frac{angle\\cdot\\pi}{180}\\right)" },
+        { "id": "backgroundRead", "value": { "opaque": { "parameter": "backgroundColor" } } },
+        { "id": "circleFillRead", "value": { "opaque": { "parameter": "circleFillColor" } } },
         { "id": "hairline", "value": { "token": "strokeWidth.hairline" } },
         { "id": "vectorWidth", "formula": "strong\\cdot1.5", "inputs": { "strong": { "token": "strokeWidth.strong" } } }
     ],
@@ -39,6 +43,35 @@
         "id": "rotating-vector",
         "type": "group",
         "children": [
+            {
+                "id": "background",
+                "type": "rect",
+                "when": { "parameter": "backgroundRead" },
+                "bindings": {
+                    "width": { "parameter": "w" },
+                    "height": { "parameter": "h" },
+                    "fill": { "parameter": "backgroundColor" }
+                },
+                "properties": {
+                    "x": 0,
+                    "y": 0,
+                    "stroke": "none"
+                }
+            },
+            {
+                "id": "circle-fill",
+                "type": "circle",
+                "when": { "parameter": "circleFillRead" },
+                "bindings": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "maxRadius" },
+                    "fill": { "parameter": "circleFillColor" }
+                },
+                "properties": {
+                    "stroke": "none"
+                }
+            },
             {
                 "id": "reference-circle",
                 "type": "circle",

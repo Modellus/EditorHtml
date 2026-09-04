@@ -1153,8 +1153,10 @@ Capabilities: `angular`, `reads-model`, `vector`, `interaction`, `writes-model`
 | `lengthScale` | number | 1 | min 0 |
 | `showCircle` | boolean | true |  |
 | `showProjections` | boolean | false |  |
+| `backgroundColor` | colour | "none" |  |
 | `vectorColor` | colour | "token:stroke.accent" |  |
 | `circleColor` | colour | "token:stroke.subtle" |  |
+| `circleFillColor` | colour | "none" |  |
 | `projectionColor` | colour | "token:stroke.subtle" |  |
 
 ### `seven-segment-display` — Seven-segment display
