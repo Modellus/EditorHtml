@@ -824,9 +824,11 @@ Capabilities: `reads-model`, `writes-model`, `oscillation`
 | `frequency` | variable | "0.5" |  |
 | `speed` | variable | "5" |  |
 | `phase` | variable | "0" |  |
+| `damping` | variable | "0" |  |
 | `length` | number | 20 | min 0.001 |
 | `autoScale` | boolean | true |  |
-| `displacementScale` | number | 2 | min 0.000001 |
+| `minimumY` | number | -2 |  |
+| `maximumY` | number | 2 |  |
 | `samples` | number | 30 | min 2, max 200 |
 | `orientation` | string | "transverse" | transverse \| longitudinal \| radial |
 | `wavefront` | boolean | true |  |

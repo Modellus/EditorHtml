@@ -63,7 +63,7 @@ test.describe('Mechanical wave object', () => {
     test('its parameter labels name the thing, not the kind of thing', async ({ page }) => {
         await setupBoard(page);
         const labels = await page.evaluate(() => BlockRegistry.get('mechanical-wave').parameters.map(parameter => parameter.label));
-        expect(labels).toEqual(expect.arrayContaining(['Amplitude', 'Frequency', 'Speed', 'Initial phase', 'Samples', 'Orientation']));
+        expect(labels).toEqual(expect.arrayContaining(['Amplitude', 'Frequency', 'Speed', 'Initial phase', 'Damping', 'Samples', 'Orientation']));
         // The row holding the term the wave is read from and published under is the wave itself, so
         // it is called that. What the object never does is prefix its own kind onto the other rows —
         // a wave's amplitude is "Amplitude", never "Wave amplitude".
@@ -144,6 +144,52 @@ test.describe('Mechanical wave object', () => {
         const equilibrium = await page.evaluate(() => Number(shell.board.shapes.getByName('Wave').properties.height) / 2);
         expect(heights[9]).not.toBeCloseTo(equilibrium, 3);
         expect(new Set(heights.map(height => height.toFixed(2))).size).toBeGreaterThan(1);
+    });
+
+    // A wave loses some of itself to the medium it travels through, so an oscillator far from the
+    // source is carried less than one near it: the swing falls away by e^(-damping * distance),
+    // where the distance is the oscillator's own place along the chain.
+    test('damping thins the swing the further from the source it is read', async ({ page }) => {
+        await setupBoard(page);
+        const parameters = { x: 80, y: 80, width: 600, height: 200, samples: 11, length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: false, autoScale: false, minimumY: -2, maximumY: 2 };
+        const drawn = await page.evaluate(parameters => {
+            const read = name => Array.from(shell.board.shapes.getByName(name).contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy')));
+            const plain = shell.commands.addComponent('mechanical-wave', 'Plain');
+            plain.setProperties(Object.assign({}, parameters, { damping: '0' }));
+            const damped = shell.commands.addComponent('mechanical-wave', 'Damped');
+            damped.setProperties(Object.assign({}, parameters, { damping: '0.2' }));
+            shell.reset();
+            plain.draw();
+            damped.draw();
+            return { plain: read('Plain'), damped: read('Damped') };
+        }, parameters);
+        const spacing = 20 / 10;
+        const equilibrium = 100;
+        for (let index = 0; index < drawn.plain.length; index++) {
+            const carried = (drawn.plain[index] - equilibrium) * Math.exp(-0.2 * index * spacing);
+            expect(drawn.damped[index] - equilibrium).toBeCloseTo(carried, 5);
+        }
+        // The source itself keeps the whole of its swing: there is no distance for it to lose any over.
+        expect(drawn.damped[0]).toBeCloseTo(drawn.plain[0], 6);
+        expect(Math.abs(drawn.damped[10] - equilibrium)).toBeLessThan(Math.abs(drawn.plain[10] - equilibrium) / 2);
+    });
+
+    test('the wave handed to the model is damped like the one drawn', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 600, height: 200, samples: 9, wave: 'y', length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0', wavefront: false, referenceIndex: 3, damping: '0.3' });
+            shell.reset();
+            shape.draw();
+        });
+        const published = await page.evaluate(() => {
+            const calculator = shell.board.calculator;
+            const values = calculator.system.getIteration(calculator.getIteration(), 1);
+            return { y: values.y, independent: values[calculator.properties.independent.name] };
+        });
+        // The third oscillator of a nine-oscillator chain twenty units long stands two spacings —
+        // five units — from the source, so it is carried e^(-0.3 * 5) of the swing.
+        expect(published.y).toBeCloseTo(referenceDisplacement(published.independent) * Math.exp(-0.3 * 5), 6);
     });
 
     test('the reference oscillator is drawn in its own colour', async ({ page }) => {
@@ -264,7 +310,7 @@ test.describe('Mechanical wave object', () => {
 
     test('the scale is the reader\'s once the wave is not fitted to the body', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { width: 600, height: 200, samples: 9, amplitude: '2', wavefront: false, autoScale: false, displacementScale: 4 });
+        await addWave(page, { width: 600, height: 200, samples: 9, amplitude: '2', wavefront: false, autoScale: false, minimumY: -4, maximumY: 4 });
         const drawn = await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Wave');
             return {
@@ -581,7 +627,7 @@ test.describe('Mechanical wave object', () => {
             shape.setProperties({ x: 80, y: 80, width: 400, height: 160 });
             shell.reset();
         });
-        const shaping = ['Amplitude', 'Frequency', 'Speed', 'Initial phase', 'Wavefront'];
+        const shaping = ['Amplitude', 'Frequency', 'Speed', 'Initial phase', 'Damping', 'Wavefront'];
         expect(await offered()).toEqual(expect.arrayContaining(shaping));
 
         // A name of the object's own: it works the wave out and hands it over, so it still shapes it.
@@ -707,7 +753,7 @@ test.describe('Mechanical wave object', () => {
         await setupBoard(page);
         // A body set to show two units of displacement, with a wave swinging twenty: the swing is ten
         // times the body, so most of the chain stands well outside it.
-        await addWave(page, { x: 100, y: 400, width: 400, height: 100, samples: 21, amplitude: '20', length: 20, wavefront: false, autoScale: false, displacementScale: 2 });
+        await addWave(page, { x: 100, y: 400, width: 400, height: 100, samples: 21, amplitude: '20', length: 20, wavefront: false, autoScale: false, minimumY: -2, maximumY: 2 });
         const heights = await page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy'))));
         const inside = heights.findIndex(height => height >= 0 && height <= 100);
         const above = heights.findIndex(height => height < 0);
@@ -719,7 +765,7 @@ test.describe('Mechanical wave object', () => {
 
     test('a longitudinal wave pushed past the end of its body is cut off too', async ({ page }) => {
         await setupBoard(page);
-        await addWave(page, { x: 100, y: 400, width: 400, height: 100, samples: 21, amplitude: '20', length: 20, orientation: 'longitudinal', wavefront: false, autoScale: false, displacementScale: 2 });
+        await addWave(page, { x: 100, y: 400, width: 400, height: 100, samples: 21, amplitude: '20', length: 20, orientation: 'longitudinal', wavefront: false, autoScale: false, minimumY: -2, maximumY: 2 });
         const painted = await page.evaluate(() => {
             const shape = shell.board.shapes.getByName('Wave');
             const bars = Array.from(shape.contentGroup.querySelectorAll('rect')).slice(1);
@@ -750,14 +796,99 @@ test.describe('Mechanical wave object', () => {
         }
     });
 
-    // The ripples are the wave the object already had, read outwards from a source in the middle
-    // instead of along a line: an oscillator sits its own distance from the source and its
-    // displacement carries it in and out along that line, which is what bunches the rings.
-    test('a ripple stands as far from the middle as the same oscillator stands from the line', async ({ page }) => {
+    // The radial wave turns the swing through the screen. An oscillator is a circle standing as far
+    // from the source as the wave had to travel to reach it — the same thing the width does in the
+    // chain, where an oscillator stands further along the older its value is — and the swing itself
+    // is painted rather than drawn. So the circles never move: whatever the wave is doing, and
+    // whenever it is read, they stand where the chain's oscillators stand along the width.
+    test('a ripple stands where the wave reached it, and the swing never moves it', async ({ page }) => {
         await setupBoard(page);
-        const parameters = { x: 80, y: 80, width: 600, height: 200, samples: 11, length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: false };
+        const parameters = { x: 80, y: 80, width: 600, height: 200, samples: 11, length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: false, orientation: 'radial' };
         const drawn = await page.evaluate(parameters => {
-            const read = (name, attribute) => Array.from(shell.board.shapes.getByName(name).contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute(attribute)));
+            const shape = shell.commands.addComponent('mechanical-wave', 'Rings');
+            shape.setProperties(parameters);
+            shell.reset();
+            shell.board.calculator.pause();
+            const read = () => Array.from(shape.contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('r')));
+            shape.draw();
+            const atRest = read();
+            const overTime = [];
+            for (const iteration of [0, 7, 19, 33]) {
+                shell.board.calculator.setIteration(iteration);
+                shape.draw();
+                overTime.push(read());
+            }
+            // The same wave with twice the swing: the picture changes colour, never geometry.
+            shape.setProperties({ amplitude: '8' });
+            shape.draw();
+            return { atRest, overTime, louder: read() };
+        }, parameters);
+        // Evenly stepped from the source out to the rim, one step to each oscillator.
+        const room = Math.max(600 - 2 * HANDLE_ROOM, 200 - 2 * HANDLE_ROOM) / 2;
+        const step = room / 11;
+        for (let index = 0; index < drawn.atRest.length; index++)
+            expect(drawn.atRest[index]).toBeCloseTo((index + 0.5) * step, 6);
+        for (const moment of drawn.overTime)
+            expect(moment).toEqual(drawn.atRest);
+        expect(drawn.louder).toEqual(drawn.atRest);
+    });
+
+    // Circle and circle meet: the disc is covered from the source to the rim, so the wave is a run
+    // of colour rather than a set of rings with the body showing between them.
+    test('the circles are as thick as the room between them, so none of the disc is left uncovered', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, { x: 80, y: 80, width: 600, height: 200, samples: 11, orientation: 'radial', wavefront: false });
+        const bands = await page.evaluate(() => Array.from(shell.board.shapes.getByName('Wave').contentGroup.querySelectorAll('circle')).map(node => ({
+            inner: Number(node.getAttribute('r')) - Number(node.getAttribute('stroke-width')) / 2,
+            outer: Number(node.getAttribute('r')) + Number(node.getAttribute('stroke-width')) / 2
+        })));
+        // The first circle covers the source itself, and each one after it starts inside the one
+        // before rather than beyond it.
+        expect(bands[0].inner).toBeLessThanOrEqual(0);
+        for (let index = 1; index < bands.length; index++)
+            expect(bands[index].inner).toBeLessThanOrEqual(bands[index - 1].outer);
+        const room = Math.max(600 - 2 * HANDLE_ROOM, 200 - 2 * HANDLE_ROOM) / 2;
+        expect(bands[bands.length - 1].outer).toBeGreaterThanOrEqual(room);
+    });
+
+    // What went wrong before: the rings were laid out on the width the chain runs along, measured
+    // from a source in the middle, so the far ones stood a whole body-width out and all but the
+    // first two were cut away. A ripple spreads to the wall of the tank it is made in and no
+    // further: the widest ring of a run reaches the furthest edge of the body, and nothing the
+    // object draws stands beyond it.
+    test('the circles spread to the furthest edge of the body and no further', async ({ page }) => {
+        await setupBoard(page);
+        const parameters = { x: 80, y: 80, width: 600, height: 200, samples: 24, length: 20, amplitude: '2', frequency: '0.5', speed: '5', wavefront: false, orientation: 'radial' };
+        const widest = await page.evaluate(parameters => {
+            const shape = shell.commands.addComponent('mechanical-wave', 'Rings');
+            shape.setProperties(parameters);
+            shell.reset();
+            shell.board.calculator.pause();
+            let found = 0;
+            for (let iteration = 0; iteration < 60; iteration++) {
+                shell.board.calculator.setIteration(iteration);
+                shape.draw();
+                for (const node of shape.contentGroup.querySelectorAll('circle'))
+                    found = Math.max(found, Number(node.getAttribute('r')) + Number(node.getAttribute('stroke-width')) / 2);
+            }
+            return found;
+        }, parameters);
+        const reach = Math.max(600 - 2 * HANDLE_ROOM, 200 - 2 * HANDLE_ROOM) / 2;
+        // The last circle covers the rim and the half pixel that keeps it touching the one inside it.
+        expect(widest).toBeLessThanOrEqual(reach + 0.3);
+        expect(widest).toBeGreaterThanOrEqual(reach);
+    });
+
+    // A ring only tells you where its oscillator is by how the rings bunch, which is hard to read
+    // when there are a hundred of them. So it is painted by how far it is carried as well, on the
+    // very scale the drawing is already on: the wave's own colour at the top of it, the body behind
+    // it at the bottom, and mixed of the two between — which is the banding a ripple shows on
+    // water.
+    // rather than disappearing every trough.
+    test('a ring is painted by how far its oscillator is carried', async ({ page }) => {
+        await setupBoard(page);
+        const parameters = { x: 80, y: 80, width: 600, height: 200, samples: 11, length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: false, autoScale: false, minimumY: -4, maximumY: 4 };
+        const drawn = await page.evaluate(parameters => {
             const chain = shell.commands.addComponent('mechanical-wave', 'Chain');
             chain.setProperties(Object.assign({}, parameters, { orientation: 'transverse' }));
             const rings = shell.commands.addComponent('mechanical-wave', 'Rings');
@@ -765,15 +896,137 @@ test.describe('Mechanical wave object', () => {
             shell.reset();
             chain.draw();
             rings.draw();
-            return { heights: read('Chain', 'cy'), radii: read('Rings', 'r') };
+            return {
+                heights: Array.from(shell.board.shapes.getByName('Chain').contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('cy'))),
+                // A ring left at its full colour carries no opacity of its own.
+                paints: Array.from(shell.board.shapes.getByName('Rings').contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('opacity') ?? 1))
+            };
         }, parameters);
-        const spacing = (600 - 2 * HANDLE_ROOM) / 10;
-        for (let index = 0; index < drawn.radii.length; index++) {
-            // The chain draws the displacement upwards from the middle of the body; the rings draw
-            // the same displacement outwards from where the oscillator rests.
-            const displacement = 100 - drawn.heights[index];
-            expect(drawn.radii[index]).toBeCloseTo(Math.max(0, index * spacing + displacement), 5);
+        // The body runs from a displacement of minus four to one of four, so its hundred and
+        // eighty-four pixels are twenty-three to the unit.
+        const pixelsPerUnit = (200 - 2 * HANDLE_ROOM) / (parameters.maximumY - parameters.minimumY);
+        for (let index = 0; index < drawn.paints.length; index++) {
+            const displacement = (100 - drawn.heights[index]) / pixelsPerUnit;
+            expect(drawn.paints[index]).toBeCloseTo((displacement - parameters.minimumY) / (parameters.maximumY - parameters.minimumY), 5);
         }
+        // The wave really does swing both ways over the chain, so the assertions above are not all
+        // being made about rings sitting at rest.
+        expect(Math.max(...drawn.paints)).toBeGreaterThan(0.7);
+        expect(Math.min(...drawn.paints)).toBeLessThan(0.3);
+    });
+
+    // The colouring runs over the very scale the drawing runs over, so widening the scale flattens
+    // the picture and narrowing it pins every ring to one end or the other. There is one pair of
+    // ends, not a pair for the drawing and another for the colour.
+    test('the colouring runs over the scale the drawing is on', async ({ page }) => {
+        await setupBoard(page);
+        const parameters = { x: 80, y: 80, width: 600, height: 200, samples: 11, length: 20, amplitude: '2', frequency: '0.5', speed: '5', phase: '0.4', wavefront: false, orientation: 'radial', referenceIndex: 0, autoScale: false };
+        const paintsFor = ends => page.evaluate(([parameters, ends]) => {
+            const shape = shell.board.shapes.getByName('Rings') ?? shell.commands.addComponent('mechanical-wave', 'Rings');
+            shape.setProperties(Object.assign({}, parameters, ends));
+            shell.reset();
+            shape.draw();
+            return Array.from(shape.contentGroup.querySelectorAll('circle')).map(node => Number(node.getAttribute('opacity') ?? 1));
+        }, [parameters, ends]);
+
+        // Ends the swing fills: the rings run the whole way from the body behind them to full colour.
+        const fitted = await paintsFor({ minimumY: -2, maximumY: 2 });
+        expect(Math.min(...fitted)).toBeLessThan(0.1);
+        expect(Math.max(...fitted)).toBeGreaterThan(0.9);
+
+        // Ends far wider than the swing: every ring sits near the middle of the mixing, so the
+        // picture is one flat tint and the bands are gone.
+        const wide = await paintsFor({ minimumY: -20, maximumY: 20 });
+        for (const paint of wide)
+            expect(paint).toBeGreaterThan(0.4);
+        expect(Math.max(...wide) - Math.min(...wide)).toBeLessThan(0.2);
+
+        // Ends narrower than the swing: everything past them is pinned to one end or the other.
+        const narrow = await paintsFor({ minimumY: -0.2, maximumY: 0.2 });
+        expect(narrow.filter(paint => paint === 0 || paint === 1).length).toBeGreaterThan(narrow.length / 2);
+
+        // A collapsed pair is not a division by zero: the ends are held apart.
+        const collapsed = await paintsFor({ minimumY: 2, maximumY: 2 });
+        for (const paint of collapsed)
+            expect(Number.isFinite(paint)).toBe(true);
+    });
+
+    // The ends the wave is drawn between are edited the way the chart edits its axes: one row under
+    // Auto scale, a minimum and a maximum on it. The wave scales only what it swings in — its width
+    // is its own length, not an axis the reader sets — so it declares that one pair and gets that
+    // one row.
+    test('the scale is one row of ends under auto scale, for the swing alone', async ({ page }) => {
+        await setupBoard(page);
+        await addWave(page, { samples: 11, amplitude: '5', wavefront: false });
+        const shown = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wave');
+            return {
+                axes: shape.getAxisRangeAxes(),
+                // The ends are never written down: what auto scale works out is shown, and what the
+                // object was set to is still standing underneath it.
+                fitted: shape.getEffectiveAxisRange(),
+                stored: shape.getStoredAxisRange(),
+                offered: shape.getParametersByCategory(['display', 'scale', 'interaction', 'sound', 'general']).map(parameter => parameter.label)
+            };
+        });
+        expect(shown.axes).toEqual(['y']);
+        expect(shown.fitted.yMin).toBeCloseTo(-5.4, 6);
+        expect(shown.fitted.yMax).toBeCloseTo(5.4, 6);
+        expect(shown.stored).toMatchObject({ yMin: -2, yMax: 2 });
+        expect(shown.offered).toContain('Auto scale');
+
+        // Auto scale off, and the ends are the reader's again — the defaults until they say otherwise.
+        const off = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Wave');
+            shape.setProperties({ autoScale: false });
+            return shape.getEffectiveAxisRange();
+        });
+        expect(off.yMin).toBe(-2);
+        expect(off.yMax).toBe(2);
+    });
+
+    // A scale saved as one number either side of nothing is two ends now, and reopening a board is
+    // not the moment to halve the wave it was drawing.
+    test('a board saved when the scale was one number keeps the distance it ran', async ({ page }) => {
+        await setupBoard(page);
+        const carried = await page.evaluate(() => {
+            const shape = shell.commands.addComponent('mechanical-wave', 'Wave');
+            shape.setProperties({ x: 80, y: 80, width: 400, height: 160, autoScale: false });
+            const saved = JSON.parse(JSON.stringify(shape.serialize()));
+            delete saved.properties.minimumY;
+            delete saved.properties.maximumY;
+            saved.properties.displacementScale = 4;
+            shell.board.deserialize([saved]);
+            shell.reset();
+            const restored = shell.board.shapes.getByName('Wave');
+            return { min: restored.properties.minimumY, max: restored.properties.maximumY, old: restored.properties.displacementScale };
+        });
+        expect(carried).toEqual({ min: -4, max: 4, old: undefined });
+    });
+
+    // The reference oscillator is a place in the chain, marked so it can be watched. The radial
+    // picture has nothing but colour to say things with, and a circle painted out of the wave would
+    // read as an oscillator doing something the rest are not, so it marks none.
+    test('the reference oscillator is marked in the chain and left unmarked in the rings', async ({ page }) => {
+        await setupBoard(page);
+        const painted = await page.evaluate(() => {
+            const read = name => Array.from(shell.board.shapes.getByName(name).contentGroup.querySelectorAll('circle'))
+                // The chain paints its oscillators and the rings stroke theirs, so whichever of the
+                // two is not "none" is the colour the reader sees.
+                .map(node => node.getAttribute('fill') === 'none' ? node.getAttribute('stroke') : node.getAttribute('fill'));
+            const settings = { x: 80, y: 80, width: 400, height: 200, samples: 11, referenceIndex: 3, referenceColor: '#ff0000', waveColor: '#0000ff', wavefront: false };
+            const chain = shell.commands.addComponent('mechanical-wave', 'Chain');
+            chain.setProperties(Object.assign({}, settings, { orientation: 'transverse' }));
+            const rings = shell.commands.addComponent('mechanical-wave', 'Rings');
+            rings.setProperties(Object.assign({}, settings, { orientation: 'radial' }));
+            shell.reset();
+            chain.draw();
+            rings.draw();
+            return { chain: read('Chain'), rings: read('Rings') };
+        });
+        expect(painted.chain[2]).toBe('#ff0000');
+        expect(painted.chain[0]).toBe('#0000ff');
+        expect(new Set(painted.rings)).toEqual(new Set(['#0000ff']));
     });
 
     test('the connecting line and the velocity arrows belong to the transverse chain alone', async ({ page }) => {
@@ -809,5 +1062,6 @@ test.describe('Mechanical wave object', () => {
         expect(serialized.properties.orientation).toBe('longitudinal');
         expect(serialized.properties.referenceIndex).toBe(4);
         expect(serialized.properties.speed).toBe('7');
+        expect(serialized.properties.damping).toBe('0');
     });
 });

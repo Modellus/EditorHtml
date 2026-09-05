@@ -331,10 +331,12 @@ var ComponentShapeToolbarMixin = {
             rangeParameters.push(parameter.id);
             items.push({ text: parameter.label, buildControl: $container => $container.append(this.createAxisRangeSwitch(parameter)) });
         }
-        if (this.getAxisRangeParameters().length === 4) {
+        // One row per axis the object declares both ends of. A drawing that scales only what it
+        // swings in — a wave, against a width that is its length — says so by declaring that pair
+        // alone, and gets that row alone.
+        for (const axis of this.getAxisRangeAxes()) {
             const control = this.getAxisRangeControl();
-            items.push({ text: "Horizontal", buildControl: $container => control.createRow("x").appendTo($container) });
-            items.push({ text: "Vertical", buildControl: $container => control.createRow("y").appendTo($container) });
+            items.push({ text: axis === "x" ? "Horizontal" : "Vertical", buildControl: $container => control.createRow(axis).appendTo($container) });
         }
         for (const parameter of this.getParametersByCategory(["display", "scale", "interaction", "sound", "general"])) {
             if (rangeParameters.includes(parameter.id))
@@ -351,6 +353,10 @@ var ComponentShapeToolbarMixin = {
     getAxisRangeParameters() {
         const names = ["minimumX", "maximumX", "minimumY", "maximumY"];
         return this.getEditableParameters().filter(parameter => names.includes(parameter.id)).map(parameter => parameter.id);
+    },
+    getAxisRangeAxes() {
+        const declared = this.getAxisRangeParameters();
+        return ["x", "y"].filter(axis => declared.includes(`minimum${axis.toUpperCase()}`) && declared.includes(`maximum${axis.toUpperCase()}`));
     },
     getAxisRangeProperty(axis, bound) {
         return `${bound === "Min" ? "minimum" : "maximum"}${axis.toUpperCase()}`;

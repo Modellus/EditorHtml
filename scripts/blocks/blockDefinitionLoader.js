@@ -40,6 +40,12 @@ class BlockDefinitionLoader {
         const valueSource = document.valueSource
             ? BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.valueSource), BlockDefinitionLoader.buildSumScope(document.valueSource, scope))
             : null;
+        // What the object would fit its axes to while it is scaling itself. The shape works the ends
+        // out from this and hands them back in as the ends the drawing reads, so the definition never
+        // has to carry a scale of its own beside the one it is given.
+        const axisFit = document.axisFit
+            ? BlockDefinitionLoader.bindFormulas(BlockMigrations.clone(document.axisFit), scope)
+            : null;
         BlockDefinitionLoader.documents.set(document.type, BlockMigrations.clone(document));
         return registry.register({
             type: document.type,
@@ -55,6 +61,7 @@ class BlockDefinitionLoader {
             agentAccessible: document.agentAccessible !== false,
             indexedSource: indexedSource,
             valueSource: valueSource,
+            axisFit: axisFit,
             create: (parameters, context) => {
                 BlockDefinitionLoader.applyLocals(locals, parameters, context);
                 return BlockDefinitionLoader.pruneNode(BlockMigrations.clone(root), context);
@@ -89,13 +96,16 @@ class BlockDefinitionLoader {
     // The names a formula reads, found lexically: the four functions spelled in plain letters go
     // first, since nothing marks them as functions once the parentheses are gone; then commands,
     // then number literals — but only where a digit starts a number rather than ending a name, so
-    // "orbitRadius0" stays whole while "1e5" does not leave an "e5" behind.
+    // "orbitRadius0" stays whole while "1e5" does not leave an "e5" behind. A letter on its own is
+    // dropped last: the grammar keeps "e" and "E" for Euler's number, so neither can reach a model
+    // term of that name and neither is the definition's to declare.
     static readNames(latex) {
         const bare = String(latex)
             .replace(Utils.getPlainFunctionCallPattern(), "$1 ")
             .replace(/\\[A-Za-z]+/g, " ")
             .replace(/(?<![A-Za-z0-9])\d+(\.\d+)?([eE][+-]?\d+)?/g, " ");
-        return Array.from(new Set(bare.match(/[A-Za-z][A-Za-z0-9]*/g) ?? []));
+        const names = bare.match(/[A-Za-z][A-Za-z0-9]*/g) ?? [];
+        return Array.from(new Set(names.filter(name => name !== "e" && name !== "E")));
     }
 
     static bindFormulas(value, scope) {

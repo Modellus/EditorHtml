@@ -63,6 +63,9 @@ class BuildingBlockRegistry {
             // And what it hands back as one value: the reading an object takes of the wave it works
             // out for itself, written under a name the model leaves free.
             valueSource: registration.valueSource ?? null,
+            // What the object would fit its axes to while it is scaling itself, for a drawing that
+            // knows its own range without plotting any points to measure.
+            axisFit: registration.axisFit ?? null,
             aliases: registration.aliases ?? [],
             agentAccessible: registration.agentAccessible !== false,
             deprecated: registration.deprecated === true,

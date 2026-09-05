@@ -154,7 +154,9 @@ test.describe('components built from JSON definitions', () => {
             undeclaredInLocal: BlockDefinitionLoader.inspect({ schemaVersion: '1.0.0', type: 'thing-one', category: 'component', root: {}, locals: [{ id: 'r', formula: '\\frac{w}{2}' }] }),
             undeclaredInTree: BlockDefinitionLoader.inspect({ schemaVersion: '1.0.0', type: 'thing-one', category: 'component', locals: [{ id: 'r', value: 4 }], root: { id: 'root', type: 'group', children: [{ id: 'dot', type: 'circle', bindings: { radius: { formula: 'r\\cdot scale' } } }] } }),
             forwardReference: BlockDefinitionLoader.inspect({ schemaVersion: '1.0.0', type: 'thing-one', category: 'component', root: {}, locals: [{ id: 'a', formula: 'b+1' }, { id: 'b', value: 2 }] }),
-            declaredSizeIsFine: BlockDefinitionLoader.inspect({ schemaVersion: '1.0.0', type: 'thing-one', category: 'component', root: {}, locals: [{ id: 'w', value: { parameter: '$width' } }, { id: 'r', formula: '\\frac{w}{2}' }] })
+            declaredSizeIsFine: BlockDefinitionLoader.inspect({ schemaVersion: '1.0.0', type: 'thing-one', category: 'component', root: {}, locals: [{ id: 'w', value: { parameter: '$width' } }, { id: 'r', formula: '\\frac{w}{2}' }] }),
+            eulerIsFine: BlockDefinitionLoader.inspect({ schemaVersion: '1.0.0', type: 'thing-one', category: 'component', root: {}, locals: [{ id: 'x', value: 2 }, { id: 'fade', formula: 'e^{-x}+E' }] }),
+            eulerIsNotAName: BlockDefinitionLoader.inspect({ schemaVersion: '1.0.0', type: 'thing-one', category: 'component', root: {}, locals: [{ id: 'edge', value: 2 }, { id: 'fade', formula: 'e^{-edge}' }] })
         }));
         expect(problems.badVersion).toHaveLength(1);
         expect(problems.badType).toHaveLength(1);
@@ -165,6 +167,11 @@ test.describe('components built from JSON definitions', () => {
         expect(problems.undeclaredInTree[0]).toContain('"scale"');
         expect(problems.forwardReference[0]).toContain('"b"');
         expect(problems.declaredSizeIsFine).toEqual([]);
+        // The grammar keeps "e" and "E" for Euler's number, so neither can ever reach a model term
+        // of that name and neither is a definition's to declare. A name that merely starts with the
+        // letter is a name like any other.
+        expect(problems.eulerIsFine).toEqual([]);
+        expect(problems.eulerIsNotAName).toEqual([]);
     });
 
     test('a definition edited at runtime changes what the board draws', async ({ page }) => {

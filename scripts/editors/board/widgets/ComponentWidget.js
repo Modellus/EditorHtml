@@ -156,15 +156,28 @@ class ComponentShape extends BaseShape {
     // registry pays a block that has been renamed. A model is not reopened to be told that the term
     // its wave was reading no longer exists.
     carryRenamedComponentProperties() {
+        const carried = new Set();
         for (const parameter of BlockObjects.getComponentParameters(this.getComponentType())) {
             const previousId = String(parameter.previousId ?? "");
             if (previousId === "" || this.properties[previousId] === undefined)
                 continue;
+            carried.add(previousId);
             const current = this.properties[parameter.id];
             if (current === undefined || current === null || current === "")
-                this.properties[parameter.id] = this.properties[previousId];
-            delete this.properties[previousId];
+                this.properties[parameter.id] = this.readRenamedComponentValue(parameter, this.properties[previousId]);
         }
+        // The old name is dropped only once every parameter has read it: one value may be carried
+        // into two, the way a scale that ran the same distance either side of nothing becomes the
+        // two ends it ran between.
+        for (const previousId of carried)
+            delete this.properties[previousId];
+    }
+
+    readRenamedComponentValue(parameter, value) {
+        if (parameter.previousIdNegated !== true)
+            return value;
+        const number = Number(value);
+        return Number.isFinite(number) ? 0 - number : value;
     }
 
     // A row naming no term holds the number itself, so one saved holding nothing at all is given the
@@ -221,10 +234,14 @@ class ComponentShape extends BaseShape {
     }
 
     getCompilationContext() {
+        return this.buildCompilationContext(this.getCompilationParameters());
+    }
+
+    buildCompilationContext(parameters) {
         return {
             width: Number(this.properties.width) || 180,
             height: Number(this.properties.height) || 180,
-            parameters: this.getCompilationParameters(),
+            parameters: parameters,
             caseNumber: this.getTermCaseNumber("caseNumber"),
             // Which writing on the board is this object's own, so a name it hands the model itself is
             // not read back as a name the model works out.
@@ -323,15 +340,54 @@ class ComponentShape extends BaseShape {
             }
         }
         if (xValues.length === 0)
-            return null;
+            return this.getDeclaredAxisFit();
         return BlockChartGeometry.padDomain(Math.min(...xValues), Math.max(...xValues), Math.min(...yValues), Math.max(...yValues));
     }
 
+    // An object that plots nothing has no points to fit around, and may still know what it would fit
+    // to — a wave knows the swing it is drawing before it has drawn any of it. It says so with
+    // `axisFit`, and the ends it names are read here. Only the ends it names are its own: the rest
+    // stay the ones the object is set to, so a definition may fit one axis and leave the other.
+    getDeclaredAxisFit() {
+        const declaration = BlockRegistry.get(this.getComponentType())?.axisFit;
+        if (!declaration)
+            return null;
+        const stored = this.getStoredAxisRange();
+        const context = this.getAxisFitContext();
+        const bindings = this.getComponentCompiler().bindings;
+        const read = (name, fallback) => {
+            if (declaration[name] === undefined)
+                return fallback;
+            const value = Number(bindings.resolve(declaration[name], context, NaN));
+            return Number.isFinite(value) ? value : fallback;
+        };
+        return {
+            xMin: read("minimumX", stored.xMin),
+            xMax: read("maximumX", stored.xMax),
+            yMin: read("minimumY", stored.yMin),
+            yMax: read("maximumY", stored.yMax)
+        };
+    }
+
+    // The fit is what the ends are worked out from, so it cannot be read against the ends: the
+    // context it resolves in holds the properties the object was set to and nothing worked out from
+    // them, or asking for the ends would ask for them again.
+    getAxisFitContext() {
+        return this.buildCompilationContext(this.properties);
+    }
+
+    // Only the ends the object declares are handed back. An object that scales one axis alone has
+    // nothing to say about the other, and a number worked out from ends it never had is not a number.
     getAxisRangeValues() {
         if (!this.hasAxisRangeOptions())
             return null;
         const domain = this.getEffectiveAxisRange();
-        return { minimumX: domain.xMin, maximumX: domain.xMax, minimumY: domain.yMin, maximumY: domain.yMax };
+        const values = { minimumX: domain.xMin, maximumX: domain.xMax, minimumY: domain.yMin, maximumY: domain.yMax };
+        for (const name of Object.keys(values)) {
+            if (!this.isComponentParameter(name))
+                delete values[name];
+        }
+        return values;
     }
 
     // Equal axis is about pixels, so it needs the box the drawing plots in. The object says where
