@@ -160,21 +160,30 @@ class ClipboardPasteController {
         return files.find(file => file.type === "text/csv" || file.name.toLowerCase().endsWith(".csv")) ?? null;
     }
 
+    // A dataset may name what it measured - a species, a country - so a column of names no longer
+    // disqualifies the paste. What still tells a table from a sentence carrying commas is the shape:
+    // every row the same width, no gaps, and at least one column measured in numbers.
     isCsvText(text) {
-        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-        if (lines.length < 2)
+        const records = Utils.parseCsvRecords(text);
+        if (records.length < 2)
             return false;
-        const columnCount = lines[0].split(",").length;
+        const columnCount = records[0].length;
         if (columnCount < 2)
             return false;
-        for (let index = 1; index < lines.length; index++) {
-            const cells = lines[index].split(",");
+        const isNumericColumn = new Array(columnCount).fill(true);
+        for (let index = 1; index < records.length; index++) {
+            const cells = records[index];
             if (cells.length !== columnCount)
                 return false;
-            if (cells.some(cell => cell.trim() === "" || !Number.isFinite(Number(cell.trim()))))
-                return false;
+            for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+                const cell = cells[columnIndex].trim();
+                if (cell === "")
+                    return false;
+                if (!Number.isFinite(Number(cell)))
+                    isNumericColumn[columnIndex] = false;
+            }
         }
-        return true;
+        return isNumericColumn.some(isNumeric => isNumeric);
     }
 
     async pasteMediaFile(file) {

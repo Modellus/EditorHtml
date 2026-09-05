@@ -120,6 +120,23 @@ test.describe('Frequency chart', () => {
         expect(chart.rows.map(row => row.series0)).toEqual([13, 0, 0]);
     });
 
+    test('counts how often each name in a loaded dataset came up', async ({ page }) => {
+        await setupEditor(page);
+        await page.evaluate(() => {
+            modellus.shape.addDataTable('Data1');
+            shell.board.shapes.getByName('Data1').applyImportedExternalData({
+                names: ['species'],
+                values: [['setosa'], ['virginica'], ['setosa'], ['setosa']]
+            });
+        });
+        await page.waitForFunction(() => shell.calculator.isCategoricalTerm('species'));
+        await addFrequencyChart(page, 3, { categoryTerm: 'species', series: [{ ...COUNT_SERIES, term: 'species' }] });
+
+        const chart = await readChart(page);
+        expect(chart.categories).toEqual(['setosa', 'virginica']);
+        expect(chart.rows.map(row => row.series0)).toEqual([3, 1]);
+    });
+
     test('a label the model never reached keeps a place of its own on the axis', async ({ page }) => {
         await setupEditor(page);
         await addModel(page, 'z\\in\\left\\lbrace green,blue,red\\right\\rbrace', 'z');

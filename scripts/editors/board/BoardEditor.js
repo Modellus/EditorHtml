@@ -1133,14 +1133,7 @@ class BoardEditor extends Workspace {
     }
 
     parseCsv(text) {
-        const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(line => line.trim().length > 0);
-        const names = lines[0].split(",").map(name => name.trim());
-        const values = [];
-        for (let i = 1; i < lines.length; i++) {
-            const row = lines[i].split(",").map(cell => parseFloat(cell.trim()));
-            values.push(row);
-        }
-        return { names, values };
+        return Utils.parseCsv(text);
     }
 
     async importDataFromFile() {

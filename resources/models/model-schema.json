@@ -29,7 +29,7 @@
             "step5_initialValues":  { "type": "string", "const": "properties.initialValuesByCase keys are 1-based case numbers as strings. Each value is a {termName: number} map giving starting values for every DIFFERENTIAL term." },
             "step6_visualization":  { "type": "string", "const": "Scan board for: ChartShape (xTerm + yTerms reveal what is plotted against what); ReferentialShape + child shapes (xTerm/yTerm of children reveal spatial motion); SliderShape.term (explorable parameters); ValueShape.term (key output displays)." },
             "step7_cases":          { "type": "string", "const": "If properties.casesCount > 1, the full equation system is solved independently for each case. Different initial values or parameter values per case enable parameter studies. ChartYTerm.case and TableColumn.case select which case a series displays." },
-            "step8_preloadedData":  { "type": "string", "const": "If preloadedData is present, external CSV data is loaded into calculator terms (names array maps to columns; values is rows × columns). This enables model–data comparison." }
+            "step8_preloadedData":  { "type": "string", "const": "If preloadedData is present, external CSV data is loaded into calculator terms (names array maps to columns; values is rows × columns). This enables model–data comparison. A column written as names rather than numbers - species, country - becomes a categorical term holding those names." }
           }
         },
 
@@ -2113,10 +2113,10 @@
           "type": "array",
           "items": {
             "type": "array",
-            "items": { "type": "number" },
-            "description": "One row of numeric values."
+            "items": { "type": ["number", "string"] },
+            "description": "One row of values. A value is a number, or the name a categorical value was measured as."
           },
-          "description": "2-D array of rows × columns of numeric values."
+          "description": "2-D array of rows × columns. A column whose every value is a name becomes a categorical term constrained to those names, stored as the numbers they stand for."
         }
       }
     },

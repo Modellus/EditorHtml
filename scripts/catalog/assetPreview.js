@@ -274,11 +274,11 @@ class AssetPreview {
     // The rows are shown as they are written rather than as numbers: the point of the preview is to
     // recognise the file, and a column of dates or names reads as itself only untouched.
     static buildDataMarkup(text, translations) {
-        const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(line => line.trim().length > 0);
-        if (lines.length === 0)
+        const records = Utils.parseCsvRecords(text);
+        if (records.length === 0)
             return `<div class="mdl-asset-preview-status">${AssetPreview.escape(translations.get("No data available"))}</div>`;
-        const names = lines[0].split(",").map(name => name.trim());
-        const rows = lines.slice(1).map(line => line.split(",").map(cell => cell.trim()));
+        const names = Utils.readCsvNames(records[0]);
+        const rows = records.slice(1).map(record => names.map((_, columnIndex) => (record[columnIndex] ?? "").trim()));
         const shownNames = names.slice(0, AssetPreview.previewColumnCount);
         const shownRows = rows.slice(0, AssetPreview.previewRowCount);
         const headerMarkup = shownNames.map(name => `<th>${AssetPreview.escape(name)}</th>`).join("");

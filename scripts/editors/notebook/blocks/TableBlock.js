@@ -37,14 +37,6 @@ if (typeof BlocksRegistry !== "undefined" && typeof DataTableShape !== "undefine
             const shellTranslations = notebookEditor?.getShell?.()?.board?.translations;
             const translations = shellTranslations ?? new BaseTranslations(shellTranslations?.language ?? "en-US");
             const theme = new BaseTheme();
-            const parseCsv = text => {
-                const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-                const names = lines[0].split(",").map(name => name.trim());
-                const values = [];
-                for (let i = 1; i < lines.length; i++)
-                    values.push(lines[i].split(",").map(cell => parseFloat(cell.trim())));
-                return { names, values };
-            };
             return {
                 hostElement: hostElement,
                 svg: null,
@@ -63,14 +55,14 @@ if (typeof BlocksRegistry !== "undefined" && typeof DataTableShape !== "undefine
                     notebookEditor?.calculator?.emit("iterate", { calculator: notebookEditor.calculator });
                 },
                 shell: {
-                    parseCsv: parseCsv,
+                    parseCsv: text => Utils.parseCsv(text),
                     importDataFromFile: async () => {
                         const [fileHandle] = await window.showOpenFilePicker({
                             types: [{ description: "CSV Files", accept: { "text/csv": [".csv"] } }]
                         });
                         const file = await fileHandle.getFile();
                         const text = await file.text();
-                        return parseCsv(text);
+                        return Utils.parseCsv(text);
                     },
                     importDataFromUrl: async () => {
                         const url = prompt(translations.get("Enter CSV URL"));
@@ -78,7 +70,7 @@ if (typeof BlocksRegistry !== "undefined" && typeof DataTableShape !== "undefine
                             return null;
                         const response = await fetch(url);
                         const text = await response.text();
-                        return parseCsv(text);
+                        return Utils.parseCsv(text);
                     },
                     reset: () => notebookEditor?._reparseExpressions?.(),
                     get modelsApiClient() { return notebookEditor?.modelsApiClient ?? null; }

@@ -1072,6 +1072,10 @@ class TableControl {
         const optionLabel = this.getCellOptionLabel(row, column, rawValue);
         if (optionLabel !== null)
             return optionLabel;
+        // A value measured as a name, in a table no model is holding: there is no list to read it
+        // against, so it is written as it stands rather than left blank for not being a number.
+        if (typeof rawValue === "string" && !Number.isFinite(Number(rawValue)))
+            return rawValue;
         const numericValue = Number(rawValue);
         if (numericValue === Infinity)
             return "∞";

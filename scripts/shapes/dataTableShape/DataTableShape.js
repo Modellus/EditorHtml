@@ -377,11 +377,10 @@ class DataTableShape extends BaseValueTableShape {
         const sourceColumn = payload?.column?.sourceColumn;
         if (!sourceColumn)
             return false;
-        const numericValue = Number(payload?.value);
+        const numericValue = this.board.calculator.resolveTermValue(sourceColumn.term, payload?.value);
         if (!Number.isFinite(numericValue))
             return false;
-        const precision = this.board.calculator.getPrecision();
-        const roundedValue = Utils.roundToPrecision(numericValue, precision);
+        const roundedValue = this.roundTableCellValue(sourceColumn.term, numericValue);
         const rowIndex = Number.isInteger(payload?.rowKey) ? payload.rowKey : payload?.rowIndex;
         if (!Number.isInteger(rowIndex))
             return false;
@@ -390,7 +389,9 @@ class DataTableShape extends BaseValueTableShape {
             return false;
         if (rowIndex < 0 || rowIndex >= this.properties.externalData.values.length)
             return false;
-        this.properties.externalData.values[rowIndex][columnIndex] = roundedValue;
+        // A column of names is held as the names, not as the numbers they stand for: the numbers are
+        // handed out afresh every time the model is loaded, and a saved file has to say what it means.
+        this.properties.externalData.values[rowIndex][columnIndex] = this.board.calculator.getValueLabel(sourceColumn.term, roundedValue) ?? roundedValue;
         this.board.calculator.refreshExternalData(this.properties.externalData.names, this.properties.externalData.values);
         return true;
     }
@@ -453,8 +454,13 @@ class DataTableShape extends BaseValueTableShape {
 
     getPreloadedRowValue(column, preloadedNames, sourceRow, iteration, independentValue, fallbackIteration) {
         const preloadedColumnIndex = preloadedNames.indexOf(column.term);
-        if (preloadedColumnIndex >= 0)
-            return sourceRow?.[preloadedColumnIndex];
+        // A name the model took in is carried as the number it stands for, and shown as its name by
+        // the cell, which reads the term's list. A name the model never took in - a table standing on
+        // its own, outside a model that loads it - is carried as written and shown as written.
+        if (preloadedColumnIndex >= 0) {
+            const cellValue = sourceRow?.[preloadedColumnIndex];
+            return this.board.calculator.isCategoricalTerm(column.term) ? this.board.calculator.resolveTermValue(column.term, cellValue) : cellValue;
+        }
         const system = this.board.calculator.system;
         if (Number.isFinite(iteration))
             return system.getByNameOnIteration(Math.round(iteration), column.term, column.case);
@@ -490,8 +496,8 @@ class DataTableShape extends BaseValueTableShape {
                 const preloadedColumnIndex = names.indexOf(sourceTermName);
                 if (preloadedColumnIndex < 0)
                     continue;
-                const originalValue = Number(originalValues[sourceRowIndex]?.[preloadedColumnIndex]);
-                if (!Number.isFinite(originalValue))
+                const originalValue = originalValues[sourceRowIndex]?.[preloadedColumnIndex];
+                if (!Number.isFinite(this.board.calculator.resolveTermValue(sourceTermName, originalValue)))
                     continue;
                 values[sourceRowIndex][preloadedColumnIndex] = originalValue;
                 hasChanges = true;

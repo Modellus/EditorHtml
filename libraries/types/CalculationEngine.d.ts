@@ -514,6 +514,74 @@ declare class DomainSerializer {
     static fromJson(json: DomainJson, registry: DomainRegistry, report: (diagnostic: Diagnostic) => void): Domain | null;
 }
 
+interface FiniteSetMember {
+    value: number;
+    /** The categorical label, or null when the member is a plain number. */
+    label: string | null;
+}
+/** `{1, 2, 3}` or `{red, green, blue}`: an explicit list of allowed scalar values. */
+declare class FiniteSetDomain extends Domain {
+    readonly members: FiniteSetMember[];
+    constructor(members: FiniteSetMember[]);
+    /** Removes repeated values while preserving the order they were declared in. */
+    private static deduplicate;
+    /** True when `other` holds the same members, in the same order, stored as the same numbers. */
+    equals(other: FiniteSetDomain): boolean;
+    get kind(): DomainKind;
+    get isCategorical(): boolean;
+    get isFinite(): boolean;
+    get control(): DomainControl;
+    contains(value: number): boolean;
+    describe(): string;
+    defaultValue(): number;
+    listValues(limit: number): DomainValueMetadata[] | null;
+    labelOf(value: number): string | null;
+    get minimum(): number | null;
+    get maximum(): number | null;
+}
+
+/** A cell of loaded data: a quantity, or the name a categorical value is written as. */
+type DataValue = number | string;
+/** A loaded column written as names, and the domain built from the names it holds. */
+interface CategoricalColumn {
+    name: string;
+    domain: FiniteSetDomain;
+}
+interface EncodedColumns {
+    /** The rows as the engine stores them, every name replaced by the number it stands for. */
+    values: number[][];
+    categorical: CategoricalColumn[];
+}
+/**
+ * Reads loaded data and finds the columns written as names - `species`, `country`, `treatment` -
+ * so a term measured that way holds its name instead of nothing at all.
+ *
+ * A column counts as names only when every value in it is one.  A column of quantities carrying a
+ * single unreadable cell stays a column of quantities with that one cell blank, so a stray `n/a`
+ * cannot turn a thousand measurements into a thousand labels.  The names are interned in the
+ * system's label table, so a `red` read from a file is stored as the same number as the `red` of a
+ * declared `color \in {red, green, blue}`, and they keep the order they first appear in, which is
+ * the order a dropdown offers them in.
+ */
+declare class CategoricalColumns {
+    /**
+     * `quantityNames` are the columns that answer for the run itself - the iteration and the
+     * independent - and are always read as numbers, whatever they happen to hold.
+     */
+    static encode(names: string[], values: DataValue[][], registry: DomainRegistry, quantityNames: string[]): EncodedColumns;
+    /**
+     * The distinct names down one column in the order they appear, or null when it is not a column
+     * of names.  A column holding more distinct names than a domain can list is free text rather
+     * than a category, and is left to be read as quantities the way it was before.
+     */
+    private static readLabels;
+    /** The name a cell is written as, "" when the cell is blank, null when it holds a quantity. */
+    private static readLabel;
+    private static holdsNames;
+    private static encodeRows;
+    private static readQuantity;
+}
+
 interface Singularity {
     type: SingularityType;
     termName: string;
@@ -568,6 +636,8 @@ declare class System {
     /** The terms carrying a domain, so an unconstrained model pays nothing for the checks. */
     private constrainedTermNames;
     private readonly domainLocations;
+    /** The terms whose domain was read off loaded data, so a later load may widen it again. */
+    private readonly dataDerivedDomainNames;
     /** Names that stand for a whole run of values addressed by index rather than for one number. */
     private readonly indexedSources;
     private readonly resolvingElements;
@@ -610,7 +680,20 @@ declare class System {
     addBody(body: Body): void;
     getBodies(): Body[];
     getBody(name: string): Body | undefined;
-    loadTerms(names: string[], values: number[][]): void;
+    /**
+     * Loads a table of measurements, one row per iteration.  A column written as names rather than
+     * numbers - `species`, `country` - is stored as the numbers those names stand for and its term
+     * is constrained to them, so it reads back as the name it was measured as everywhere a
+     * categorical term does.
+     */
+    loadTerms(names: string[], values: DataValue[][]): void;
+    /**
+     * Constrains each loaded column of names to the names it holds.  A domain the model declared
+     * itself is left alone: the author said which values the term may take, and data holding only
+     * some of them does not narrow that.  A domain this method gave before is replaced, so editing
+     * a value to a name the column had not seen yet widens the list rather than being refused.
+     */
+    private applyDataDomains;
     addOutlierIteration(termName: string, iteration: number): void;
     removeOutlierIteration(termName: string, iteration: number): void;
     reset(): void;
@@ -4699,30 +4782,6 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDeltaExpression: (context: DeltaExpressionContext) => Branch;
 }
 
-interface FiniteSetMember {
-    value: number;
-    /** The categorical label, or null when the member is a plain number. */
-    label: string | null;
-}
-/** `{1, 2, 3}` or `{red, green, blue}`: an explicit list of allowed scalar values. */
-declare class FiniteSetDomain extends Domain {
-    readonly members: FiniteSetMember[];
-    constructor(members: FiniteSetMember[]);
-    /** Removes repeated values while preserving the order they were declared in. */
-    private static deduplicate;
-    get kind(): DomainKind;
-    get isCategorical(): boolean;
-    get isFinite(): boolean;
-    get control(): DomainControl;
-    contains(value: number): boolean;
-    describe(): string;
-    defaultValue(): number;
-    listValues(limit: number): DomainValueMetadata[] | null;
-    labelOf(value: number): string | null;
-    get minimum(): number | null;
-    get maximum(): number | null;
-}
-
 /**
  * `[1..5]` or `[0..10..2]`: the arithmetic progression from `start` towards `end` in `step`
  * increments.  The progression is kept structurally and only expanded through `listValues`, so a
@@ -4811,5 +4870,5 @@ declare class UnionDomain extends Domain {
     toMetadata(): DomainMetadata;
 }
 
-export { Body, Branch, BuiltinDomain, BuiltinDomainKind, RegressionType as DataRegressionType, Deriver, DiagnosticCode, DiagnosticCollector, DiagnosticSeverity, DiscreteRangeDomain, Domain, DomainControl, DomainKind, DomainReference, DomainRegistry, DomainSerializer, Engine, EnumLiteral, EnumLiteralTable, Expression, ExpressionExpander, FiniteSetDomain, IntervalDomain, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, Simplifier, SingularitiesDetector, SingularityType, System, Term, TermType, UnionDomain, Visitor, formatDomainNumber };
-export type { RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult, Diagnostic, DomainJson, DomainMetadata, DomainResolver, DomainValueMetadata, DomainsJson, EnumLiteralEntry, FiniteSetMember, NamedDomainDeclaration, Singularity, SourceLocation, SystemProcessor };
+export { Body, Branch, BuiltinDomain, BuiltinDomainKind, CategoricalColumns, RegressionType as DataRegressionType, Deriver, DiagnosticCode, DiagnosticCollector, DiagnosticSeverity, DiscreteRangeDomain, Domain, DomainControl, DomainKind, DomainReference, DomainRegistry, DomainSerializer, Engine, EnumLiteral, EnumLiteralTable, Expression, ExpressionExpander, FiniteSetDomain, IntervalDomain, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, Simplifier, SingularitiesDetector, SingularityType, System, Term, TermType, UnionDomain, Visitor, formatDomainNumber };
+export type { CategoricalColumn, RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult, DataValue, Diagnostic, DomainJson, DomainMetadata, DomainResolver, DomainValueMetadata, DomainsJson, EncodedColumns, EnumLiteralEntry, FiniteSetMember, NamedDomainDeclaration, Singularity, SourceLocation, SystemProcessor };

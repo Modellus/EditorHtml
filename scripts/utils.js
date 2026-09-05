@@ -864,6 +864,85 @@ class Utils {
         };
     }
 
+    // A comma-separated file read the way the model holds it: the first line names the columns and
+    // every line after it is a row. A cell that is written as a number is one, and a cell that is
+    // written as a name stays that name, so a column of species or countries reaches the model as
+    // what it was measured as instead of as nothing at all. Every row is as wide as the header, so
+    // a value is read under the name of the column it was written in and no other.
+    static parseCsv(text) {
+        const records = Utils.parseCsvRecords(text);
+        if (records.length === 0)
+            return { names: [], values: [] };
+        const names = Utils.readCsvNames(records[0]);
+        const values = [];
+        for (let index = 1; index < records.length; index++) {
+            const row = [];
+            for (let columnIndex = 0; columnIndex < names.length; columnIndex++)
+                row.push(Utils.parseCsvCell(records[index][columnIndex] ?? ""));
+            values.push(row);
+        }
+        return { names, values };
+    }
+
+    // A value holding a comma is written in quotes - "+4, +2, -4" is one oxidation state column, not
+    // three - and a quote inside such a value is written twice. Splitting on every comma instead
+    // shifts the rest of the row one column to the right for each comma the value happens to carry,
+    // which is what turns a column of names into a column with numbers scattered through it. A value
+    // may also carry a line break of its own, so the records are read out of the text itself rather
+    // than out of its lines.
+    static parseCsvRecords(text) {
+        const content = text.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+        const records = [];
+        let record = [];
+        let field = "";
+        let isQuoted = false;
+        for (let index = 0; index < content.length; index++) {
+            const character = content[index];
+            if (isQuoted) {
+                if (character !== '"')
+                    field += character;
+                else if (content[index + 1] === '"') {
+                    field += '"';
+                    index++;
+                } else
+                    isQuoted = false;
+                continue;
+            }
+            if (character === '"' && field === "")
+                isQuoted = true;
+            else if (character === ",") {
+                record.push(field);
+                field = "";
+            } else if (character === "\n") {
+                record.push(field);
+                records.push(record);
+                record = [];
+                field = "";
+            } else
+                field += character;
+        }
+        record.push(field);
+        records.push(record);
+        return records.filter(entry => entry.some(value => value.trim() !== ""));
+    }
+
+    // A spreadsheet writes every row out to the width of its widest, so the header ends in a run of
+    // columns carrying no name. They name nothing the model could hold and are left out.
+    static readCsvNames(record) {
+        const names = record.map(name => name.trim());
+        while (names.length > 0 && names[names.length - 1] === "")
+            names.pop();
+        return names;
+    }
+
+    static parseCsvCell(cell) {
+        const text = cell.trim();
+        if (text === "")
+            return NaN;
+        const value = Number(text);
+        return Number.isFinite(value) ? value : text;
+    }
+
     static roundToPrecision(value, precision) {
         const factor = 10 ** precision;
         return Math.round(value * factor) / factor;

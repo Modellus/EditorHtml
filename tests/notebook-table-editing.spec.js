@@ -75,3 +75,29 @@ test('a table block writes its cells with the caret the arrow keys move', async 
     const committedValue = await page.evaluate(() => getBlockTable().rows[0].column1);
     expect(committedValue).toBe(0.5);
 });
+
+test('a table block standing outside a model still writes a value measured as a name', async ({ page }) => {
+    await setupNotebook(page);
+    await page.evaluate(() => {
+        notebook.addBlock('table');
+    });
+    await expect.poll(() => page.evaluate(() => Array.from(notebook.shapeInstances.values()).some(shape => shape.table))).toBe(true);
+    await page.evaluate(() => {
+        const shape = Array.from(notebook.shapeInstances.values()).find(instance => instance.table);
+        const names = ['species', 'length'];
+        const values = [['setosa', 5.1], ['virginica', 6.3]];
+        shape.properties.externalData = { names: names, values: values };
+        shape.properties.originalExternalData = { names: [...names], values: values.map(row => [...row]) };
+        shape.properties.columns = [{ term: 'species', case: 1, color: 'transparent' }, { term: 'length', case: 1, color: 'transparent' }];
+        shape.refreshTableColumns();
+        shape.refreshTableRows();
+        shape.draw();
+    });
+
+    const cellTexts = await page.evaluate(() => {
+        const table = getBlockTable();
+        return table.rows.map(row => table.options.columns.map(column => table.getCellText(row, column)));
+    });
+
+    expect(cellTexts).toEqual([['setosa', '5.10'], ['virginica', '6.30']]);
+});

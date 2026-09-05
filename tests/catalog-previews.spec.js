@@ -145,6 +145,20 @@ test.describe('catalogue previews', () => {
         expect(await page.locator('.mdl-asset-preview-data-note').count()).toBe(0);
     });
 
+    test('a data card shows a value written in quotes under the column it belongs to', async ({ page }) => {
+        await stubCatalogApi(page);
+        await page.route(`${API_HOST}/data/dat-1/asset`, route => route.fulfill({
+            contentType: 'text/csv',
+            body: 'Symbol,OxidationStates,StandardState,,,\nH,"+1, -1",Gas,,,\nC,"+4, +2, -4",Solid,,,\n'
+        }));
+        await openCatalogNode(page, 'catalog-data');
+        await page.click('.mdl-asset-preview--data .mdl-asset-preview-button');
+        await page.waitForSelector('.mdl-asset-preview-data-table');
+        expect(await page.locator('.mdl-asset-preview-data-table thead th').allTextContents()).toEqual(['Symbol', 'OxidationStates', 'StandardState']);
+        expect(await page.locator('.mdl-asset-preview-data-table tbody tr').first().locator('td').allTextContents()).toEqual(['H', '+1, -1', 'Gas']);
+        expect(await page.textContent('.mdl-asset-preview-data-summary')).toBe('2 rows · 3 columns');
+    });
+
     test('a character card walks while the pointer is on it', async ({ page }) => {
         await stubCatalogApi(page);
         await openCatalogNode(page, 'catalog-characters');
