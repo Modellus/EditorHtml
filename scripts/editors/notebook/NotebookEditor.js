@@ -104,6 +104,10 @@ class NotebookEditor extends Workspace {
         return Number(this.calculator?.properties?.independent?.step ?? 0.1);
     }
 
+    getModelPrecision() {
+        return Number(this.calculator?.properties?.precision ?? 2);
+    }
+
     getIndependentName() {
         return String(this.calculator?.properties?.independent?.name ?? "t");
     }
@@ -322,7 +326,7 @@ class NotebookEditor extends Workspace {
                     sliderWidth: 400,
                     sliderTooltipFormatter: value => {
                         const currentValue = this.getIndependentStart() + (value - 1) * this.getIndependentStep();
-                        return Utils.formatNumber(currentValue, 2);
+                        return Utils.formatModelValue(currentValue, this.getModelPrecision());
                     },
                     onSliderValueChanged: value => {
                         this.calculatorSetIteration(value);
@@ -586,12 +590,12 @@ class NotebookEditor extends Workspace {
 
     _updateStartLabel() {
         if (this._startLabel)
-            this._startLabel.textContent = Utils.formatNumber(this.getIndependentStart(), 2);
+            this._startLabel.textContent = Utils.formatModelValue(this.getIndependentStart(), this.getModelPrecision());
     }
 
     _updateEndLabel() {
         if (this._endLabel)
-            this._endLabel.textContent = Utils.formatNumber(this.getIndependentEnd(), 2);
+            this._endLabel.textContent = Utils.formatModelValue(this.getIndependentEnd(), this.getModelPrecision());
     }
 
     _updateIndependentNameLabel() {

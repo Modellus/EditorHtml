@@ -883,6 +883,20 @@ class Utils {
         return Math.floor(numericPrecision);
     }
 
+    static formatModelValue(value, precision, nonFiniteText = "\u2014") {
+        const numericValue = Number(value);
+        if (numericValue === Infinity)
+            return "\u221e";
+        if (numericValue === -Infinity)
+            return "-\u221e";
+        if (!Number.isFinite(numericValue))
+            return nonFiniteText;
+        const normalizedPrecision = Utils.normalizePrecision(precision);
+        const rounded = Utils.roundToPrecision(numericValue, normalizedPrecision);
+        const normalized = Object.is(rounded, -0) ? 0 : rounded;
+        return Utils.formatNumber(normalized, normalizedPrecision);
+    }
+
     // What is edited is what is read: a value handed to an editor is rounded to the same precision
     // it is displayed with, so a reading of 1.23 is not silently edited as 1.2345678.
     static roundValueForEditing(value, precision) {

@@ -137,7 +137,7 @@ if (typeof BaseShape !== "undefined") FrequencyChartShape = class FrequencyChart
         }
         seenValues.sort((left, right) => left - right);
         const areWholeNumbers = seenValues.every(value => Number.isInteger(value));
-        return { labels: seenValues.map(value => areWholeNumbers ? String(value) : Utils.formatNumber(value, precision)), values: seenValues, isCategorical: false };
+        return { labels: seenValues.map(value => areWholeNumbers ? String(value) : Utils.formatModelValue(value, precision, "")), values: seenValues, isCategorical: false };
     }
 
     roundToPrecision(value, precision) {

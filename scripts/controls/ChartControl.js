@@ -417,10 +417,8 @@ class ChartControl {
     }
 
     formatCrosshairValue(value) {
-        if (!Number.isFinite(value))
-            return "";
         const precision = typeof this.options.getPrecision === "function" ? this.options.getPrecision() : (Number.isFinite(this.options.precision) ? this.options.precision : 2);
-        return Utils.formatNumber(value, precision);
+        return Utils.formatModelValue(value, precision, "");
     }
 
     formatArgumentValue(value) {
@@ -429,7 +427,7 @@ class ChartControl {
         if (this.isCategoryMode())
             return this.getCategoryLabel(value);
         if (typeof this.options.getArgumentPrecision === "function")
-            return Utils.formatNumber(value, this.options.getArgumentPrecision());
+            return Utils.formatModelValue(value, this.options.getArgumentPrecision(), "");
         return this.formatCrosshairValue(value);
     }
 

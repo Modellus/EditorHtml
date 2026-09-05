@@ -1083,11 +1083,7 @@ class TableControl {
     }
 
     formatNumber(value, precision) {
-        const normalizedPrecision = Utils.normalizePrecision(precision);
-        const roundedValue = Utils.roundValueForEditing(value, normalizedPrecision);
-        if (roundedValue == null)
-            return "";
-        return Utils.formatNumber(roundedValue, normalizedPrecision);
+        return Utils.formatModelValue(value, precision, "");
     }
 
     getCellPrecision(row, column) {

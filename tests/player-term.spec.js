@@ -78,8 +78,8 @@ test.describe('Player term visibility toggles', () => {
         expect(state.independent).toBe(true);
         expect(state.iteration).toBe(false);
         const labels = await getPlayerLabels(page);
-        expect(labels.start).toBe('0.0');
-        expect(labels.end).toBe('10.0');
+        expect(labels.start).toBe('0.00');
+        expect(labels.end).toBe('10.00');
     });
 
     test('Iteration display honors iterationTermStart 0', async ({ page }) => {
@@ -107,9 +107,44 @@ test.describe('Player term visibility toggles', () => {
         expect(state.independent).toBe(true);
         expect(state.iteration).toBe(false);
         const labels = await getPlayerLabels(page);
-        expect(labels.start).toBe('0.0');
-        expect(labels.end).toBe('10.0');
+        expect(labels.start).toBe('0.00');
+        expect(labels.end).toBe('10.00');
         expect(labels.trigger).toBe('t');
+    });
+
+    test("The player writes the independent at the model's precision", async ({ page }) => {
+        await setupEditor(page);
+        const written = await page.evaluate(() => {
+            const read = () => ({
+                start: shell.bottomToolbar._startLabel.textContent,
+                end: shell.bottomToolbar._endLabel.textContent,
+                tooltip: shell.bottomToolbar.playHead.option('tooltip').format(1)
+            });
+            shell.setProperty('independent.start', 1.23456);
+            shell.setProperty('independent.end', 9.87654);
+            shell.setProperty('precision', 3);
+            const atThree = read();
+            shell.setProperty('precision', 0);
+            const atZero = read();
+            return { atThree, atZero };
+        });
+        expect(written.atThree).toEqual({ start: '1.235', end: '9.877', tooltip: '1.235' });
+        expect(written.atZero).toEqual({ start: '1', end: '10', tooltip: '1' });
+    });
+
+    test('The iteration term is written whole whatever the precision', async ({ page }) => {
+        await setupEditor(page);
+        const written = await page.evaluate(() => {
+            shell.setProperty('precision', 3);
+            shell.setProperty('playerTerm', 'iteration');
+            shell.bottomToolbar.updatePlayer();
+            return {
+                start: shell.bottomToolbar._startLabel.textContent,
+                end: shell.bottomToolbar._endLabel.textContent,
+                tooltip: shell.bottomToolbar.playHead.option('tooltip').format(6)
+            };
+        });
+        expect(written).toEqual({ start: '1', end: '101', tooltip: '6' });
     });
 
     test('playerTerm round-trips through serialize/deserialise and syncs the eyes', async ({ page }) => {

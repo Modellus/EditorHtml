@@ -832,9 +832,7 @@ class ReferentialShape extends BaseShape {
     }
 
     formatTickValue(value, precision) {
-        const rounded = Utils.roundToPrecision(value, precision);
-        const normalized = Object.is(rounded, -0) ? 0 : rounded;
-        return Utils.formatNumber(normalized, precision);
+        return Utils.formatModelValue(value, precision);
     }
 
     normalizeScale(value) {

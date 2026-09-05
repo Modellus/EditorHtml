@@ -105,9 +105,8 @@ class BottomToolbar {
                     sliderWidth: 400,
                     sliderTooltipFormatter: value => {
                         if (this.getPlayerTerm() === "iteration")
-                            return Utils.formatNumber(this.shell.calculator.getIterationTermValue(value), 0);
-                        const precision = Utils.getPrecision(this.shell.calculator.properties.independent.step);
-                        return Utils.formatNumber(this.shell.calculator.getIndependentValue(value), precision);
+                            return Utils.formatModelValue(this.shell.calculator.getIterationTermValue(value), 0);
+                        return Utils.formatModelValue(this.shell.calculator.getIndependentValue(value), this.getPlayerPrecision());
                     },
                     onSliderValueChanged: (value, isUserInitiated) => this.shell.iterationChanged(value, isUserInitiated),
                     itemsBeforeSlider: [
@@ -321,6 +320,12 @@ class BottomToolbar {
             scrollingEnabled: false,
             itemTemplate: (data, _, el) => Utils.renderDropdownListItem(el, data)
         });
+    }
+
+    getPlayerPrecision() {
+        if (this.getPlayerTerm() === "iteration")
+            return 0;
+        return this.shell.calculator.getPrecision();
     }
 
     getPlayerTermEnd() {
@@ -660,17 +665,17 @@ class BottomToolbar {
         this.shell.updatePlayerSliderValue(iteration);
         ModellusPlayerToolbar.updateCalculatedProgress(this.playHead, this.shell.calculator.getLastCalculatedIteration());
         const showIterationTerm = this.getPlayerTerm() === "iteration";
-        const precision = showIterationTerm ? 0 : Utils.getPrecision(this.shell.calculator.properties.independent.step);
+        const precision = this.getPlayerPrecision();
         if (this._startLabel) {
             const start = showIterationTerm ? this.shell.calculator.getIterationTermValue(1) : this.shell.calculator.getStart();
-            this._startLabel.textContent = Utils.formatNumber(start, precision);
+            this._startLabel.textContent = Utils.formatModelValue(start, precision);
         }
         if (this._endLabel) {
             if (this.shell.calculator.properties.independent.noLimit)
                 this._endLabel.innerHTML = '<i class="fa-light fa-infinity" style="font-size:14px; font-weight:400; padding-top:3px"></i>';
             else {
                 const end = showIterationTerm ? this.shell.calculator.getIterationTermValue(finalIteration) : this.shell.calculator.getEnd();
-                this._endLabel.textContent = Utils.formatNumber(end, precision);
+                this._endLabel.textContent = Utils.formatModelValue(end, precision);
             }
         }
         if (this._independentNameLabel)

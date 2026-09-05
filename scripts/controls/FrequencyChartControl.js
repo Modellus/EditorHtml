@@ -230,7 +230,7 @@ class FrequencyChartControl {
     formatValue(value, wholeNumbered) {
         if (!Number.isFinite(value))
             return "";
-        return wholeNumbered ? String(Math.round(value)) : Utils.formatNumber(value, this.getPrecision());
+        return wholeNumbered ? String(Math.round(value)) : Utils.formatModelValue(value, this.getPrecision(), "");
     }
 
     getNumericValue(row, fieldName) {
