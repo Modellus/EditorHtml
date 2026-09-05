@@ -241,7 +241,7 @@ test.describe('Body character rotation', () => {
                 colors: rows.querySelectorAll('.mdl-color-picker').length
             };
         });
-        expect(panel.labels).toEqual(['Term', 'Paired term']);
+        expect(panel.labels).toEqual(['Value', 'Paired term']);
         expect(panel.selectors).toBe(2);
         expect(panel.colors).toBe(0);
         await page.evaluate(() => {
@@ -249,7 +249,7 @@ test.describe('Body character rotation', () => {
             DevExpress.ui.dxDropDownBox.getInstance(rows.querySelector('.shape-term-extra-term .dx-dropdowneditor')).open();
         });
         await page.waitForTimeout(400);
-        await page.locator('.mdl-term-tree-popup .mdl-term-tree-custom-input input').fill('4');
+        await page.keyboard.type('4');
         await page.keyboard.press('Enter');
         await page.waitForTimeout(300);
         // The value typed into the second selector belongs to the second selector alone.

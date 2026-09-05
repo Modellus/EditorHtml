@@ -594,13 +594,13 @@ test.describe('Mechanical wave object', () => {
             shell.board.selection.select(shape);
         });
         await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').click();
-        // The name is written where the term is chosen, which is a row inside the chip that names it.
-        await page.locator('.mdl-shape-overlay-popup .shape-term-term').first().click();
-        await page.locator('.mdl-term-editor-rows:visible .shape-term-term-row').click();
-        const customValue = page.locator('.mdl-term-tree-custom-input input').first();
-        await expect(customValue).toHaveAttribute('placeholder', 'Name a new term');
-        await customValue.fill('y');
-        await customValue.press('Enter');
+        // The name is written into the field the row already stands in: it says what it takes, and
+        // what is typed there is taken without a drop down being opened to find somewhere to type.
+        const termField = page.locator('.mdl-shape-overlay-popup .shape-term-term').first();
+        await expect(termField.locator('input.dx-texteditor-input')).toHaveAttribute('placeholder', 'Name a new term');
+        await termField.click();
+        await page.keyboard.type('y');
+        await page.keyboard.press('Enter');
         await expect.poll(() => page.evaluate(() => shell.board.calculator.isTerm('y'))).toBe(true);
         const written = await page.evaluate(() => ({
             wave: shell.board.shapes.getByName('Wave').properties.wave,

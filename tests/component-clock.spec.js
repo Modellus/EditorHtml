@@ -1484,10 +1484,9 @@ test.describe('component variable inputs', () => {
         await page.waitForTimeout(400);
         await openTermChip(page, 0);
         await termChipPanel(page).locator('.shape-term-term-row').click();
-        await page.waitForSelector('.mdl-term-tree-custom-input input');
-        const input = page.locator('.mdl-term-tree-custom-input input').last();
-        await input.fill(text);
-        await input.press('Enter');
+        await expect(page.locator('.mdl-term-tree-popup')).toBeVisible();
+        await page.keyboard.type(text);
+        await page.keyboard.press('Enter');
         await page.waitForTimeout(400);
         await page.keyboard.press('Escape');
         await page.waitForTimeout(300);
@@ -1697,9 +1696,8 @@ test.describe('compass pointers', () => {
         await page.waitForTimeout(500);
         await termChipPanel(page).locator('.shape-term-extra-term').first().click();
         await page.waitForTimeout(400);
-        const customInput = page.locator('.mdl-nested-dropdown-popup .mdl-term-tree-custom-input input').last();
-        await customInput.fill('north');
-        await customInput.press('Enter');
+        await page.keyboard.type('north');
+        await page.keyboard.press('Enter');
         await page.waitForTimeout(500);
         const pointers = await page.evaluate(() => shell.board.shapes.getByName('Compass').properties.pointers);
         expect(pointers[0].secondTerm).toBe('north');
@@ -1714,9 +1712,8 @@ test.describe('compass pointers', () => {
         await openTermChip(page, 0, '.component-terms-control');
         await termChipPanel(page).locator('.shape-term-term-row').click();
         await page.waitForTimeout(400);
-        const customInput = page.locator('.mdl-nested-dropdown-popup .mdl-term-tree-custom-input input').last();
-        await customInput.fill('heading');
-        await customInput.press('Enter');
+        await page.keyboard.type('heading');
+        await page.keyboard.press('Enter');
         await page.waitForTimeout(500);
         const pointers = await page.evaluate(() => shell.board.shapes.getByName('Compass').properties.pointers);
         expect(pointers[0].term).toBe('heading');

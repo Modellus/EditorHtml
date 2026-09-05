@@ -936,7 +936,7 @@ test('each variable is named on one chip carrying its unit, case and colour', as
     await page.evaluate(() => $(document.querySelector('.mdl-shape-overlay-popup .shape-term-term')).dxDropDownBox('instance').open());
     await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(1);
     expect(await page.evaluate(() => Array.from([...document.querySelectorAll('.mdl-term-editor-rows')].find(rows => rows.offsetParent !== null).querySelectorAll('.mdl-term-editor-row-label')).map(label => label.textContent)))
-        .toEqual(['Show', 'Term', 'Unit', 'Case', 'Colour', 'Locked']);
+        .toEqual(['Show', 'Value', 'Unit', 'Case', 'Colour', 'Locked']);
 });
 
 // A value the object worked out for itself is read in what it is measured in, the way every other

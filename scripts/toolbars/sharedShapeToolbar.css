@@ -459,6 +459,22 @@ math-field {
     padding-right: 0;
 }
 
+/* A value is set by typing it into the field itself, so a focused field is given over to what the
+   reader writes: the chip stands down, the input takes the room it was drawn in, and the caret
+   stands where the writing goes. The chip is put back on as soon as the field is left or the value
+   is taken. A term is written here in the size it is written in the list this field drops, so what
+   is typed is the size of what it is being chosen against. */
+.mdl-term-chip-editor.mdl-term-editing .mdl-term-chip {
+    display: none;
+}
+
+.mdl-term-chip-editor.mdl-term-editing .dx-texteditor-input {
+    width: 100%;
+    padding-left: 0;
+    padding-right: 0;
+    font-size: 16px;
+}
+
 /* Under the list of terms, behind a rule: what the term is measured in, which case it is read from
    and what it is drawn in, each one named by a label of its own. */
 .mdl-term-editor-rows {

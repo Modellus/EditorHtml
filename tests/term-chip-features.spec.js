@@ -81,7 +81,7 @@ test.describe('Term chip features', () => {
         await addChart(page, [{ term: 'y', case: 1, color: '#1871c2', showLabel: true, chartTypes: ['line'] }]);
         await openTermsMenu(page, 'Chart1');
         const scope = '.chart-yterms-control';
-        expect(await readTermChipRowLabels(page, 0, scope)).toEqual(['Show', 'Term', 'Unit', 'Colour', 'Type']);
+        expect(await readTermChipRowLabels(page, 0, scope)).toEqual(['Show', 'Value', 'Unit', 'Colour', 'Type']);
         const parts = await readChipParts(page, scope);
         expect(parts.map(part => part.className.split(' ')[0])).toEqual([
             'mdl-term-chip__mark', 'mdl-term-chip__color', 'form-math-field', 'mdl-term-chip__mark'
@@ -159,7 +159,7 @@ test.describe('Term chip features', () => {
         });
         await openTermsMenu(page, 'Gauge');
         const scope = '.term-packed-terms-control';
-        expect(await readTermChipRowLabels(page, 0, scope)).toEqual(['Show', 'Term', 'Unit', 'Locked']);
+        expect(await readTermChipRowLabels(page, 0, scope)).toEqual(['Show', 'Value', 'Unit', 'Locked']);
         expect((await readChipParts(page, scope)).map(part => part.icons[0])).toEqual([
             'fa-light fa-eye-closed', undefined, 'fa-light fa-lock-open'
         ]);
@@ -168,6 +168,84 @@ test.describe('Term chip features', () => {
         expect((await readChipParts(page, scope)).map(part => part.icons[0])).toEqual([
             'fa-light fa-eye', undefined, 'fa-light fa-lock'
         ]);
+    });
+
+    // A row that takes a plain value takes it where the reader already is: the field the row stands
+    // in. Nothing has to be opened to find somewhere to type.
+    test('a value is typed straight into the row field, with no drop down to open first', async ({ page }) => {
+        await setupEditor(page);
+        await addModel(page, '\\frac{dx}{dt}=v', 'v');
+        await page.evaluate(() => {
+            modellus.shape.addReferential('Referential');
+            modellus.shape.addBody('Body', 'Referential');
+        });
+        await openTermsMenu(page, 'Body');
+        await page.locator('.mdl-shape-overlay-popup .shape-term-term').first().click();
+        await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(1);
+        await page.keyboard.type('7.5');
+        await page.keyboard.press('Enter');
+        await expect.poll(() => page.evaluate(() => Number(shell.board.shapes.getByName('Body').properties.xTerm))).toBe(7.5);
+        // The chip is put back on over what was typed, so the row reads the way every other row does.
+        const chip = await readChipParts(page, '.mdl-shape-overlay-popup .mdl-dropdown-list-item:nth-child(1)');
+        expect(chip.some(part => part.text === '7.50')).toBe(true);
+    });
+
+    // A field that can be written in says so the moment it is focused: the chip stands down, the
+    // caret stands where the writing goes, and what is written is the size of what it is being
+    // chosen against in the list below.
+    test('a focused field shows the caret and writes at the size of the list it drops', async ({ page }) => {
+        await setupEditor(page);
+        await addModel(page, '\\frac{dx}{dt}=v', 'v');
+        await page.evaluate(() => {
+            modellus.shape.addReferential('Referential');
+            modellus.shape.addBody('Body', 'Referential');
+        });
+        await openTermsMenu(page, 'Body');
+        await openTermChip(page, 0);
+        await page.locator('.mdl-term-editor-rows:visible .shape-term-term-row .dx-dropdowneditor').click();
+        await expect(page.locator('.mdl-term-tree-view')).toBeVisible();
+        const written = await page.evaluate(() => {
+            const field = document.querySelector('.mdl-term-editor-rows .shape-term-term-row .mdl-term-chip-editor');
+            const input = field.querySelector('input.dx-texteditor-input');
+            const inputStyle = getComputedStyle(input);
+            const chip = field.querySelector('.mdl-term-chip');
+            return {
+                caretColor: inputStyle.caretColor,
+                textColor: inputStyle.color,
+                opacity: inputStyle.opacity,
+                hasWidth: input.getBoundingClientRect().width > 0,
+                chipDisplay: chip ? getComputedStyle(chip).display : 'none',
+                inputFontSize: inputStyle.fontSize,
+                listFontSize: getComputedStyle(document.querySelector('.mdl-term-tree-popup math-field')).fontSize
+            };
+        });
+        expect(written.caretColor).not.toBe('rgba(0, 0, 0, 0)');
+        expect(written.textColor).not.toBe('rgba(0, 0, 0, 0)');
+        expect(written.opacity).toBe('1');
+        expect(written.hasWidth).toBe(true);
+        // The chip is what the field wears at rest, and a field being written in is not at rest.
+        expect(written.chipDisplay).toBe('none');
+        expect(written.inputFontSize).toBe(written.listFontSize);
+    });
+
+    // The list offers what the model holds. The value the row already carries is read on the field
+    // itself, so the drop down neither repeats it nor keeps a second place to type it.
+    test('the term list offers the model terms alone, never the value the row already holds', async ({ page }) => {
+        await setupEditor(page);
+        await addModel(page, '\\frac{dx}{dt}=v', 'v');
+        await page.evaluate(() => {
+            modellus.shape.addReferential('Referential');
+            modellus.shape.addBody('Body', 'Referential');
+            shell.board.shapes.getByName('Body').setProperties({ xTerm: '7.50' });
+        });
+        await openTermsMenu(page, 'Body');
+        await openTermChip(page, 0);
+        await page.locator('.mdl-term-editor-rows:visible .shape-term-term-row .dx-dropdowneditor').click();
+        await expect(page.locator('.mdl-term-tree-view')).toBeVisible();
+        const listed = await page.evaluate(() => Array.from(document.querySelectorAll('.mdl-term-tree-popup .dx-treeview-item')).map(item => item.textContent.trim()));
+        expect(listed).not.toContain('7.50');
+        expect(listed).toContain('v');
+        expect(await page.locator('.mdl-term-tree-custom-input').count()).toBe(0);
     });
 
     test('a table column carries the mark its values are drawn with, under a label of its own', async ({ page }) => {

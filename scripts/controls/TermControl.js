@@ -246,6 +246,10 @@ class TermControl {
             return items;
         if (calculator.isTerm(selectedValue))
             return items;
+        // The list offers the terms the model holds. A plain value is not one of them and is read on
+        // the field itself, so repeating it here would offer the reader what they already have.
+        if (TermControl.isPlainValue(selectedValue))
+            return items;
         const formatValue = normalizeCustomValue ?? (value => TermControl.normalizeBaseShapeCustomTermValue(baseShape, value));
         items.unshift({ text: formatValue(selectedValue), term: selectedValue });
         return items;
@@ -1391,31 +1395,11 @@ class TermControl {
         this.renderColorSecondaryEditor(host, item, index);
     }
 
-    // The picker is dressed the way the units picker is: what the reader writes sits at the top of the
-    // drop down, divided by a rule from the list underneath, and the drop down is as wide as its
-    // widest term rather than as wide as the field it drops from.
-    renderTermDropdownContent(contentElement, item, index, treeItems, acceptCustomValue, currentTermValue, closeDropdown, onChanged, onCustomItemCreating, editorInstance) {
+    // The drop down is the list of terms and nothing else: what the reader writes is written into the
+    // field the list drops from, so the value the row already holds is never repeated here. The list
+    // is as wide as its widest term rather than as wide as the field it drops from.
+    renderTermDropdownContent(contentElement, treeItems, currentTermValue, closeDropdown, onChanged) {
         const dropdownContent = $('<div class="mdl-term-tree-content">').appendTo(contentElement);
-        if (acceptCustomValue) {
-            const customInputHost = $('<div class="mdl-term-tree-custom-input">');
-            $('<div>').dxTextBox({
-                value: currentTermValue || "",
-                // A row that only reads the model takes a term or a plain number. A row that would
-                // define the term it names says so instead, because a name the model has never held
-                // is not offered anywhere in the list below and would otherwise look like a mistake.
-                placeholder: String(this.options.termEditor?.customValuePlaceholder ?? "") || "Custom value",
-                stylingMode: "filled",
-                onEnterKey: e => {
-                    const customValue = e.component.option("value");
-                    closeDropdown?.();
-                    if (onCustomItemCreating)
-                        onCustomItemCreating({ text: customValue, customItem: null, item: item, index: index, component: editorInstance });
-                    else
-                        onChanged(customValue);
-                }
-            }).appendTo(customInputHost);
-            dropdownContent.append(customInputHost);
-        }
         $('<div class="mdl-term-tree-view">').dxTreeView({
             items: treeItems,
             dataStructure: "plain",
@@ -1493,7 +1477,7 @@ class TermControl {
     }
 
     getTermRowLabel() {
-        return this.options.termEditor?.label ?? "Term";
+        return this.options.termEditor?.label ?? "Value";
     }
 
     getModeRowLabel() {
@@ -1566,6 +1550,52 @@ class TermControl {
         return TermControl.applyPlainValueStyle($("<span>").addClass(className).text(text));
     }
 
+    // A row takes a plain value the moment it is typed into the field itself, which is the one place
+    // every term field already stands: no drop down has to be opened and nothing has to be found
+    // inside it. What is typed goes the way the list's own choice goes, so a value and a term are
+    // written into the model by the same hand.
+    commitTypedTermValue(item, index, value, onChanged, onCustomItemCreating, component) {
+        if (onCustomItemCreating)
+            onCustomItemCreating({ text: value, customItem: null, item: item, index: index, component: component });
+        else
+            onChanged(value);
+    }
+
+    // The chip is what the field wears at rest. It is taken off the moment the field is focused, so
+    // the caret stands where the reader is about to write and what they write is read as they write
+    // it; the next sync puts the chip back on.
+    enterTermEditorEditing(component) {
+        component.$element().addClass("mdl-term-editing");
+        const inputContainer = this.getTermEditorInputContainer(component);
+        if (!inputContainer?.length)
+            return;
+        inputContainer.find(".dx-texteditor-input").css({ color: "", caretColor: "", opacity: "", textShadow: "" });
+    }
+
+    // A drop down takes the focus with it when it opens, so a field that can be typed into asks for it
+    // back and offers what it already holds selected: one click on the row, and what is typed next
+    // stands in place of the value that was there.
+    focusTypedTermValueInput(component) {
+        requestAnimationFrame(() => {
+            const inputElement = component.$element().find(".dx-texteditor-input")[0];
+            if (!inputElement)
+                return;
+            inputElement.focus();
+            inputElement.select();
+        });
+    }
+
+    acceptsTypedTermValue(item, index) {
+        const providedOptions = this.options.termEditor ?? {};
+        if (typeof providedOptions.acceptCustomValue === "function")
+            return providedOptions.acceptCustomValue(item, index) === true;
+        return providedOptions.acceptCustomValue === true;
+    }
+
+    getTypedTermValuePlaceholder() {
+        return String(this.options.termEditor?.customValuePlaceholder ?? "");
+    }
+
     getTermEditorInputContainer(component) {
         const componentElement = component?.element?.();
         const inputElement = componentElement?.find?.(".dx-texteditor-input")?.first?.();
@@ -1588,6 +1618,7 @@ class TermControl {
     // input is left underneath so the placeholder still shows through a chip with no term in it yet.
     syncTermEditorMathField(component, fallbackValue, system, item = null, index = 0, isPrimary = true) {
         const selectedValue = component.option("value") ?? fallbackValue;
+        component.$element().removeClass("mdl-term-editing");
         const inputContainer = this.getTermEditorInputContainer(component);
         if (!inputContainer?.length)
             return;
@@ -1709,6 +1740,15 @@ class TermControl {
         this.renderTermEditorRows(contentElement, this.getItems()[index], index);
     }
 
+    // The chip is the row's own field, so a value typed straight into it is written to the term the
+    // row names — but only while the row names one term. A row naming a pair keeps its typing inside
+    // the chip, where each half has a field of its own to be told apart by.
+    acceptsTypedChipValue(item, index) {
+        if (!this.acceptsTypedTermValue(item, index))
+            return false;
+        return !this.shouldShowExtraTermEditor(item, index);
+    }
+
     // The chip opens on everything the term is read with rather than straight onto the list of terms:
     // the list is one row inside it, standing under its own label the way the unit and the colour do.
     getTermChipEditorOptions(item, index) {
@@ -1716,9 +1756,12 @@ class TermControl {
         const calculator = this.getCalculator();
         const isMissingTerm = calculator ? TermControl.isMissingTermReference(calculator, termValue, this.options.allowNumericTermReference === true) : false;
         const system = this.getSystem();
+        const acceptsTypedValue = this.acceptsTypedChipValue(item, index);
         return {
             value: termValue || null,
             disabled: this.isTermEditorDisabled(item, index),
+            acceptCustomValue: acceptsTypedValue,
+            placeholder: acceptsTypedValue ? this.getTypedTermValuePlaceholder() : "",
             inputAttr: { class: "mdl-variable-selector" },
             stylingMode: "filled",
             elementAttr: {
@@ -1730,7 +1773,16 @@ class TermControl {
                 this.syncTermEditorMathField(e.component, termValue, system, item, index, true);
             },
             onContentReady: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, true),
-            onValueChanged: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, true),
+            onFocusIn: e => {
+                if (acceptsTypedValue)
+                    this.enterTermEditorEditing(e.component);
+            },
+            onFocusOut: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, true),
+            onValueChanged: e => {
+                if (acceptsTypedValue && e.event)
+                    this.commitTypedTermValue(item, index, e.value, value => this.onTermChanged(index, value), this.options.termEditor?.onCustomItemCreating, e.component);
+                this.syncTermEditorMathField(e.component, termValue, system, item, index, true);
+            },
             contentTemplate: (component, contentElement) => this.renderTermChipContent($(contentElement), item, index),
             dropDownOptions: {
                 container: document.body,
@@ -1766,9 +1818,7 @@ class TermControl {
 
     buildTermSelectorOptions(item, index, termValue, flatItems, onChanged, onCustomItemCreating) {
         const providedOptions = this.options.termEditor ?? {};
-        const acceptCustomValue = typeof providedOptions.acceptCustomValue === "function"
-            ? providedOptions.acceptCustomValue(item, index) === true
-            : providedOptions.acceptCustomValue === true;
+        const acceptCustomValue = this.acceptsTypedTermValue(item, index);
         // A row whose term is no longer the object's to choose keeps its place and its colour, and
         // only the selector goes quiet: the reader can still see what it was reading and still say
         // what it is drawn in.
@@ -1788,6 +1838,8 @@ class TermControl {
             dataSource: leafTerms,
             valueExpr: "value",
             displayExpr: data => this.resolveTermEditorDisplayedText(data, termValue, system),
+            acceptCustomValue: acceptCustomValue,
+            placeholder: acceptCustomValue ? this.getTypedTermValuePlaceholder() : "",
             inputAttr: { class: "mdl-variable-selector" },
             stylingMode: "filled",
             elementAttr: {
@@ -1799,15 +1851,28 @@ class TermControl {
                 this.syncTermEditorMathField(e.component, termValue, system, item, index, false);
             },
             onContentReady: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, false),
-            onValueChanged: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, false),
-            contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), item, index, treeItems, acceptCustomValue, termValue, () => dropDownBoxInstance?.close(), onChanged, onCustomItemCreating, dropDownBoxInstance),
+            onFocusIn: e => {
+                if (acceptCustomValue)
+                    this.enterTermEditorEditing(e.component);
+            },
+            onFocusOut: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, false),
+            onValueChanged: e => {
+                if (acceptCustomValue && e.event)
+                    this.commitTypedTermValue(item, index, e.value, onChanged, onCustomItemCreating, e.component);
+                this.syncTermEditorMathField(e.component, termValue, system, item, index, false);
+            },
+            contentTemplate: (component, contentElement) => this.renderTermDropdownContent($(contentElement), treeItems, termValue, () => dropDownBoxInstance?.close(), onChanged),
             dropDownOptions: {
                 container: document.body,
                 width: "auto",
                 onShowing: e => TermControl.fitTermTreeHeightOnShowing(e.component),
                 wrapperAttr: TermControl.getShapeNestedOverlayWrapperAttr("mdl-nested-dropdown-popup mdl-term-tree-popup")
             },
-            ...(providedOptions.onOpened ? { onOpened: providedOptions.onOpened } : {})
+            onOpened: e => {
+                providedOptions.onOpened?.(e);
+                if (acceptCustomValue)
+                    this.focusTypedTermValueInput(e.component);
+            }
         };
     }
 
@@ -1815,6 +1880,8 @@ class TermControl {
         this.openEditorIndex = index;
         this.openEditorRowSignature = this.getTermEditorRowSignature(index);
         this.options.termEditor?.onOpened?.(event);
+        if (this.acceptsTypedChipValue(this.getItems()[index], index))
+            this.focusTypedTermValueInput(event.component);
     }
 
     onTermEditorClosed() {
@@ -1873,6 +1940,8 @@ class TermControl {
         if (selectedTerm === "")
             return items;
         if (calculator.isTerm?.(selectedTerm))
+            return items;
+        if (TermControl.isPlainValue(selectedTerm))
             return items;
         items.unshift({ text: selectedTerm, term: selectedTerm });
         return items;
