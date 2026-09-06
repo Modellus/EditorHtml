@@ -71,8 +71,9 @@ class ComponentShape extends BaseShape {
         const registration = BlockRegistry.get(componentType);
         this.properties.name = definition?.name ?? registration?.displayName ?? this.board.translations.get("Component Name");
         const center = this.board.getClientCenter();
-        this.properties.width = 180;
-        this.properties.height = 180;
+        const size = ComponentShape.getDefaultSize(componentType);
+        this.properties.width = size.width;
+        this.properties.height = size.height;
         this.properties.x = center.x - this.properties.width / 2;
         this.properties.y = center.y - this.properties.height / 2;
         this.properties.preset = definition?.preset ?? "standard";
@@ -86,8 +87,16 @@ class ComponentShape extends BaseShape {
         Object.assign(this.properties, BlockObjects.getInstancePropertyDefaults(componentType, this.properties.preset));
     }
 
-    getMinimumDrawSize() {
-        return { width: 180, height: 180 };
+    // The box an object is drawn in when nothing said how big. A dial is square, and that is what
+    // the tokens hold; an object shaped otherwise — a ruler is a strip, a protractor is wider than
+    // it is tall — says so in its own definition, so it is placed in the proportions it is drawn to.
+    static getDefaultSize(componentType) {
+        return BlockObjects.getDefaultSize(componentType);
+    }
+
+    getMinimumDrawSize(pendingProperties = null) {
+        const definition = pendingProperties?.definition ?? this.properties.definition;
+        return ComponentShape.getDefaultSize(BlockObjects.getComponentType(definition));
     }
 
     getDrawGesture() {
@@ -1084,24 +1093,41 @@ class ComponentShape extends BaseShape {
         element.addEventListener("pointerdown", event => this.onAxisTickDragStart(event, input));
     }
 
+    // Where a tick stands, in the units its axis spaces them by: its own value on an ordinary axis,
+    // and the logarithm of it on one whose decades are evenly spread. Every step of the drag is the
+    // same arithmetic in those units, so one path serves both.
+    getAxisTickPlacement(input, value) {
+        const numeric = Number(value);
+        if (input.scale !== "logarithmic")
+            return numeric;
+        return numeric > 0 ? Math.log10(numeric) : NaN;
+    }
+
     onAxisTickDragStart(event, input) {
         event.preventDefault();
         event.stopPropagation();
         const minimum = Number(this.properties[input.minimumProperty]);
+        const originPlace = this.getAxisTickPlacement(input, minimum);
+        const endPlace = this.getAxisTickPlacement(input, this.properties[input.maximumProperty]);
+        const tickPlace = this.getAxisTickPlacement(input, input.value);
+        if (!Number.isFinite(originPlace) || !Number.isFinite(tickPlace) || !(endPlace > originPlace))
+            return;
         const originPixel = Number(input.originPixel);
         const lengthPixels = Number(input.lengthPixels);
         const tickPixel = input.axis === "x"
-            ? originPixel + (Number(input.value) - minimum) / (Number(this.properties[input.maximumProperty]) - minimum) * lengthPixels
-            : originPixel - (Number(input.value) - minimum) / (Number(this.properties[input.maximumProperty]) - minimum) * lengthPixels;
+            ? originPixel + (tickPlace - originPlace) / (endPlace - originPlace) * lengthPixels
+            : originPixel - (tickPlace - originPlace) / (endPlace - originPlace) * lengthPixels;
         const started = this._axisTickDrag.start(event, {
-            tickOffsetValue: Number(input.value) - minimum,
+            tickOffsetValue: tickPlace - originPlace,
             tickOffsetPixel: input.axis === "x" ? tickPixel - originPixel : originPixel - tickPixel,
             getPixelOffset: moveEvent => {
                 const point = this.getComponentLocalPoint(moveEvent);
                 return input.axis === "x" ? point.x - originPixel : originPixel - point.y;
             },
             onMove: newScale => {
-                this.setProperty(input.maximumProperty, minimum + newScale * lengthPixels);
+                const newSpan = newScale * lengthPixels;
+                this.setProperty(input.maximumProperty, input.scale === "logarithmic" ? Math.pow(10, originPlace + newSpan) : minimum + newSpan);
+                this.writeAxisTickCount(input, newSpan);
                 this.board.markDirty(this);
             },
             onEnd: () => {
@@ -1113,6 +1139,17 @@ class ComponentShape extends BaseShape {
             return;
         this.board.pointerLocked = true;
         this.dragStart();
+    }
+
+    // An axis that says how many parts it is cut into rather than how much one part is worth keeps
+    // the part while it is dragged: the numbers stay the same distance apart and there are more or
+    // fewer of them, which is how a ruler stretches. An axis that says the step outright has no
+    // count to write and this leaves it alone.
+    writeAxisTickCount(input, newSpan) {
+        const step = Number(input.stepValue);
+        if (String(input.countProperty ?? "") === "" || !(step > 0))
+            return;
+        this.setProperty(input.countProperty, Math.max(1, Math.min(60, Math.round(newSpan / step))));
     }
 
     // A memory is a parameter of the object like any other, so writing one is writing a property:

@@ -534,7 +534,7 @@
             </tbody>
         </table>
         <h3 id="block-drag-axis-tick"><code>drag-axis-tick</code> — Drag axis tick</h3>
-        <p>Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have.</p>
+        <p>Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have. An axis whose ticks are placed by the logarithm of their value is dragged in decades rather than in values, and one that says how many parts it is cut into rather than how much one part is worth keeps the part and writes the count, so its numbers stay the same distance apart and there are more or fewer of them.</p>
         <p class="block-meta">Capabilities: <code>interaction</code></p>
         <table class="docs-table">
             <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
@@ -543,6 +543,9 @@
                 <tr><td><code>value</code></td><td>number</td><td><code>0</code></td><td></td></tr>
                 <tr><td><code>minimumProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>maximumProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>scale</code></td><td>string</td><td><code>"linear"</code></td><td>linear | logarithmic</td></tr>
+                <tr><td><code>countProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>stepValue</code></td><td>number</td><td><code>0</code></td><td></td></tr>
                 <tr><td><code>originPixel</code></td><td>number</td><td><code>0</code></td><td></td></tr>
                 <tr><td><code>lengthPixels</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
             </tbody>
@@ -721,7 +724,7 @@
         </table>
         <h2 id="components">Components</h2>
         <p>Ready-made assemblies. A node names one as its <code>type</code> and sets these under <code>parameters</code>.</p>
-        <p class="block-index"><a href="#block-calculator">calculator</a> <a href="#block-circular-gauge">circular-gauge</a> <a href="#block-clock">clock</a> <a href="#block-compass">compass</a> <a href="#block-dial-face">dial-face</a> <a href="#block-key-cap">key-cap</a> <a href="#block-label-ring">label-ring</a> <a href="#block-mechanical-wave">mechanical-wave</a> <a href="#block-memory-list">memory-list</a> <a href="#block-memory-trace">memory-trace</a> <a href="#block-mouse-tracker">mouse-tracker</a> <a href="#block-orbit-system">orbit-system</a> <a href="#block-oscilloscope">oscilloscope</a> <a href="#block-piano">piano</a> <a href="#block-piano-keyboard">piano-keyboard</a> <a href="#block-plot-axes">plot-axes</a> <a href="#block-plot-crosshair">plot-crosshair</a> <a href="#block-plot-grid">plot-grid</a> <a href="#block-pointer-hand">pointer-hand</a> <a href="#block-pointer-ring">pointer-ring</a> <a href="#block-rotating-vector">rotating-vector</a> <a href="#block-seven-segment-display">seven-segment-display</a> <a href="#block-speedometer">speedometer</a> <a href="#block-steering-wheel">steering-wheel</a> <a href="#block-thermometer">thermometer</a> <a href="#block-tick-ring">tick-ring</a></p>
+        <p class="block-index"><a href="#block-calculator">calculator</a> <a href="#block-circular-gauge">circular-gauge</a> <a href="#block-clock">clock</a> <a href="#block-compass">compass</a> <a href="#block-dial-face">dial-face</a> <a href="#block-key-cap">key-cap</a> <a href="#block-label-ring">label-ring</a> <a href="#block-mechanical-wave">mechanical-wave</a> <a href="#block-memory-list">memory-list</a> <a href="#block-memory-trace">memory-trace</a> <a href="#block-mouse-tracker">mouse-tracker</a> <a href="#block-orbit-system">orbit-system</a> <a href="#block-oscilloscope">oscilloscope</a> <a href="#block-piano">piano</a> <a href="#block-piano-keyboard">piano-keyboard</a> <a href="#block-plot-axes">plot-axes</a> <a href="#block-plot-crosshair">plot-crosshair</a> <a href="#block-plot-grid">plot-grid</a> <a href="#block-pointer-hand">pointer-hand</a> <a href="#block-pointer-ring">pointer-ring</a> <a href="#block-protractor">protractor</a> <a href="#block-rotating-vector">rotating-vector</a> <a href="#block-ruler">ruler</a> <a href="#block-seven-segment-display">seven-segment-display</a> <a href="#block-speedometer">speedometer</a> <a href="#block-steering-wheel">steering-wheel</a> <a href="#block-thermometer">thermometer</a> <a href="#block-tick-ring">tick-ring</a></p>
         <h3 id="block-calculator"><code>calculator</code> — Calculator</h3>
         <p>Calculator whose working is held by the object itself: four functions on a narrow one, and a scientific pad of powers, roots, trigonometry and logarithms beside the digits once it is wide enough to hold one. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.</p>
         <p class="block-meta">Capabilities: <code>interaction</code> <code>textual</code> <code>reads-model</code> <code>writes-model</code> <code>memory</code></p>
@@ -879,6 +882,7 @@
                 <tr><td><code>valueStep</code></td><td>number</td><td><code>1</code></td><td></td></tr>
                 <tr><td><code>wrapAt</code></td><td>number</td><td><code>12</code></td><td>min 0</td></tr>
                 <tr><td><code>digits</code></td><td>number</td><td><code>0</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>numberFormat</code></td><td>string</td><td><code>"decimal"</code></td><td>decimal | pi</td></tr>
                 <tr><td><code>texts</code></td><td>string</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>fontSize</code></td><td>number</td><td><code>12</code></td><td>min 1</td></tr>
                 <tr><td><code>fontFamily</code></td><td>string</td><td><code>"token:font.family"</code></td><td></td></tr>
@@ -1209,6 +1213,30 @@
                 <tr><td><code>pointers</code></td><td>object</td><td><code>[]</code></td><td></td></tr>
             </tbody>
         </table>
+        <h3 id="block-protractor"><code>protractor</code> — Protractor</h3>
+        <p>A scale bent round a vertex to measure an angle against: a band of degrees numbered at every division, divided ten ways between one number and the next, standing on the arms it is read between. It is laid over whatever is being measured — a vector, a body's path, a drawing — and resting the pointer on it reads the angle from its zero. How far round it goes is its own, so the same object is a half circle, a quadrant or a whole dial, and the numbers the two ends read are its own too, so a protractor can be marked in degrees, in turns, or in whatever the model measures its angles in.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>scale</code> <code>interaction</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>startAngle</code></td><td>number</td><td><code>0</code></td><td>min -360, max 360</td></tr>
+                <tr><td><code>spanAngle</code></td><td>number</td><td><code>180</code></td><td>min 1, max 360</td></tr>
+                <tr><td><code>divisions</code></td><td>number</td><td><code>18</code></td><td>min 1, max 36</td></tr>
+                <tr><td><code>startValue</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>endValue</code></td><td>number</td><td><code>180</code></td><td></td></tr>
+                <tr><td><code>numbers</code></td><td>string</td><td><code>"decimal"</code></td><td>decimal | pi</td></tr>
+                <tr><td><code>unit</code></td><td>string</td><td><code>"º"</code></td><td></td></tr>
+                <tr><td><code>digits</code></td><td>number</td><td><code>0</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>faceColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>scaleColor</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
+                <tr><td><code>scaleLabelColor</code></td><td>colour</td><td><code>"token:axis.labelColor"</code></td><td></td></tr>
+                <tr><td><code>readingColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>hoverX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>hoverY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>hovering</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+            </tbody>
+        </table>
         <h3 id="block-rotating-vector"><code>rotating-vector</code> — Rotating vector</h3>
         <p>Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow reaches the pointer that drags it: one drag both turns it and stretches it, writing the angle and the length back together, so where the reader leaves the tip is where the arrow points and how far it goes.</p>
         <p class="block-meta">Capabilities: <code>angular</code> <code>linear</code> <code>reads-model</code> <code>vector</code> <code>interaction</code> <code>writes-model</code></p>
@@ -1225,6 +1253,28 @@
                 <tr><td><code>circleColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
                 <tr><td><code>circleFillColor</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
                 <tr><td><code>projectionColor</code></td><td>colour</td><td><code>"token:stroke.subtle"</code></td><td></td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-ruler"><code>ruler</code> — Ruler</h3>
+        <p>A scale laid across the board to measure against: a body ruled from one end to the other, cut into as many numbered parts as it is asked for, with the space between each pair of numbers divided ten ways and the halfway mark drawn taller. Resting the pointer on it reads the value it stands at, and pulling one of the numbers stretches the scale under it the way a chart's axis is stretched, so the ruler is set against what it is measuring rather than typed in. Read logarithmically it is a slide rule instead: the decades are evenly spread, numbered 1, 10, 100, and each is divided by the marks for 2 to 9 standing where their logarithms put them.</p>
+        <p class="block-meta">Capabilities: <code>linear</code> <code>scale</code> <code>interaction</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>minimumX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>maximumX</code></td><td>number</td><td><code>10</code></td><td></td></tr>
+                <tr><td><code>scaleType</code></td><td>string</td><td><code>"linear"</code></td><td>linear | logarithmic</td></tr>
+                <tr><td><code>majorTicks</code></td><td>number</td><td><code>10</code></td><td>min 1, max 60</td></tr>
+                <tr><td><code>unit</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>digits</code></td><td>number</td><td><code>2</code></td><td>min 0, max 6</td></tr>
+                <tr><td><code>backgroundColor</code></td><td>colour</td><td><code>"token:surface.default"</code></td><td></td></tr>
+                <tr><td><code>borderColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>scaleColor</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
+                <tr><td><code>scaleLabelColor</code></td><td>colour</td><td><code>"token:axis.labelColor"</code></td><td></td></tr>
+                <tr><td><code>readingColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>hoverValue</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>hoverDepth</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>hovering</code></td><td>number</td><td><code>0</code></td><td></td></tr>
             </tbody>
         </table>
         <h3 id="block-seven-segment-display"><code>seven-segment-display</code> — Seven-segment display</h3>

@@ -95,12 +95,12 @@
         "TableShape":        { "type": "string", "const": "Tabular view of term values across iterations. columns array lists term names. Useful for discrete/recurrence models or when exact numeric output matters." },
         "GaugeShape":        { "type": "string", "const": "Circular gauge whose term value is mapped between minimum and maximum across a dial. Supports automatic scaling and colored value ranges." },
         "MediaShape":        { "type": "string", "const": "Static or animated image, video or audio. Use for background reference images (e.g., a photograph to overlay a model trajectory) or synced/free-running video and audio." },
-        "RulerShape":        { "type": "string", "const": "On-canvas ruler for manual distance measurement. Not connected to calculator terms. Teaching aid." },
-        "ProtractorShape":   { "type": "string", "const": "On-canvas protractor for manual angle measurement. Not connected to calculator terms. Teaching aid." },
+        "RulerShape":        { "type": "string", "const": "Retired. The ruler is now the 'ruler' block object, placed as a ComponentShape; this shape is kept only so models saved before the change still open. Do not write new ones." },
+        "ProtractorShape":   { "type": "string", "const": "Retired. The protractor is now the 'protractor' block object, placed as a ComponentShape; this shape is kept only so models saved before the change still open. Do not write new ones." },
         "MindMapBubbleShape":    { "type": "string", "const": "Speech bubble node for a mind map. properties.text holds its label. Annotation only, not connected to calculator terms. Place it directly on the board (parent = null)." },
         "MindMapRectangleShape": { "type": "string", "const": "Rounded box node for a mind map. properties.text holds its label. Annotation only, not connected to calculator terms. Place it directly on the board (parent = null)." },
         "MindMapCircleShape":    { "type": "string", "const": "Ellipse node for a mind map, usually the central idea. properties.text holds its label. Annotation only, not connected to calculator terms." },
-        "ComponentShape":    { "type": "string", "const": "An object composed from registered building blocks rather than a dedicated shape class: analogue clock, compass, speedometer, circular gauge, rotating vector and orbit system, plus anything built from primitives (circle, line, polygon, arc, text, ...), modifiers (rotate, repeat, ...) and behaviours. properties.definition holds the versioned definition and every component parameter is a flat property beside it, so a variable parameter such as hourVariable holds a term name exactly like BodyShape.xTerm does. Build these with the modellus_blocks_* tools, never by hand-writing node trees." },
+        "ComponentShape":    { "type": "string", "const": "An object composed from registered building blocks rather than a dedicated shape class: analogue clock, compass, speedometer, circular gauge, rotating vector, orbit system, ruler and protractor, plus anything built from primitives (circle, line, polygon, arc, text, ...), modifiers (rotate, repeat, ...) and behaviours. properties.definition holds the versioned definition and every component parameter is a flat property beside it, so a variable parameter such as hourVariable holds a term name exactly like BodyShape.xTerm does. Build these with the modellus_blocks_* tools, never by hand-writing node trees." },
         "MindMapConnectorShape": { "type": "string", "const": "Line or arrow linking two shapes of any type. startShapeId/endShapeId are shape ids; startRelativeX/Y and endRelativeX/Y (0..1 fractions of the attached shape's box) fix the point inside the shape the end is attached to, so it follows and rescales when that shape moves or resizes. Leave an id null and use startX/startY or endX/endY for a free end. startTipType/endTipType choose the ends, routing chooses the path, properties.text places a label in the middle. bendAlong/bendOffset position a draggable bend handle that reshapes the path: for straight routing it kinks the line at an angle, for curved routing it adjusts the curve on top of its automatic bulge, for orthogonal routing only bendAlong applies and slides the elbow." }
       }
     },
@@ -1816,7 +1816,7 @@
 
     "RulerShape": {
       "title": "RulerShape",
-      "description": "A physical ruler overlay used to measure distances on the canvas.",
+      "description": "Retired. A physical ruler overlay used to measure distances on the canvas, replaced by the 'ruler' block object placed as a ComponentShape. Kept so models saved before the change still open.",
       "type": "object",
       "required": ["type", "id", "properties"],
       "additionalProperties": false,
@@ -1854,7 +1854,7 @@
 
     "ProtractorShape": {
       "title": "ProtractorShape",
-      "description": "A physical protractor overlay used to measure angles on the canvas.",
+      "description": "Retired. A physical protractor overlay used to measure angles on the canvas, replaced by the 'protractor' block object placed as a ComponentShape. Kept so models saved before the change still open.",
       "type": "object",
       "required": ["type", "id", "properties"],
       "additionalProperties": false,

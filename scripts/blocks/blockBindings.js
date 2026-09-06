@@ -636,6 +636,13 @@ class BlockBindings {
         const numeric = Number(value);
         if (!Number.isFinite(numeric))
             return `${prefix}${value}${suffix}`;
+        // How a number reads under a tick, when the decimals it wants are not the object's to fix:
+        // "axis" is the chart's own — three decimals, and an exponent once it is too long to read
+        // otherwise, which is what a scale running over decades needs — and "pi" writes it as a
+        // multiple of π, so an instrument marked in radians reads in radians.
+        const style = String(binding.style ?? "");
+        if (style === "pi" || style === "axis")
+            return `${prefix}${formatAxisTickValue(numeric, style === "pi" ? "pi" : "decimal")}${suffix}`;
         const requestedDigits = Number(this.resolve(binding.digits, context, NaN));
         const digits = Number.isFinite(requestedDigits) ? Math.max(0, Math.min(10, Math.floor(requestedDigits))) : 2;
         return `${prefix}${numeric.toFixed(digits)}${suffix}`;

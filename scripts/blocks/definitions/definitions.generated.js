@@ -6061,7 +6061,9 @@ BlockDefinitionLoader.registerAll([
         "preview": {
             "parameters": {
                 "wavefront": false,
-                "samples": 24
+                "samples": 60,
+                "showLine": true,
+                "elementSize": 2.5
             }
         },
         "parameters": [
@@ -10603,6 +10605,974 @@ BlockDefinitionLoader.registerAll([
     },
     {
         "schemaVersion": "1.0.0",
+        "type": "protractor",
+        "category": "component",
+        "displayName": "Protractor",
+        "description": "A scale bent round a vertex to measure an angle against: a band of degrees numbered at every division, divided ten ways between one number and the next, standing on the arms it is read between. It is laid over whatever is being measured — a vector, a body's path, a drawing — and resting the pointer on it reads the angle from its zero. How far round it goes is its own, so the same object is a half circle, a quadrant or a whole dial, and the numbers the two ends read are its own too, so a protractor can be marked in degrees, in turns, or in whatever the model measures its angles in.",
+        "icon": "fa-light fa-angle",
+        "defaultSize": {
+            "width": 300,
+            "height": 170
+        },
+        "tags": [
+            "object",
+            "protractor",
+            "angle",
+            "scale",
+            "measure",
+            "ticks",
+            "interaction"
+        ],
+        "capabilities": [
+            "radial",
+            "angular",
+            "scale",
+            "interaction"
+        ],
+        "parameters": [
+            {
+                "id": "startAngle",
+                "label": "Zero direction",
+                "valueType": "number",
+                "defaultValue": 0,
+                "unit": "deg",
+                "minimum": -360,
+                "maximum": 360,
+                "category": "scale",
+                "description": "Where the zero of the scale points, measured anticlockwise from straight right, so a protractor lying the usual way up reads zero at its right-hand arm."
+            },
+            {
+                "id": "spanAngle",
+                "label": "Span",
+                "valueType": "number",
+                "defaultValue": 180,
+                "unit": "deg",
+                "minimum": 1,
+                "maximum": 360,
+                "category": "scale",
+                "description": "How far round the vertex the scale runs, anticlockwise from the zero direction. A whole turn stands the vertex in the middle of the box and draws the band as a full dial; anything less stands it on the bottom edge, where a protractor's vertex belongs."
+            },
+            {
+                "id": "divisions",
+                "label": "Divisions",
+                "valueType": "number",
+                "defaultValue": 18,
+                "minimum": 1,
+                "maximum": 36,
+                "bindable": false,
+                "category": "scale",
+                "description": "How many numbered parts the scale is cut into — eighteen over a half circle is the ten degrees a protractor is marked in. Each part is divided ten ways by smaller marks of its own."
+            },
+            {
+                "id": "startValue",
+                "label": "First number",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "scale",
+                "description": "What the zero end of the scale reads. With the last number it decides what the protractor is marked in: 0 to 180 measures degrees, 0 to 3.1416 measures the same angles in radians, and 0 to 1 measures them in turns."
+            },
+            {
+                "id": "endValue",
+                "label": "Last number",
+                "valueType": "number",
+                "defaultValue": 180,
+                "category": "scale"
+            },
+            {
+                "id": "numbers",
+                "label": "Numbers",
+                "valueType": "string",
+                "defaultValue": "decimal",
+                "enumValues": [
+                    "decimal",
+                    "pi"
+                ],
+                "enumIcons": [
+                    "fa-light fa-1",
+                    "fa-light fa-pi"
+                ],
+                "category": "display",
+                "description": "How the scale is numbered, and how the angle under the pointer is read: as plain numbers, or as multiples of π. A protractor whose ends read 0 and 3.1416 is a protractor marked in radians, and this is what writes its numbers as π/6, π/3, π/2 rather than as decimals of it."
+            },
+            {
+                "id": "unit",
+                "label": "Unit",
+                "valueType": "string",
+                "defaultValue": "º",
+                "category": "display",
+                "description": "What the angle is measured in, written after the value the pointer reads. The numbers round the band stay bare, the way an axis writes its own."
+            },
+            {
+                "id": "digits",
+                "label": "Decimals",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "display",
+                "minimum": 0,
+                "maximum": 6,
+                "description": "Decimals the angle under the pointer is read to. The numbers round the band follow it only when the divisions need them."
+            },
+            {
+                "id": "faceColor",
+                "label": "Band colour",
+                "valueType": "colour",
+                "defaultValue": "token:surface.default",
+                "category": "style"
+            },
+            {
+                "id": "borderColor",
+                "label": "Border colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.default",
+                "category": "style"
+            },
+            {
+                "id": "scaleColor",
+                "label": "Scale colour",
+                "valueType": "colour",
+                "defaultValue": "token:axis.color",
+                "category": "style"
+            },
+            {
+                "id": "scaleLabelColor",
+                "label": "Number colour",
+                "valueType": "colour",
+                "defaultValue": "token:axis.labelColor",
+                "category": "style"
+            },
+            {
+                "id": "readingColor",
+                "label": "Reading colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.accent",
+                "category": "style",
+                "description": "The arm standing where the pointer is and the plate the angle is read on."
+            },
+            {
+                "id": "hoverX",
+                "label": "Pointer across",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "hoverY",
+                "label": "Pointer up",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "hovering",
+                "label": "Pointer on the protractor",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            }
+        ],
+        "locals": [
+            {
+                "id": "w",
+                "value": {
+                    "parameter": "$width"
+                }
+            },
+            {
+                "id": "h",
+                "value": {
+                    "parameter": "$height"
+                }
+            },
+            {
+                "id": "pad",
+                "value": {
+                    "token": "spacing.medium"
+                }
+            },
+            {
+                "id": "strokeDefault",
+                "value": {
+                    "token": "strokeWidth.default"
+                }
+            },
+            {
+                "id": "axisStroke",
+                "value": {
+                    "token": "axis.strokeWidth"
+                }
+            },
+            {
+                "id": "tickFont",
+                "value": {
+                    "token": "font.size.tick"
+                }
+            },
+            {
+                "id": "labelFont",
+                "value": {
+                    "token": "font.family"
+                }
+            },
+            {
+                "id": "crosshairWidth",
+                "value": {
+                    "token": "crosshair.strokeWidth"
+                }
+            },
+            {
+                "id": "crosshairDash",
+                "value": {
+                    "token": "crosshair.dash"
+                }
+            },
+            {
+                "id": "crosshairOpacity",
+                "value": {
+                    "token": "crosshair.opacity"
+                }
+            },
+            {
+                "id": "badgeOpacity",
+                "value": {
+                    "token": "badge.opacity"
+                }
+            },
+            {
+                "id": "badgePadX",
+                "value": {
+                    "token": "badge.paddingX"
+                }
+            },
+            {
+                "id": "badgePadY",
+                "value": {
+                    "token": "badge.paddingY"
+                }
+            },
+            {
+                "id": "badgeChar",
+                "value": {
+                    "token": "badge.charWidth"
+                }
+            },
+            {
+                "id": "badgeCorner",
+                "value": {
+                    "token": "badge.cornerRadius"
+                }
+            },
+            {
+                "id": "spanUp",
+                "formula": "\\max\\left(1,\\min\\left(360,spanAngle\\right)\\right)"
+            },
+            {
+                "id": "full",
+                "formula": "\\max\\left(0,spanUp-359.5\\right)"
+            },
+            {
+                "id": "notFull",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": 0,
+                    "otherwise": 1
+                }
+            },
+            {
+                "id": "halfW",
+                "formula": "\\frac{w}{2}"
+            },
+            {
+                "id": "halfH",
+                "formula": "\\frac{h}{2}"
+            },
+            {
+                "id": "cx",
+                "formula": "halfW"
+            },
+            {
+                "id": "cy",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": {
+                        "parameter": "halfH"
+                    },
+                    "otherwise": {
+                        "formula": "h-pad"
+                    }
+                }
+            },
+            {
+                "id": "radiusFull",
+                "formula": "\\max\\left(8,\\min\\left(halfW,halfH\\right)-pad\\right)"
+            },
+            {
+                "id": "radiusPart",
+                "formula": "\\max\\left(8,\\min\\left(halfW,h\\right)-pad\\right)"
+            },
+            {
+                "id": "outerR",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": {
+                        "parameter": "radiusFull"
+                    },
+                    "otherwise": {
+                        "parameter": "radiusPart"
+                    }
+                }
+            },
+            {
+                "id": "majorTickLength",
+                "formula": "\\max\\left(4,outerR\\cdot0.1\\right)"
+            },
+            {
+                "id": "minorTickLength",
+                "formula": "majorTickLength\\cdot0.45"
+            },
+            {
+                "id": "labelRadius",
+                "formula": "outerR-majorTickLength-tickFont\\cdot0.9"
+            },
+            {
+                "id": "innerR",
+                "formula": "\\max\\left(4,\\min\\left(outerR\\cdot0.72,labelRadius-tickFont\\cdot0.8\\right)\\right)"
+            },
+            {
+                "id": "endAngle",
+                "formula": "startAngle+spanUp"
+            },
+            {
+                "id": "divisionsUp",
+                "formula": "\\max\\left(1,\\min\\left(36,divisions-\\mod\\left(divisions,1\\right)\\right)\\right)"
+            },
+            {
+                "id": "labelCount",
+                "formula": "divisionsUp+1"
+            },
+            {
+                "id": "ringSpan",
+                "formula": "0-spanUp"
+            },
+            {
+                "id": "tickCount",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": {
+                        "formula": "divisionsUp\\cdot10"
+                    },
+                    "otherwise": {
+                        "formula": "divisionsUp\\cdot10+1"
+                    }
+                }
+            },
+            {
+                "id": "includeEndTick",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": false,
+                    "otherwise": true
+                }
+            },
+            {
+                "id": "valueSpan",
+                "formula": "endValue-startValue"
+            },
+            {
+                "id": "valueStep",
+                "formula": "\\frac{valueSpan}{divisionsUp}"
+            },
+            {
+                "id": "labelDigits",
+                "value": {
+                    "choose": {
+                        "formula": "\\mod\\left(valueStep,1\\right)"
+                    },
+                    "then": {
+                        "parameter": "digits"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "startTurn",
+                "formula": "0-startAngle"
+            },
+            {
+                "id": "endTurn",
+                "formula": "0-endAngle"
+            },
+            {
+                "id": "centerDot",
+                "formula": "\\max\\left(1.5,outerR\\cdot0.02\\right)"
+            },
+            {
+                "id": "playing",
+                "value": {
+                    "parameter": "$playing"
+                }
+            },
+            {
+                "id": "hoveringNow",
+                "formula": "hovering\\cdot\\left(1-playing\\right)"
+            },
+            {
+                "id": "bearing",
+                "fallback": 0,
+                "value": {
+                    "direction": {
+                        "x": {
+                            "parameter": "hoverX"
+                        },
+                        "y": {
+                            "parameter": "hoverY"
+                        }
+                    }
+                }
+            },
+            {
+                "id": "mathAngle",
+                "formula": "90-bearing"
+            },
+            {
+                "id": "rawRelative",
+                "formula": "\\mod\\left(mathAngle-startAngle+720,360\\right)"
+            },
+            {
+                "id": "clampedRelative",
+                "formula": "\\max\\left(0,\\min\\left(spanUp,rawRelative\\right)\\right)"
+            },
+            {
+                "id": "relative",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": {
+                        "parameter": "rawRelative"
+                    },
+                    "otherwise": {
+                        "parameter": "clampedRelative"
+                    }
+                }
+            },
+            {
+                "id": "pointerAngle",
+                "formula": "startAngle+relative"
+            },
+            {
+                "id": "pointerTurn",
+                "formula": "0-pointerAngle"
+            },
+            {
+                "id": "pointerRadians",
+                "formula": "\\frac{\\left(pointerAngle\\cdot\\pi\\right)}{180}"
+            },
+            {
+                "id": "reading",
+                "formula": "startValue+\\frac{\\left(relative\\cdot valueSpan\\right)}{spanUp}"
+            },
+            {
+                "id": "readingDecimalText",
+                "value": {
+                    "format": {
+                        "parameter": "reading"
+                    },
+                    "digits": {
+                        "parameter": "digits"
+                    }
+                }
+            },
+            {
+                "id": "readingPiText",
+                "value": {
+                    "format": {
+                        "parameter": "reading"
+                    },
+                    "style": "pi"
+                }
+            },
+            {
+                "id": "readingText",
+                "value": {
+                    "choose": {
+                        "parameter": "numbers"
+                    },
+                    "equals": "pi",
+                    "then": {
+                        "parameter": "readingPiText"
+                    },
+                    "otherwise": {
+                        "parameter": "readingDecimalText"
+                    }
+                }
+            },
+            {
+                "id": "badgeRadius",
+                "formula": "\\frac{\\left(innerR+labelRadius\\right)}{2}"
+            },
+            {
+                "id": "badgeCenterX",
+                "formula": "cx+badgeRadius\\cdot\\cos\\left(pointerRadians\\right)"
+            },
+            {
+                "id": "badgeCenterY",
+                "formula": "cy-badgeRadius\\cdot\\sin\\left(pointerRadians\\right)"
+            },
+            {
+                "id": "badgeWidth",
+                "formula": "tickFont\\cdot badgeChar\\cdot\\left(5+digits\\right)+badgePadX\\cdot2"
+            },
+            {
+                "id": "badgeHeight",
+                "formula": "tickFont+badgePadY\\cdot2"
+            },
+            {
+                "id": "badgeLeft",
+                "formula": "badgeCenterX-\\frac{badgeWidth}{2}"
+            },
+            {
+                "id": "badgeTop",
+                "formula": "badgeCenterY-\\frac{badgeHeight}{2}"
+            },
+            {
+                "id": "badgeTextColor",
+                "value": {
+                    "contrast": {
+                        "parameter": "readingColor"
+                    }
+                }
+            }
+        ],
+        "root": {
+            "id": "protractor",
+            "type": "group",
+            "children": [
+                {
+                    "id": "band",
+                    "type": "arc",
+                    "when": {
+                        "parameter": "notFull"
+                    },
+                    "bindings": {
+                        "centerX": {
+                            "parameter": "cx"
+                        },
+                        "centerY": {
+                            "parameter": "cy"
+                        },
+                        "radius": {
+                            "parameter": "outerR"
+                        },
+                        "innerRadius": {
+                            "parameter": "innerR"
+                        },
+                        "startAngle": {
+                            "parameter": "endAngle"
+                        },
+                        "endAngle": {
+                            "parameter": "startAngle"
+                        },
+                        "fill": {
+                            "parameter": "faceColor"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeDefault"
+                        }
+                    }
+                },
+                {
+                    "id": "band-full",
+                    "type": "ring",
+                    "when": {
+                        "parameter": "full"
+                    },
+                    "bindings": {
+                        "centerX": {
+                            "parameter": "cx"
+                        },
+                        "centerY": {
+                            "parameter": "cy"
+                        },
+                        "innerRadius": {
+                            "parameter": "innerR"
+                        },
+                        "outerRadius": {
+                            "parameter": "outerR"
+                        },
+                        "fill": {
+                            "parameter": "faceColor"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeDefault"
+                        }
+                    }
+                },
+                {
+                    "id": "arm-start",
+                    "type": "line",
+                    "when": {
+                        "parameter": "notFull"
+                    },
+                    "bindings": {
+                        "x1": {
+                            "parameter": "cx"
+                        },
+                        "y1": {
+                            "parameter": "cy"
+                        },
+                        "x2": {
+                            "formula": "cx+innerR"
+                        },
+                        "y2": {
+                            "parameter": "cy"
+                        },
+                        "stroke": {
+                            "parameter": "scaleColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeDefault"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "rotate",
+                            "angle": {
+                                "parameter": "startTurn"
+                            },
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "arm-end",
+                    "type": "line",
+                    "when": {
+                        "parameter": "notFull"
+                    },
+                    "bindings": {
+                        "x1": {
+                            "parameter": "cx"
+                        },
+                        "y1": {
+                            "parameter": "cy"
+                        },
+                        "x2": {
+                            "formula": "cx+innerR"
+                        },
+                        "y2": {
+                            "parameter": "cy"
+                        },
+                        "stroke": {
+                            "parameter": "scaleColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeDefault"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "rotate",
+                            "angle": {
+                                "parameter": "endTurn"
+                            },
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "vertex",
+                    "type": "circle",
+                    "bindings": {
+                        "centerX": {
+                            "parameter": "cx"
+                        },
+                        "centerY": {
+                            "parameter": "cy"
+                        },
+                        "radius": {
+                            "parameter": "centerDot"
+                        },
+                        "fill": {
+                            "parameter": "scaleColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none"
+                    }
+                },
+                {
+                    "id": "ticks",
+                    "type": "tick-ring",
+                    "parameters": {
+                        "centerX": {
+                            "parameter": "cx"
+                        },
+                        "centerY": {
+                            "parameter": "cy"
+                        },
+                        "radius": {
+                            "parameter": "outerR"
+                        },
+                        "count": {
+                            "parameter": "tickCount"
+                        },
+                        "startAngle": {
+                            "parameter": "startAngle"
+                        },
+                        "spanAngle": {
+                            "parameter": "ringSpan"
+                        },
+                        "includeEnd": {
+                            "parameter": "includeEndTick"
+                        },
+                        "length": {
+                            "parameter": "minorTickLength"
+                        },
+                        "width": {
+                            "parameter": "strokeDefault"
+                        },
+                        "color": {
+                            "parameter": "scaleColor"
+                        },
+                        "majorEvery": 10,
+                        "majorLength": {
+                            "parameter": "majorTickLength"
+                        },
+                        "majorWidth": {
+                            "parameter": "axisStroke"
+                        }
+                    }
+                },
+                {
+                    "id": "numbers",
+                    "type": "label-ring",
+                    "parameters": {
+                        "centerX": {
+                            "parameter": "cx"
+                        },
+                        "centerY": {
+                            "parameter": "cy"
+                        },
+                        "radius": {
+                            "parameter": "labelRadius"
+                        },
+                        "count": {
+                            "parameter": "labelCount"
+                        },
+                        "startAngle": {
+                            "parameter": "startAngle"
+                        },
+                        "spanAngle": {
+                            "parameter": "ringSpan"
+                        },
+                        "includeEnd": true,
+                        "startValue": {
+                            "parameter": "startValue"
+                        },
+                        "valueStep": {
+                            "parameter": "valueStep"
+                        },
+                        "wrapAt": 0,
+                        "digits": {
+                            "parameter": "labelDigits"
+                        },
+                        "numberFormat": {
+                            "parameter": "numbers"
+                        },
+                        "fontSize": {
+                            "parameter": "tickFont"
+                        },
+                        "fontFamily": {
+                            "parameter": "labelFont"
+                        },
+                        "color": {
+                            "parameter": "scaleLabelColor"
+                        }
+                    }
+                },
+                {
+                    "id": "crosshair",
+                    "type": "line",
+                    "when": {
+                        "parameter": "hoveringNow"
+                    },
+                    "bindings": {
+                        "x1": {
+                            "parameter": "cx"
+                        },
+                        "y1": {
+                            "parameter": "cy"
+                        },
+                        "x2": {
+                            "formula": "cx+outerR"
+                        },
+                        "y2": {
+                            "parameter": "cy"
+                        },
+                        "stroke": {
+                            "parameter": "readingColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "crosshairWidth"
+                        },
+                        "strokeDash": {
+                            "parameter": "crosshairDash"
+                        },
+                        "opacity": {
+                            "parameter": "crosshairOpacity"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "rotate",
+                            "angle": {
+                                "parameter": "pointerTurn"
+                            },
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "reading-plate",
+                    "type": "rect",
+                    "when": {
+                        "parameter": "hoveringNow"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "badgeLeft"
+                        },
+                        "y": {
+                            "parameter": "badgeTop"
+                        },
+                        "width": {
+                            "parameter": "badgeWidth"
+                        },
+                        "height": {
+                            "parameter": "badgeHeight"
+                        },
+                        "cornerRadius": {
+                            "parameter": "badgeCorner"
+                        },
+                        "fill": {
+                            "parameter": "readingColor"
+                        },
+                        "opacity": {
+                            "parameter": "badgeOpacity"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none"
+                    }
+                },
+                {
+                    "id": "reading",
+                    "type": "text",
+                    "when": {
+                        "parameter": "hoveringNow"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "badgeCenterX"
+                        },
+                        "y": {
+                            "parameter": "badgeCenterY"
+                        },
+                        "text": {
+                            "parameter": "readingText"
+                        },
+                        "unit": {
+                            "parameter": "unit"
+                        },
+                        "fontSize": {
+                            "parameter": "tickFont"
+                        },
+                        "fill": {
+                            "parameter": "badgeTextColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none",
+                        "textAnchor": "middle",
+                        "baseline": "central"
+                    }
+                },
+                {
+                    "id": "scale-grab",
+                    "type": "rect",
+                    "bindings": {
+                        "width": {
+                            "parameter": "w"
+                        },
+                        "height": {
+                            "parameter": "h"
+                        }
+                    },
+                    "properties": {
+                        "x": 0,
+                        "y": 0,
+                        "fill": "none",
+                        "stroke": "none"
+                    },
+                    "behaviours": [
+                        {
+                            "type": "follow-pointer",
+                            "xParameter": "hoverX",
+                            "yParameter": "hoverY",
+                            "activeParameter": "hovering",
+                            "originX": {
+                                "parameter": "cx"
+                            },
+                            "originY": {
+                                "parameter": "cy"
+                            },
+                            "scaleX": 1,
+                            "scaleY": -1
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
+        "schemaVersion": "1.0.0",
         "type": "rotating-vector",
         "category": "component",
         "displayName": "Rotating vector",
@@ -11040,6 +12010,1269 @@ BlockDefinitionLoader.registerAll([
                         "radius": 2.5,
                         "stroke": "none"
                     }
+                }
+            ]
+        }
+    },
+    {
+        "schemaVersion": "1.0.0",
+        "type": "ruler",
+        "category": "component",
+        "displayName": "Ruler",
+        "description": "A scale laid across the board to measure against: a body ruled from one end to the other, cut into as many numbered parts as it is asked for, with the space between each pair of numbers divided ten ways and the halfway mark drawn taller. Resting the pointer on it reads the value it stands at, and pulling one of the numbers stretches the scale under it the way a chart's axis is stretched, so the ruler is set against what it is measuring rather than typed in. Read logarithmically it is a slide rule instead: the decades are evenly spread, numbered 1, 10, 100, and each is divided by the marks for 2 to 9 standing where their logarithms put them.",
+        "icon": "fa-light fa-ruler",
+        "defaultSize": {
+            "width": 320,
+            "height": 64
+        },
+        "tags": [
+            "object",
+            "ruler",
+            "scale",
+            "measure",
+            "ticks",
+            "axis",
+            "logarithmic",
+            "interaction"
+        ],
+        "capabilities": [
+            "linear",
+            "scale",
+            "interaction"
+        ],
+        "parameters": [
+            {
+                "id": "minimumX",
+                "label": "Minimum",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "scale",
+                "description": "What the left end of the scale reads. It is held still while a number is pulled, so the ruler stretches from that end. A logarithmic ruler starts above zero, since nothing below it has a logarithm."
+            },
+            {
+                "id": "maximumX",
+                "label": "Maximum",
+                "valueType": "number",
+                "defaultValue": 10,
+                "category": "scale"
+            },
+            {
+                "id": "scaleType",
+                "label": "Scale",
+                "valueType": "string",
+                "defaultValue": "linear",
+                "enumValues": [
+                    "linear",
+                    "logarithmic"
+                ],
+                "enumIcons": [
+                    "fa-light fa-ruler-horizontal",
+                    "fa-light fa-chart-line-up"
+                ],
+                "category": "scale",
+                "description": "Whether a value stands where its size puts it or where its logarithm does. Read logarithmically, every decade takes the same width and is numbered at 1, 10, 100 and so on, with the marks for 2 to 9 crowding towards the top of each — the scale a slide rule is read on."
+            },
+            {
+                "id": "majorTicks",
+                "label": "Divisions",
+                "valueType": "number",
+                "defaultValue": 10,
+                "minimum": 1,
+                "maximum": 60,
+                "bindable": false,
+                "category": "scale",
+                "description": "How many numbered parts the scale is cut into, counted from the minimum. Each part is divided ten ways by smaller marks of its own, with the halfway one drawn taller. Pulling a number holds the part it stands for and writes the count, so stretching the ruler gives more of the same divisions rather than the same number of bigger ones. A logarithmic ruler is cut into decades instead, so it numbers itself and this is left alone."
+            },
+            {
+                "id": "unit",
+                "label": "Unit",
+                "valueType": "string",
+                "defaultValue": "",
+                "category": "display",
+                "description": "What the ruler measures in, written after the value the pointer reads. The numbers along the scale stay bare, the way an axis writes its own."
+            },
+            {
+                "id": "digits",
+                "label": "Decimals",
+                "valueType": "number",
+                "defaultValue": 2,
+                "category": "display",
+                "minimum": 0,
+                "maximum": 6,
+                "description": "Decimals the value under the pointer is read to. The numbers along the scale follow it only when the divisions need them: a ruler cut into whole units is numbered in whole units however finely it reads. A logarithmic ruler reads to the decimals a scale running over decades needs rather than to this."
+            },
+            {
+                "id": "backgroundColor",
+                "label": "Body colour",
+                "valueType": "colour",
+                "defaultValue": "token:surface.default",
+                "category": "style"
+            },
+            {
+                "id": "borderColor",
+                "label": "Border colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.default",
+                "category": "style"
+            },
+            {
+                "id": "scaleColor",
+                "label": "Scale colour",
+                "valueType": "colour",
+                "defaultValue": "token:axis.color",
+                "category": "style",
+                "description": "The marks along the scale. They are drawn to the measurements the board's own axes are drawn to, so a ruler beside a chart is read the same way."
+            },
+            {
+                "id": "scaleLabelColor",
+                "label": "Number colour",
+                "valueType": "colour",
+                "defaultValue": "token:axis.labelColor",
+                "category": "style"
+            },
+            {
+                "id": "readingColor",
+                "label": "Reading colour",
+                "valueType": "colour",
+                "defaultValue": "token:stroke.accent",
+                "category": "style",
+                "description": "The line under the pointer and the plate the value is read on."
+            },
+            {
+                "id": "hoverValue",
+                "label": "Pointer value",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "hoverDepth",
+                "label": "Pointer depth",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            },
+            {
+                "id": "hovering",
+                "label": "Pointer on the scale",
+                "valueType": "number",
+                "defaultValue": 0,
+                "category": "state",
+                "userEditable": false,
+                "agentAccessible": false
+            }
+        ],
+        "locals": [
+            {
+                "id": "w",
+                "value": {
+                    "parameter": "$width"
+                }
+            },
+            {
+                "id": "h",
+                "value": {
+                    "parameter": "$height"
+                }
+            },
+            {
+                "id": "pad",
+                "value": {
+                    "token": "spacing.medium"
+                }
+            },
+            {
+                "id": "hairline",
+                "value": {
+                    "token": "strokeWidth.hairline"
+                }
+            },
+            {
+                "id": "strokeDefault",
+                "value": {
+                    "token": "strokeWidth.default"
+                }
+            },
+            {
+                "id": "axisStroke",
+                "value": {
+                    "token": "axis.strokeWidth"
+                }
+            },
+            {
+                "id": "minorOpacity",
+                "value": {
+                    "token": "axis.minorOpacity"
+                }
+            },
+            {
+                "id": "middleOpacity",
+                "value": {
+                    "token": "opacity.ghost"
+                }
+            },
+            {
+                "id": "tickFont",
+                "value": {
+                    "token": "font.size.tick"
+                }
+            },
+            {
+                "id": "crosshairWidth",
+                "value": {
+                    "token": "crosshair.strokeWidth"
+                }
+            },
+            {
+                "id": "crosshairDash",
+                "value": {
+                    "token": "crosshair.dash"
+                }
+            },
+            {
+                "id": "crosshairOpacity",
+                "value": {
+                    "token": "crosshair.opacity"
+                }
+            },
+            {
+                "id": "badgeOpacity",
+                "value": {
+                    "token": "badge.opacity"
+                }
+            },
+            {
+                "id": "badgePadX",
+                "value": {
+                    "token": "badge.paddingX"
+                }
+            },
+            {
+                "id": "badgePadY",
+                "value": {
+                    "token": "badge.paddingY"
+                }
+            },
+            {
+                "id": "badgeChar",
+                "value": {
+                    "token": "badge.charWidth"
+                }
+            },
+            {
+                "id": "badgeCorner",
+                "value": {
+                    "token": "badge.cornerRadius"
+                }
+            },
+            {
+                "id": "bodyW",
+                "formula": "\\max\\left(1,w-2\\cdot pad\\right)"
+            },
+            {
+                "id": "bodyH",
+                "formula": "\\max\\left(1,h-2\\cdot pad\\right)"
+            },
+            {
+                "id": "bodyRight",
+                "formula": "pad+bodyW"
+            },
+            {
+                "id": "bodyBottom",
+                "formula": "pad+bodyH"
+            },
+            {
+                "id": "edge",
+                "formula": "\\min\\left(18,\\max\\left(4,\\frac{bodyW}{6}\\right)\\right)"
+            },
+            {
+                "id": "left",
+                "formula": "pad+edge"
+            },
+            {
+                "id": "usable",
+                "formula": "\\max\\left(1,bodyW-2\\cdot edge\\right)"
+            },
+            {
+                "id": "labelBand",
+                "formula": "tickFont\\cdot1.5"
+            },
+            {
+                "id": "tickTop",
+                "formula": "pad+hairline"
+            },
+            {
+                "id": "majorLength",
+                "formula": "\\max\\left(6,\\min\\left(bodyBottom-labelBand-tickTop-2,tickFont\\cdot3.2\\right)\\right)"
+            },
+            {
+                "id": "scaleBottom",
+                "formula": "tickTop+majorLength"
+            },
+            {
+                "id": "middleLength",
+                "formula": "majorLength\\cdot0.83"
+            },
+            {
+                "id": "minorLength",
+                "formula": "majorLength\\cdot0.65"
+            },
+            {
+                "id": "labelBaseline",
+                "formula": "scaleBottom+tickFont\\cdot1.05"
+            },
+            {
+                "id": "grabTop",
+                "formula": "scaleBottom"
+            },
+            {
+                "id": "grabHeight",
+                "formula": "\\max\\left(tickFont,labelBand\\right)"
+            },
+            {
+                "id": "isLog",
+                "value": {
+                    "choose": {
+                        "parameter": "scaleType"
+                    },
+                    "equals": "logarithmic",
+                    "then": 1,
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "notLog",
+                "value": {
+                    "choose": {
+                        "parameter": "isLog"
+                    },
+                    "then": 0,
+                    "otherwise": 1
+                }
+            },
+            {
+                "id": "span",
+                "formula": "maximumX-minimumX"
+            },
+            {
+                "id": "spanUp",
+                "formula": "\\max\\left(0,span\\right)"
+            },
+            {
+                "id": "pixelsPerValue",
+                "value": {
+                    "choose": {
+                        "parameter": "spanUp"
+                    },
+                    "then": {
+                        "formula": "\\frac{usable}{spanUp}"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "linearOrigin",
+                "formula": "left-minimumX\\cdot pixelsPerValue"
+            },
+            {
+                "id": "divisions",
+                "formula": "\\max\\left(1,\\min\\left(60,majorTicks-\\mod\\left(majorTicks,1\\right)\\right)\\right)"
+            },
+            {
+                "id": "linearStep",
+                "formula": "\\frac{spanUp}{divisions}"
+            },
+            {
+                "id": "linearMajorCount",
+                "formula": "divisions+1"
+            },
+            {
+                "id": "linearSpacing",
+                "formula": "pixelsPerValue\\cdot linearStep"
+            },
+            {
+                "id": "linearMinorSpacing",
+                "formula": "\\frac{linearSpacing}{10}"
+            },
+            {
+                "id": "linearMinorCount",
+                "formula": "divisions\\cdot10+1"
+            },
+            {
+                "id": "linearMiddleStart",
+                "formula": "left+\\frac{linearSpacing}{2}"
+            },
+            {
+                "id": "tickDigits",
+                "value": {
+                    "choose": {
+                        "formula": "\\mod\\left(linearStep,1\\right)"
+                    },
+                    "then": {
+                        "parameter": "digits"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
+                "id": "grabHalf",
+                "formula": "\\min\\left(9,\\max\\left(1,\\frac{linearSpacing}{2}\\right)\\right)"
+            },
+            {
+                "id": "grabLeft",
+                "formula": "left-grabHalf"
+            },
+            {
+                "id": "grabWidth",
+                "formula": "grabHalf\\cdot2"
+            },
+            {
+                "id": "safeMin",
+                "formula": "\\max\\left(0.000000000001,minimumX\\right)"
+            },
+            {
+                "id": "safeMax",
+                "formula": "\\max\\left(safeMin\\cdot10,maximumX\\right)"
+            },
+            {
+                "id": "logMinRaw",
+                "formula": "\\log\\left(safeMin\\right)"
+            },
+            {
+                "id": "logMaxRaw",
+                "formula": "\\log\\left(safeMax\\right)"
+            },
+            {
+                "id": "logSpan",
+                "formula": "\\max\\left(0.0001,logMaxRaw-logMinRaw\\right)"
+            },
+            {
+                "id": "pxPerDecade",
+                "formula": "\\frac{usable}{logSpan}"
+            },
+            {
+                "id": "firstDecade",
+                "formula": "\\left\\lceil logMinRaw\\right\\rceil"
+            },
+            {
+                "id": "lastDecade",
+                "formula": "\\left\\lfloor logMaxRaw\\right\\rfloor"
+            },
+            {
+                "id": "decadeCount",
+                "formula": "\\max\\left(1,\\min\\left(12,lastDecade-firstDecade+1\\right)\\right)"
+            },
+            {
+                "id": "decadeStart",
+                "formula": "left+\\left(firstDecade-logMinRaw\\right)\\cdot pxPerDecade"
+            },
+            {
+                "id": "logMinorCount",
+                "formula": "\\left(decadeCount+1\\right)\\cdot8"
+            },
+            {
+                "id": "logGrabHalf",
+                "formula": "\\min\\left(9,\\max\\left(1,\\frac{pxPerDecade}{2}\\right)\\right)"
+            },
+            {
+                "id": "logGrabLeft",
+                "formula": "decadeStart-logGrabHalf"
+            },
+            {
+                "id": "logGrabWidth",
+                "formula": "logGrabHalf\\cdot2"
+            },
+            {
+                "id": "playing",
+                "value": {
+                    "parameter": "$playing"
+                }
+            },
+            {
+                "id": "hoveringNow",
+                "formula": "hovering\\cdot\\left(1-playing\\right)"
+            },
+            {
+                "id": "originPixel",
+                "value": {
+                    "choose": {
+                        "parameter": "isLog"
+                    },
+                    "then": {
+                        "parameter": "left"
+                    },
+                    "otherwise": {
+                        "parameter": "linearOrigin"
+                    }
+                }
+            },
+            {
+                "id": "pixelsPerUnit",
+                "value": {
+                    "choose": {
+                        "parameter": "isLog"
+                    },
+                    "then": {
+                        "parameter": "pxPerDecade"
+                    },
+                    "otherwise": {
+                        "parameter": "pixelsPerValue"
+                    }
+                }
+            },
+            {
+                "id": "hoverMinimum",
+                "value": {
+                    "choose": {
+                        "parameter": "isLog"
+                    },
+                    "then": 0,
+                    "otherwise": {
+                        "parameter": "minimumX"
+                    }
+                }
+            },
+            {
+                "id": "hoverMaximum",
+                "value": {
+                    "choose": {
+                        "parameter": "isLog"
+                    },
+                    "then": {
+                        "parameter": "logSpan"
+                    },
+                    "otherwise": {
+                        "parameter": "maximumX"
+                    }
+                }
+            },
+            {
+                "id": "hoverPixel",
+                "formula": "originPixel+hoverValue\\cdot pixelsPerUnit"
+            },
+            {
+                "id": "logReading",
+                "formula": "\\left(10\\right)^{\\left(logMinRaw+hoverValue\\right)}"
+            },
+            {
+                "id": "readingValue",
+                "value": {
+                    "choose": {
+                        "parameter": "isLog"
+                    },
+                    "then": {
+                        "parameter": "logReading"
+                    },
+                    "otherwise": {
+                        "parameter": "hoverValue"
+                    }
+                }
+            },
+            {
+                "id": "readingDecimalText",
+                "value": {
+                    "format": {
+                        "parameter": "readingValue"
+                    },
+                    "digits": {
+                        "parameter": "digits"
+                    }
+                }
+            },
+            {
+                "id": "readingAxisText",
+                "value": {
+                    "format": {
+                        "parameter": "readingValue"
+                    },
+                    "style": "axis"
+                }
+            },
+            {
+                "id": "readingText",
+                "value": {
+                    "choose": {
+                        "parameter": "isLog"
+                    },
+                    "then": {
+                        "parameter": "readingAxisText"
+                    },
+                    "otherwise": {
+                        "parameter": "readingDecimalText"
+                    }
+                }
+            },
+            {
+                "id": "badgeWidth",
+                "formula": "tickFont\\cdot badgeChar\\cdot\\left(5+digits\\right)+badgePadX\\cdot2"
+            },
+            {
+                "id": "badgeHeight",
+                "formula": "tickFont+badgePadY\\cdot2"
+            },
+            {
+                "id": "badgeCenterX",
+                "formula": "\\max\\left(pad+\\frac{badgeWidth}{2},\\min\\left(bodyRight-\\frac{badgeWidth}{2},hoverPixel\\right)\\right)"
+            },
+            {
+                "id": "badgeLeft",
+                "formula": "badgeCenterX-\\frac{badgeWidth}{2}"
+            },
+            {
+                "id": "badgeCenterY",
+                "formula": "labelBaseline-tickFont\\cdot0.35"
+            },
+            {
+                "id": "badgeTop",
+                "formula": "badgeCenterY-\\frac{badgeHeight}{2}"
+            },
+            {
+                "id": "badgeTextColor",
+                "value": {
+                    "contrast": {
+                        "parameter": "readingColor"
+                    }
+                }
+            }
+        ],
+        "root": {
+            "id": "ruler",
+            "type": "group",
+            "children": [
+                {
+                    "id": "body",
+                    "type": "rect",
+                    "bindings": {
+                        "x": {
+                            "parameter": "pad"
+                        },
+                        "y": {
+                            "parameter": "pad"
+                        },
+                        "width": {
+                            "parameter": "bodyW"
+                        },
+                        "height": {
+                            "parameter": "bodyH"
+                        },
+                        "fill": {
+                            "parameter": "backgroundColor"
+                        },
+                        "stroke": {
+                            "parameter": "borderColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeDefault"
+                        }
+                    }
+                },
+                {
+                    "id": "scale",
+                    "type": "clip-box",
+                    "bindings": {
+                        "x": {
+                            "formula": "left-hairline"
+                        },
+                        "y": {
+                            "parameter": "pad"
+                        },
+                        "width": {
+                            "formula": "usable+hairline\\cdot2"
+                        },
+                        "height": {
+                            "parameter": "bodyH"
+                        }
+                    },
+                    "children": [
+                        {
+                            "id": "minor-tick",
+                            "type": "line",
+                            "when": {
+                                "parameter": "notLog"
+                            },
+                            "bindings": {
+                                "x1": {
+                                    "parameter": "left"
+                                },
+                                "y1": {
+                                    "parameter": "tickTop"
+                                },
+                                "x2": {
+                                    "parameter": "left"
+                                },
+                                "y2": {
+                                    "formula": "tickTop+minorLength"
+                                },
+                                "stroke": {
+                                    "parameter": "scaleColor"
+                                },
+                                "strokeWidth": {
+                                    "parameter": "strokeDefault"
+                                },
+                                "opacity": {
+                                    "parameter": "minorOpacity"
+                                }
+                            },
+                            "properties": {
+                                "strokeLinecap": "butt"
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "linearMinorCount"
+                                    },
+                                    "dx": {
+                                        "parameter": "linearMinorSpacing"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "middle-tick",
+                            "type": "line",
+                            "when": {
+                                "parameter": "notLog"
+                            },
+                            "bindings": {
+                                "x1": {
+                                    "parameter": "linearMiddleStart"
+                                },
+                                "y1": {
+                                    "parameter": "tickTop"
+                                },
+                                "x2": {
+                                    "parameter": "linearMiddleStart"
+                                },
+                                "y2": {
+                                    "formula": "tickTop+middleLength"
+                                },
+                                "stroke": {
+                                    "parameter": "scaleColor"
+                                },
+                                "strokeWidth": {
+                                    "parameter": "strokeDefault"
+                                },
+                                "opacity": {
+                                    "parameter": "middleOpacity"
+                                }
+                            },
+                            "properties": {
+                                "strokeLinecap": "butt"
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "divisions"
+                                    },
+                                    "dx": {
+                                        "parameter": "linearSpacing"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "major-tick",
+                            "type": "line",
+                            "when": {
+                                "parameter": "notLog"
+                            },
+                            "bindings": {
+                                "x1": {
+                                    "parameter": "left"
+                                },
+                                "y1": {
+                                    "parameter": "tickTop"
+                                },
+                                "x2": {
+                                    "parameter": "left"
+                                },
+                                "y2": {
+                                    "parameter": "scaleBottom"
+                                },
+                                "stroke": {
+                                    "parameter": "scaleColor"
+                                },
+                                "strokeWidth": {
+                                    "parameter": "axisStroke"
+                                }
+                            },
+                            "properties": {
+                                "strokeLinecap": "butt"
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "linearMajorCount"
+                                    },
+                                    "dx": {
+                                        "parameter": "linearSpacing"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "log-minor-tick",
+                            "type": "line",
+                            "when": {
+                                "parameter": "isLog"
+                            },
+                            "bindings": {
+                                "x1": {
+                                    "formula": "\\max\\left(left-2,\\min\\left(left+usable+2,left+\\left(firstDecade-1+\\left\\lfloor\\frac{i}{8}\\right\\rfloor+\\log\\left(2+i-8\\cdot\\left\\lfloor\\frac{i}{8}\\right\\rfloor\\right)-logMinRaw\\right)\\cdot pxPerDecade\\right)\\right)",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "y1": {
+                                    "parameter": "tickTop"
+                                },
+                                "x2": {
+                                    "formula": "\\max\\left(left-2,\\min\\left(left+usable+2,left+\\left(firstDecade-1+\\left\\lfloor\\frac{i}{8}\\right\\rfloor+\\log\\left(2+i-8\\cdot\\left\\lfloor\\frac{i}{8}\\right\\rfloor\\right)-logMinRaw\\right)\\cdot pxPerDecade\\right)\\right)",
+                                    "inputs": {
+                                        "i": {
+                                            "parameter": "$index"
+                                        }
+                                    }
+                                },
+                                "y2": {
+                                    "formula": "tickTop+minorLength"
+                                },
+                                "stroke": {
+                                    "parameter": "scaleColor"
+                                },
+                                "strokeWidth": {
+                                    "parameter": "strokeDefault"
+                                },
+                                "opacity": {
+                                    "parameter": "minorOpacity"
+                                }
+                            },
+                            "properties": {
+                                "strokeLinecap": "butt"
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "logMinorCount"
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "id": "log-major-tick",
+                            "type": "line",
+                            "when": {
+                                "parameter": "isLog"
+                            },
+                            "bindings": {
+                                "x1": {
+                                    "parameter": "decadeStart"
+                                },
+                                "y1": {
+                                    "parameter": "tickTop"
+                                },
+                                "x2": {
+                                    "parameter": "decadeStart"
+                                },
+                                "y2": {
+                                    "parameter": "scaleBottom"
+                                },
+                                "stroke": {
+                                    "parameter": "scaleColor"
+                                },
+                                "strokeWidth": {
+                                    "parameter": "axisStroke"
+                                }
+                            },
+                            "properties": {
+                                "strokeLinecap": "butt"
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "decadeCount"
+                                    },
+                                    "dx": {
+                                        "parameter": "pxPerDecade"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "id": "tick-label",
+                    "type": "text",
+                    "when": {
+                        "parameter": "notLog"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "left"
+                        },
+                        "y": {
+                            "parameter": "labelBaseline"
+                        },
+                        "text": {
+                            "format": {
+                                "formula": "minimumX+linearStep\\cdot i",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "digits": {
+                                "parameter": "tickDigits"
+                            }
+                        },
+                        "fontSize": {
+                            "parameter": "tickFont"
+                        },
+                        "fill": {
+                            "parameter": "scaleLabelColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none",
+                        "textAnchor": "middle",
+                        "baseline": "auto"
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "linearMajorCount"
+                            },
+                            "dx": {
+                                "parameter": "linearSpacing"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "log-tick-label",
+                    "type": "text",
+                    "when": {
+                        "parameter": "isLog"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "decadeStart"
+                        },
+                        "y": {
+                            "parameter": "labelBaseline"
+                        },
+                        "text": {
+                            "format": {
+                                "formula": "\\left(10\\right)^{\\left(firstDecade+i\\right)}",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "style": "axis"
+                        },
+                        "fontSize": {
+                            "parameter": "tickFont"
+                        },
+                        "fill": {
+                            "parameter": "scaleLabelColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none",
+                        "textAnchor": "middle",
+                        "baseline": "auto"
+                    },
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "decadeCount"
+                            },
+                            "dx": {
+                                "parameter": "pxPerDecade"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "crosshair",
+                    "type": "line",
+                    "when": {
+                        "parameter": "hoveringNow"
+                    },
+                    "bindings": {
+                        "x1": {
+                            "parameter": "hoverPixel"
+                        },
+                        "y1": {
+                            "parameter": "tickTop"
+                        },
+                        "x2": {
+                            "parameter": "hoverPixel"
+                        },
+                        "y2": {
+                            "parameter": "bodyBottom"
+                        },
+                        "stroke": {
+                            "parameter": "readingColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "crosshairWidth"
+                        },
+                        "strokeDash": {
+                            "parameter": "crosshairDash"
+                        },
+                        "opacity": {
+                            "parameter": "crosshairOpacity"
+                        }
+                    }
+                },
+                {
+                    "id": "reading-plate",
+                    "type": "rect",
+                    "when": {
+                        "parameter": "hoveringNow"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "badgeLeft"
+                        },
+                        "y": {
+                            "parameter": "badgeTop"
+                        },
+                        "width": {
+                            "parameter": "badgeWidth"
+                        },
+                        "height": {
+                            "parameter": "badgeHeight"
+                        },
+                        "cornerRadius": {
+                            "parameter": "badgeCorner"
+                        },
+                        "fill": {
+                            "parameter": "readingColor"
+                        },
+                        "opacity": {
+                            "parameter": "badgeOpacity"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none"
+                    }
+                },
+                {
+                    "id": "reading",
+                    "type": "text",
+                    "when": {
+                        "parameter": "hoveringNow"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "badgeCenterX"
+                        },
+                        "y": {
+                            "parameter": "badgeCenterY"
+                        },
+                        "text": {
+                            "parameter": "readingText"
+                        },
+                        "unit": {
+                            "parameter": "unit"
+                        },
+                        "fontSize": {
+                            "parameter": "tickFont"
+                        },
+                        "fill": {
+                            "parameter": "badgeTextColor"
+                        }
+                    },
+                    "properties": {
+                        "stroke": "none",
+                        "textAnchor": "middle",
+                        "baseline": "central"
+                    }
+                },
+                {
+                    "id": "tick-grab",
+                    "type": "rect",
+                    "when": {
+                        "parameter": "notLog"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "grabLeft"
+                        },
+                        "y": {
+                            "parameter": "grabTop"
+                        },
+                        "width": {
+                            "parameter": "grabWidth"
+                        },
+                        "height": {
+                            "parameter": "grabHeight"
+                        }
+                    },
+                    "properties": {
+                        "fill": "none",
+                        "stroke": "none"
+                    },
+                    "behaviours": [
+                        {
+                            "type": "drag-axis-tick",
+                            "axis": "x",
+                            "value": {
+                                "formula": "minimumX+linearStep\\cdot i",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "minimumProperty": "minimumX",
+                            "maximumProperty": "maximumX",
+                            "countProperty": "majorTicks",
+                            "stepValue": {
+                                "parameter": "linearStep"
+                            },
+                            "originPixel": {
+                                "parameter": "left"
+                            },
+                            "lengthPixels": {
+                                "parameter": "usable"
+                            }
+                        }
+                    ],
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "linearMajorCount"
+                            },
+                            "dx": {
+                                "parameter": "linearSpacing"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "log-tick-grab",
+                    "type": "rect",
+                    "when": {
+                        "parameter": "isLog"
+                    },
+                    "bindings": {
+                        "x": {
+                            "parameter": "logGrabLeft"
+                        },
+                        "y": {
+                            "parameter": "grabTop"
+                        },
+                        "width": {
+                            "parameter": "logGrabWidth"
+                        },
+                        "height": {
+                            "parameter": "grabHeight"
+                        }
+                    },
+                    "properties": {
+                        "fill": "none",
+                        "stroke": "none"
+                    },
+                    "behaviours": [
+                        {
+                            "type": "drag-axis-tick",
+                            "axis": "x",
+                            "scale": "logarithmic",
+                            "value": {
+                                "formula": "\\left(10\\right)^{\\left(firstDecade+i\\right)}",
+                                "inputs": {
+                                    "i": {
+                                        "parameter": "$index"
+                                    }
+                                }
+                            },
+                            "minimumProperty": "minimumX",
+                            "maximumProperty": "maximumX",
+                            "originPixel": {
+                                "parameter": "left"
+                            },
+                            "lengthPixels": {
+                                "parameter": "usable"
+                            }
+                        }
+                    ],
+                    "modifiers": [
+                        {
+                            "type": "repeat",
+                            "count": {
+                                "parameter": "decadeCount"
+                            },
+                            "dx": {
+                                "parameter": "pxPerDecade"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "scale-grab",
+                    "type": "rect",
+                    "bindings": {
+                        "x": {
+                            "parameter": "pad"
+                        },
+                        "y": {
+                            "parameter": "tickTop"
+                        },
+                        "width": {
+                            "parameter": "bodyW"
+                        },
+                        "height": {
+                            "formula": "scaleBottom-tickTop"
+                        }
+                    },
+                    "properties": {
+                        "fill": "none",
+                        "stroke": "none"
+                    },
+                    "behaviours": [
+                        {
+                            "type": "follow-pointer",
+                            "xParameter": "hoverValue",
+                            "yParameter": "hoverDepth",
+                            "activeParameter": "hovering",
+                            "originX": {
+                                "parameter": "originPixel"
+                            },
+                            "originY": {
+                                "parameter": "tickTop"
+                            },
+                            "scaleX": {
+                                "parameter": "pixelsPerUnit"
+                            },
+                            "scaleY": 1,
+                            "minimumX": {
+                                "parameter": "hoverMinimum"
+                            },
+                            "maximumX": {
+                                "parameter": "hoverMaximum"
+                            }
+                        }
+                    ]
                 }
             ]
         }

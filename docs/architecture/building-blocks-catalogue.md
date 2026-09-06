@@ -428,7 +428,7 @@ Capabilities: `interaction`, `angular`, `writes-model`
 
 ### `drag-axis-tick` — Drag axis tick
 
-Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have.
+Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have. An axis whose ticks are placed by the logarithm of their value is dragged in decades rather than in values, and one that says how many parts it is cut into rather than how much one part is worth keeps the part and writes the count, so its numbers stay the same distance apart and there are more or fewer of them.
 
 Capabilities: `interaction`
 
@@ -438,6 +438,9 @@ Capabilities: `interaction`
 | `value` | number | 0 |  |
 | `minimumProperty` | string | "" |  |
 | `maximumProperty` | string | "" |  |
+| `scale` | string | "linear" | linear \| logarithmic |
+| `countProperty` | string | "" |  |
+| `stepValue` | number | 0 |  |
 | `originPixel` | number | 0 |  |
 | `lengthPixels` | number | 0 | min 0 |
 
@@ -805,6 +808,7 @@ Capabilities: `radial`, `angular`, `textual`
 | `valueStep` | number | 1 |  |
 | `wrapAt` | number | 12 | min 0 |
 | `digits` | number | 0 | min 0, max 6 |
+| `numberFormat` | string | "decimal" | decimal \| pi |
 | `texts` | string | "" |  |
 | `fontSize` | number | 12 | min 1 |
 | `fontFamily` | string | "token:font.family" |  |
@@ -1147,6 +1151,31 @@ Capabilities: `radial`, `angular`, `reads-model`
 | `startAngle` | number | 90 |  |
 | `pointers` | object | [] |  |
 
+### `protractor` — Protractor
+
+A scale bent round a vertex to measure an angle against: a band of degrees numbered at every division, divided ten ways between one number and the next, standing on the arms it is read between. It is laid over whatever is being measured — a vector, a body's path, a drawing — and resting the pointer on it reads the angle from its zero. How far round it goes is its own, so the same object is a half circle, a quadrant or a whole dial, and the numbers the two ends read are its own too, so a protractor can be marked in degrees, in turns, or in whatever the model measures its angles in.
+
+Capabilities: `radial`, `angular`, `scale`, `interaction`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `startAngle` | number | 0 | min -360, max 360 |
+| `spanAngle` | number | 180 | min 1, max 360 |
+| `divisions` | number | 18 | min 1, max 36 |
+| `startValue` | number | 0 |  |
+| `endValue` | number | 180 |  |
+| `numbers` | string | "decimal" | decimal \| pi |
+| `unit` | string | "º" |  |
+| `digits` | number | 0 | min 0, max 6 |
+| `faceColor` | colour | "token:surface.default" |  |
+| `borderColor` | colour | "token:stroke.default" |  |
+| `scaleColor` | colour | "token:axis.color" |  |
+| `scaleLabelColor` | colour | "token:axis.labelColor" |  |
+| `readingColor` | colour | "token:stroke.accent" |  |
+| `hoverX` | number | 0 |  |
+| `hoverY` | number | 0 |  |
+| `hovering` | number | 0 |  |
+
 ### `rotating-vector` — Rotating vector
 
 Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow reaches the pointer that drags it: one drag both turns it and stretches it, writing the angle and the length back together, so where the reader leaves the tip is where the arrow points and how far it goes.
@@ -1165,6 +1194,29 @@ Capabilities: `angular`, `linear`, `reads-model`, `vector`, `interaction`, `writ
 | `circleColor` | colour | "token:stroke.subtle" |  |
 | `circleFillColor` | colour | "none" |  |
 | `projectionColor` | colour | "token:stroke.subtle" |  |
+
+### `ruler` — Ruler
+
+A scale laid across the board to measure against: a body ruled from one end to the other, cut into as many numbered parts as it is asked for, with the space between each pair of numbers divided ten ways and the halfway mark drawn taller. Resting the pointer on it reads the value it stands at, and pulling one of the numbers stretches the scale under it the way a chart's axis is stretched, so the ruler is set against what it is measuring rather than typed in. Read logarithmically it is a slide rule instead: the decades are evenly spread, numbered 1, 10, 100, and each is divided by the marks for 2 to 9 standing where their logarithms put them.
+
+Capabilities: `linear`, `scale`, `interaction`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `minimumX` | number | 0 |  |
+| `maximumX` | number | 10 |  |
+| `scaleType` | string | "linear" | linear \| logarithmic |
+| `majorTicks` | number | 10 | min 1, max 60 |
+| `unit` | string | "" |  |
+| `digits` | number | 2 | min 0, max 6 |
+| `backgroundColor` | colour | "token:surface.default" |  |
+| `borderColor` | colour | "token:stroke.default" |  |
+| `scaleColor` | colour | "token:axis.color" |  |
+| `scaleLabelColor` | colour | "token:axis.labelColor" |  |
+| `readingColor` | colour | "token:stroke.accent" |  |
+| `hoverValue` | number | 0 |  |
+| `hoverDepth` | number | 0 |  |
+| `hovering` | number | 0 |  |
 
 ### `seven-segment-display` — Seven-segment display
 

@@ -1,3 +1,6 @@
+// Retired. The ruler is an object built from blocks now — scripts/blocks/definitions/ruler.json,
+// hosted by ComponentShape like the compass and the thermometer — and that is what the ruler key on
+// the toolbar places. This class stays registered so a model saved before the change still opens.
 class RulerShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, null, id);

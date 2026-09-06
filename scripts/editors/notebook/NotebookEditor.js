@@ -151,6 +151,9 @@ class NotebookEditor extends Workspace {
         const tableDescriptor = BlocksRegistry.getDescriptor("table");
         const textDescriptor = BlocksRegistry.getDescriptor("text");
         const sliderDescriptor = BlocksRegistry.getDescriptor("slider");
+        // The measuring instruments are objects built from blocks, so they wear the component's own
+        // toolbar rather than one of their own.
+        const rulerDescriptor = BlocksRegistry.getDescriptor("ruler");
         const resolveNotebookToolbarMixin = descriptor => {
             if (typeof descriptor?.getNotebookToolbarMixin === "function")
                 return descriptor.getNotebookToolbarMixin();
@@ -162,13 +165,12 @@ class NotebookEditor extends Workspace {
             [tableDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(tableDescriptor)],
             [textDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(textDescriptor)],
             [sliderDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(sliderDescriptor)],
+            [rulerDescriptor.notebookShapeClass, resolveNotebookToolbarMixin(rulerDescriptor)],
             [GaugeNotebookShape, GaugeShapeToolbarMixin],
             [ValueNotebookShape, ValueShapeToolbarMixin],
             [MediaNotebookShape, CatalogAssetPickerMixin, MediaShapeToolbarMixin],
             [ReferentialNotebookShape, ReferentialShapeToolbarMixin],
             [QuestionNotebookShape, QuestionShapeToolbarMixin],
-            [RulerNotebookShape, RulerShapeToolbarMixin],
-            [ProtractorNotebookShape, ProtractorShapeToolbarMixin],
             [SlopeNotebookShape, SlopeShapeToolbarMixin]
         ];
         for (const [shapeClass, ...toolbarMixins] of bindings) {

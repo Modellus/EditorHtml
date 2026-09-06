@@ -139,6 +139,12 @@ Components palette. `preview.parameters` are the values the palette thumbnail an
 screenshot are drawn with — needed whenever the defaults draw nothing recognisable (a gauge reading
 zero, a phasor of length one); a clock does not need it.
 
+`defaultSize` — `{ "width": 320, "height": 64 }` — is the box the object is placed in when nothing
+said how big. Leave it out and the object is placed square, which is what a dial wants; declare it
+when the drawing is not — a ruler is a strip and a protractor is wider than it is tall, and neither
+reads as itself in a square. Like every other top-level field it does nothing until
+`BlockDefinitionLoader.register` passes it on, so it is in that literal beside `icon` and `tags`.
+
 ### Parameters — what the user edits
 
 Each is `{ id, label, valueType, defaultValue, category }` plus any of `description`, `minimum`,
@@ -339,7 +345,7 @@ why an ordinary object clips with a `clip-box` instead.
 | `drag-angle` | dragging a hand around a centre points it at the pointer and writes the angle back, measured from `offsetDegrees` — zero straight up when that is left at nothing. `signed` reads that angle the short way round so one side of zero comes out below it, which is what a wheel wants; left off it runs from nothing to a whole turn, which is what a bearing wants. Naming a `verticalVariable` as well writes a pair: it keeps the length it had and takes the direction it was pointed at. Naming a `lengthVariable` instead makes the node reach the pointer rather than only point at it: how far the pointer stands from the anchor is written as the length, divided by `pixelsPerUnit` and held between `minimumLength` and `maximumLength`, so one drag both turns the thing and stretches it. The two halves are asked for one at a time, so an arrow the model gives a length to is still turned by hand |
 | `drag-rotate` | dragging a rim or a bezel turns it by the angle travelled, not to the pointer. Naming a `verticalVariable` as well writes a pair rather than a number: the pair keeps its length and takes the angle it was turned to, which is how an object driven by a direction stays draggable |
 | `keep-time` | a key runs a clock: `play` sets it counting real time from wherever it stands, `pause` holds it, and `stop` ends the run and clears it. The four parts of the reading — hours, minutes, seconds, thousandths — are named a variable and a property each, so a clock bound to nothing counts in its own numbers, and the whole run is one undo entry. It counts on a clock of its own, so it goes on counting while the player stands still; name a `runningParameter` and the drawing can show which key it is on |
-| `drag-axis-tick` | an axis tick rescales the axis |
+| `drag-axis-tick` | an axis tick rescales the axis. `scale: "logarithmic"` places the ticks by the logarithm of their value and writes the far end as a power of ten, so a decade under the pointer stays under it; naming a `countProperty` and a `stepValue` makes the drag hold the step and write the new count, which is what an axis numbered by its divisions rather than by its step needs |
 | `follow-pointer` | the drawing shows what is under the cursor without keeping it |
 | `hoverable`, `tooltip` | cursor and native tooltip |
 | `remember`, `forget`, `track-pointer` | the object keeps a memory (§4) |
@@ -360,7 +366,7 @@ Do not redraw what one of these already draws.
 | a reading spelled out in lamps, the way a digital clock shows one | `seven-segment-display` |
 | **anything cartesian** | `plot-grid`, `plot-axes`, `plot-crosshair` |
 | a memory shown as a list or a path | `memory-list`, `memory-trace` |
-| a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `calculator`, `mouse-tracker`, `thermometer` |
+| a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `calculator`, `mouse-tracker`, `thermometer`, `ruler`, `protractor` |
 
 An axis drawn as three lines and some text is the mistake the mouse tracker was built out of: the plot
 components carry the board's nice ticks, minor ticks, label gaps measured in tick fonts, and the drag
@@ -376,7 +382,7 @@ handles that rescale an axis.
 | `{ "expression": "minute\\cdot6" }` | LaTeX over model variables |
 | `{ "formula": "a+b", "inputs": {…} }` | LaTeX whose free names the definition supplies; the loader wires them at registration |
 | `{ "token": "stroke.accent" }` | a design token |
-| `{ "format": <binding>, "digits": 1, "prefix": …, "suffix": … }` | a number as text |
+| `{ "format": <binding>, "digits": 1, "prefix": …, "suffix": … }` | a number as text; `"style": "axis"` writes it the way a tick on the board's own axes is written — three decimals, and an exponent once it is too long to read — and `"style": "pi"` writes it as a multiple of π, which is what an instrument marked in radians reads in |
 | `{ "choose": <binding>, "then": …, "otherwise": … }` | a conditional; `0` and `""` are false |
 | `{ "choose": <binding>, "equals": <binding>, "then": …, "otherwise": … }` | the same conditional comparing two values, which is how a parameter offering named alternatives picks one |
 | `{ "direction": { "x": <binding>, "y": <binding> } }` | the angle a pair points in, in degrees clockwise from straight up, the way a compass marker reads the pair it names |
@@ -460,6 +466,9 @@ npx playwright test tests/object-picker.spec.js tests/component-blocks.spec.js
 | --- | --- |
 | a dial, gauge or meter | [`circular-gauge.json`](../../scripts/blocks/definitions/circular-gauge.json) — 104 lines, the smallest complete object |
 | a scale with a needle | [`speedometer.json`](../../scripts/blocks/definitions/speedometer.json) |
+| an instrument that measures rather than reads | [`ruler.json`](../../scripts/blocks/definitions/ruler.json) and [`protractor.json`](../../scripts/blocks/definitions/protractor.json) — bound to no term at all: a `follow-pointer` over the scale reports where the pointer is into three parameters of the object's own, and the reading and the line under it carry a `when` on those, so they are drawn while the pointer is there and gone the moment it leaves. The ruler is the thermometer's scale laid on its side, with a `drag-axis-tick` on a grab area over each number |
+| one object read two ways | [`ruler.json`](../../scripts/blocks/definitions/ruler.json) again — a linear scale and a logarithmic one in the same document, each set of ticks carried by a `when` on the same choice, and the pointer, the reading and the drag reading that choice through `choose` rather than through a second object. Its decade marks are placed by a `\log` in a formula over `$index`, since they are not evenly spaced, and the ones that fall outside the range are clamped to the edge and cut off by a `clip-box`, which keeps them out of the box the object reports as its own |
+| an instrument marked in π | [`protractor.json`](../../scripts/blocks/definitions/protractor.json) — `tick-ring` and `label-ring` round an `arc`, with a `direction` binding turning the pointer into the angle it stands at. What the two ends of its scale read is what it is marked in, so the same object measures degrees, radians or turns; `label-ring`'s `numberFormat` and the `format` binding's `"style": "pi"` are what write those numbers as π/6 rather than as 0.52 |
 | a quantity read as a length, up a scale of its own | [`thermometer.json`](../../scripts/blocks/definitions/thermometer.json) — the marks and their numbers are one `line` and one `text` under a `repeat` that steps down the scale, the numbers read from `$index`, and the value and the scale are worked out from the one ratio so they cannot disagree. It is also where to see **what scales with the box and what does not**: the glass is worked out from `$width`/`$height`, while the writing and the marks are the sizes `font.size.tick`, `font.size.large`, `axis.tickLength` and `axis.minorTickLength` hold, with the gaps around a label the same multiples of the tick font the chart's own axis uses — so resizing stretches the scale rather than the labels on it |
 | a hand or arrow driven by an angle | [`rotating-vector.json`](../../scripts/blocks/definitions/rotating-vector.json) |
 | interactive, writing values back | [`compass.json`](../../scripts/blocks/definitions/compass.json) — `drag-angle` and `drag-rotate` on invisible grab areas |

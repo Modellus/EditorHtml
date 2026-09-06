@@ -47,8 +47,6 @@ class BaseShape {
         ExpressionNotebookShape: "fa-light fa-function",
         TextNotebookShape: "fa-light fa-text",
         QuestionNotebookShape: "fa-light fa-clipboard-question",
-        RulerNotebookShape: "fa-light fa-ruler",
-        ProtractorNotebookShape: "fa-light fa-angle",
         SlopeNotebookShape: "fa-light fa-ruler-triangle",
         ReferentialNotebookShape: "fa-light fa-shapes",
         GaugeNotebookShape: "fa-light fa-gauge"
@@ -190,8 +188,10 @@ class BaseShape {
     // Recommended size a shape gets when drawn from the toolbar with a
     // drag too small to be meaningful. Defaults to the size assigned by
     // setDefaults(), so it must be read before the draw gesture shrinks
-    // the shape; widgets can override it with a dedicated minimum.
-    getMinimumDrawSize() {
+    // the shape; widgets can override it with a dedicated minimum. The
+    // properties the shape is about to be handed come with the question,
+    // for a shape that is not yet the thing it is about to be told it is.
+    getMinimumDrawSize(pendingProperties = null) {
         return { width: this.properties.width, height: this.properties.height };
     }
 

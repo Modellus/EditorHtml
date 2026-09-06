@@ -1,3 +1,7 @@
+// Retired. The protractor is an object built from blocks now —
+// scripts/blocks/definitions/protractor.json, hosted by ComponentShape — and that is what the
+// protractor key on the toolbar places. This class stays registered so a model saved before the
+// change still opens.
 class ProtractorShape extends BaseShape {
     constructor(board, parent, id) {
         super(board, null, id);

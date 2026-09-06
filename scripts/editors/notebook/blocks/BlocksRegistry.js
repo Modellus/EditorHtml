@@ -557,13 +557,15 @@ class BlocksRegistry {
 
     static createDefaultBlock(type, id) {
         const descriptor = this.getDescriptor(type);
-        return {
+        // A block whose drawing has a shape of its own says how deep it wants to be, so a ruler is
+        // laid out as a strip rather than as a square of the column's width.
+        return Object.assign({
             id,
             type,
             content: descriptor.defaultContent ?? "",
             borderColor: "#e8e8e8",
             backgroundColor: "transparent"
-        };
+        }, descriptor.defaultProperties ?? {});
     }
 }
 

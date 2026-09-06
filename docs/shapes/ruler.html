@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ruler Shape – Modellus Docs</title>
-    <meta name="description" content="Ruler shape documentation for Modellus." />
+    <title>Ruler – Modellus Docs</title>
+    <meta name="description" content="Ruler object documentation for Modellus." />
     <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -102,36 +102,40 @@
             <span>Ruler</span>
         </div>
 
-        <h1>Ruler Shape</h1>
-        <p class="page-desc">The Ruler shape provides a measurement tool for distances on the board, useful for comparing model outputs with physical measurements.</p>
+        <h1>Ruler</h1>
+        <p class="page-desc">A scale laid across the board to measure against, built from the editor&rsquo;s own building blocks.</p>
 
         <div class="screenshot-placeholder">
             <i class="fa-light fa-image"></i>
-            Screenshot: Ruler shape on the board
+            Screenshot: the ruler on the board
         </div>
 
         <h2>Overview</h2>
-        <p>A Ruler shape places a measurement tool on the board that displays the distance between two points. It can be used to measure distances in the referential coordinate system, helping students compare simulated positions with expected values or real measurements.</p>
+        <p>The ruler is a body ruled from one end to the other, numbered every so many units, with the space between each pair of numbers divided ten ways and the halfway mark drawn taller. Lay it over what is being measured &mdash; a body&rsquo;s path, a photograph, a drawing &mdash; and resting the pointer on it reads the value it stands at, on a plate beside the numbers. It measures rather than reads the model: it is bound to no term.</p>
+        <p>The scale is set against what it is measuring rather than typed in: pulling one of the numbers stretches the ruler under it, exactly the way a chart&rsquo;s axis is stretched, holding the minimum still and moving the maximum with the pointer.</p>
+        <p>Read logarithmically it is a slide rule instead: every decade takes the same width and is numbered 1, 10, 100, with the marks for 2 to 9 crowding towards the top of each. A value then stands where its logarithm puts it, so the middle of a ruler running from 1 to 1000 reads a little over 31 rather than 500, and pulling a decade stretches the ruler a decade at a time.</p>
+        <p>It is placed from the ruler key on the shapes toolbar, and it is also in the objects palette and in the notebook&rsquo;s own toolbar, since it is an <a href="/docs/blocks/index.html">object built from blocks</a> like the compass or the thermometer: one JSON definition, drawn by the same compiler every other object is drawn by, wherever it stands. Models saved before the change carry the older <code>RulerShape</code>, which still opens.</p>
 
         <h2>Toolbar</h2>
         <div class="screenshot-placeholder">
             <i class="fa-light fa-image"></i>
-            Screenshot: Ruler shape toolbar
+            Screenshot: the ruler toolbar
         </div>
 
-        <h2>Properties Panel</h2>
+        <h2>Settings</h2>
         <div class="screenshot-placeholder">
             <i class="fa-light fa-image"></i>
-            Screenshot: Ruler properties panel
+            Screenshot: the ruler settings menu
         </div>
         <table class="docs-table">
             <thead><tr><th>Property</th><th>Description</th></tr></thead>
             <tbody>
-                <tr><td>Start position</td><td>One endpoint of the ruler</td></tr>
-                <tr><td>End position</td><td>Other endpoint of the ruler</td></tr>
-                <tr><td>Units</td><td>Display unit label</td></tr>
-                <tr><td>Decimal places</td><td>Precision of the measurement display</td></tr>
-                <tr><td>Show ticks</td><td>Display graduation marks</td></tr>
+                <tr><td>Horizontal</td><td>What the two ends of the scale read. The minimum is held still while a number is pulled, so the ruler stretches from that end</td></tr>
+                <tr><td>Scale</td><td>Whether a value stands where its size puts it or where its logarithm does</td></tr>
+                <tr><td>Divisions</td><td>How many numbered parts the scale is cut into, each divided ten ways by smaller marks with the halfway one drawn taller. Pulling a number holds the part it stands for and writes the count, so stretching the ruler gives more of the same divisions rather than the same number of bigger ones. A logarithmic ruler is cut into decades instead, so it numbers itself</td></tr>
+                <tr><td>Unit</td><td>What the ruler measures in, written after the value the pointer reads. The numbers along the scale stay bare</td></tr>
+                <tr><td>Decimals</td><td>Decimals the value under the pointer is read to. The numbers along the scale follow it only when the step needs them</td></tr>
+                <tr><td>Colours</td><td>The body, its border, the marks, the numbers and the reading, each picked in the colour menu</td></tr>
             </tbody>
         </table>
 

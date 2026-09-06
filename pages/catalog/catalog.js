@@ -2560,7 +2560,7 @@ class ModelsApp {
 
   renderObjectPreview(definitionText) {
     const inspection = this.inspectObjectDefinition(definitionText);
-    this._objectPreviewSvg = inspection.problems.length > 0 ? null : BlockRenderer.toStandaloneSvg(inspection.compilation.nodes, ObjectDrawing.previewSize, ObjectDrawing.previewSize, "none");
+    this._objectPreviewSvg = inspection.problems.length > 0 ? null : ObjectDrawing.toSvg(inspection.document, ObjectDrawing.previewSize);
     this._objectPreviewProblems = inspection.problems;
     this.paintObjectPreview();
     return inspection;

@@ -115,13 +115,16 @@ class ObjectPicker {
         const size = ObjectPicker.previewSize;
         const definition = BlockObjects.createComponentInstance(item.componentType);
         const parameters = this.getPreviewParameters(item.componentType, definition.preset);
+        // Every card is the same square, and the object stands in the middle of it at its own
+        // proportions rather than stretched to fill it.
+        const box = BlockObjects.fitDrawingBox(item.componentType, size);
         const compilation = this.getCompiler().compile(definition, {
-            width: size,
-            height: size,
+            width: box.width,
+            height: box.height,
             parameters: parameters,
             tokens: new BlockTokens(definition.preset)
         });
-        return BlockRenderer.toStandaloneSvg(compilation.nodes, size, size, "none");
+        return BlockRenderer.toFittedSvg(compilation.nodes, size, box);
     }
 
     getPreviewParameters(componentType, preset) {

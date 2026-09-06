@@ -35,6 +35,15 @@ class ModellusShapeToolbar {
         ];
     }
 
+    // A key of its own for an object the editor ships: the measuring instruments earn one because
+    // they are reached for as often as a chart is, not hunted for in the objects palette. What it
+    // arms is a component like any other, so the object is the definition and nothing about the
+    // board knows it is a ruler.
+    static armObject(shell, componentType, buttonId) {
+        const componentProperties = ComponentShape.createInstanceProperties(componentType);
+        shell.shapeDrawController.toggle("ComponentShape", componentProperties.name, buttonId, componentProperties);
+    }
+
     // A toolbar button that stands for a family of shapes: clicking it opens the list, and picking
     // from the list arms that shape for drawing under the same button. The list is read when the
     // button opens, so it carries whatever the translations say at that moment.
@@ -375,7 +384,7 @@ class ModellusShapeToolbar {
                     elementAttr: {
                         id: "ruler-button"
                     },
-                    onClick: _ => shell.shapeDrawController.toggle("RulerShape", "Ruler", "ruler-button"),
+                    onClick: _ => ModellusShapeToolbar.armObject(shell, "ruler", "ruler-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Ruler Tooltip", 280)
                 }
             },
@@ -387,7 +396,7 @@ class ModellusShapeToolbar {
                     elementAttr: {
                         id: "protractor-button"
                     },
-                    onClick: _ => shell.shapeDrawController.toggle("ProtractorShape", "Protractor", "protractor-button"),
+                    onClick: _ => ModellusShapeToolbar.armObject(shell, "protractor", "protractor-button"),
                     onInitialized: event => shell.createTranslatedTooltip(event, "Protractor Tooltip", 280)
                 }
             },

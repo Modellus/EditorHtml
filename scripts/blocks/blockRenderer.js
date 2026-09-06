@@ -88,6 +88,15 @@ class BlockRenderer {
         }
     }
 
+    // The same drawing, standing in the middle of a square of its own: what a card, a palette
+    // thumbnail and a catalogue screenshot show, since every one of those is square whatever shape
+    // the object is.
+    static toFittedSvg(nodes, size, box) {
+        const offsetX = Number(box?.offsetX) || 0;
+        const offsetY = Number(box?.offsetY) || 0;
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><g transform="translate(${offsetX} ${offsetY})">${BlockRenderer.toMarkup(nodes)}</g></svg>`;
+    }
+
     static toStandaloneSvg(nodes, width, height, background = "#ffffff") {
         const backgroundMarkup = background === "none" ? "" : `<rect x="0" y="0" width="${width}" height="${height}" fill="${BlockRenderer.escapeAttribute(background)}"></rect>`;
         return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${backgroundMarkup}${BlockRenderer.toMarkup(nodes)}</svg>`;

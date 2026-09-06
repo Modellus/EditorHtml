@@ -23,7 +23,9 @@
   "preview": {
     "parameters": {
       "wavefront": false,
-      "samples": 24
+      "samples": 60,
+      "showLine": true,
+      "elementSize": 2.5
     }
   },
   "parameters": [

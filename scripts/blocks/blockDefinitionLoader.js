@@ -57,6 +57,10 @@ class BlockDefinitionLoader {
             tags: document.tags ?? [],
             capabilities: document.capabilities ?? [],
             aliases: document.aliases ?? [],
+            // The box the object is placed in when nothing said how big to draw it. A ruler is a
+            // strip and a protractor is wider than it is tall, so the shape that hosts them cannot
+            // fall back to the square every dial wants.
+            defaultSize: document.defaultSize ?? null,
             parameters: (document.parameters ?? []).map(parameter => BlockDefinitionLoader.normalizeParameter(parameter)),
             agentAccessible: document.agentAccessible !== false,
             indexedSource: indexedSource,

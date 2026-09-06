@@ -15,11 +15,15 @@ class ObjectDrawing {
             BlockObjects.getInstancePropertyDefaults(definitionDocument.type, instance.preset),
             definitionDocument.preview?.parameters ?? {}
         );
-        return ObjectDrawing.getCompiler().compile(instance, { width: size, height: size, parameters, tokens: new BlockTokens(instance.preset) });
+        const box = BlockObjects.fitDrawingBox(definitionDocument.type, size);
+        return ObjectDrawing.getCompiler().compile(instance, { width: box.width, height: box.height, parameters, tokens: new BlockTokens(instance.preset) });
     }
 
+    // Every card is the same square, and the object stands in the middle of it at its own
+    // proportions: a ruler drawn as a square is a strip of scale over an acre of blank body.
     static toSvg(definitionDocument, size = ObjectDrawing.previewSize) {
-        return BlockRenderer.toStandaloneSvg(ObjectDrawing.compile(definitionDocument, size).nodes, size, size, "none");
+        const box = BlockObjects.fitDrawingBox(definitionDocument.type, size);
+        return BlockRenderer.toFittedSvg(ObjectDrawing.compile(definitionDocument, size).nodes, size, box);
     }
 
     // The screenshot is the drawing itself, so a catalogue card can never show something the object

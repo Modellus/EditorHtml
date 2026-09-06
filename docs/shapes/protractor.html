@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Protractor Shape – Modellus Docs</title>
-    <meta name="description" content="Protractor shape documentation for Modellus." />
+    <title>Protractor – Modellus Docs</title>
+    <meta name="description" content="Protractor object documentation for Modellus." />
     <link rel="icon" type="image/svg+xml" href="/scripts/themes/modellus.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -102,36 +102,42 @@
             <span>Protractor</span>
         </div>
 
-        <h1>Protractor Shape</h1>
-        <p class="page-desc">The Protractor shape measures and displays angles interactively on the board.</p>
+        <h1>Protractor</h1>
+        <p class="page-desc">A scale bent round a vertex to measure an angle against, built from the editor&rsquo;s own building blocks.</p>
 
         <div class="screenshot-placeholder">
             <i class="fa-light fa-image"></i>
-            Screenshot: Protractor shape on the board
+            Screenshot: the protractor on the board
         </div>
 
         <h2>Overview</h2>
-        <p>A Protractor shape provides an angle measurement tool on the board. It displays the angle between two directions from a center point, making it useful for measuring launch angles, rotation amounts, or any angular quantity in your model.</p>
+        <p>The protractor is a band of degrees numbered at every division, divided ten ways between one number and the next, standing on the arms it is read between. Lay it over what is being measured &mdash; a vector, a body&rsquo;s path, a drawing &mdash; and resting the pointer on it reads the angle from its zero, on a plate standing on the band. It measures rather than reads the model: it is bound to no term.</p>
+        <p>How far round the vertex it goes is its own: a half circle stands the vertex on the bottom edge the way a protractor sits on a page, and a whole turn closes the band into a dial with the vertex in the middle of the box. The numbers the two ends read are its own too, so the same object is marked in degrees (0 to 180), in radians (0 to 3.1416) or in turns (0 to 1).</p>
+        <p>A protractor whose ends read 0 and 3.1416 is one marked in radians, and it can be numbered in π to match: π/6, π/3, π/2 round the band, and the same fractions on the plate the pointer reads.</p>
+        <p>It is placed from the protractor key on the shapes toolbar, and it is also in the objects palette and in the notebook&rsquo;s own toolbar, since it is an <a href="/docs/blocks/index.html">object built from blocks</a> like the compass or the thermometer: one JSON definition, drawn by the same compiler every other object is drawn by, wherever it stands. Models saved before the change carry the older <code>ProtractorShape</code>, which still opens.</p>
 
         <h2>Toolbar</h2>
         <div class="screenshot-placeholder">
             <i class="fa-light fa-image"></i>
-            Screenshot: Protractor shape toolbar
+            Screenshot: the protractor toolbar
         </div>
 
-        <h2>Properties Panel</h2>
+        <h2>Settings</h2>
         <div class="screenshot-placeholder">
             <i class="fa-light fa-image"></i>
-            Screenshot: Protractor properties panel
+            Screenshot: the protractor settings menu
         </div>
         <table class="docs-table">
             <thead><tr><th>Property</th><th>Description</th></tr></thead>
             <tbody>
-                <tr><td>Center position</td><td>The vertex of the angle</td></tr>
-                <tr><td>Start direction</td><td>Reference direction (0°)</td></tr>
-                <tr><td>Angle display</td><td>Current measured angle</td></tr>
-                <tr><td>Units</td><td>Degrees or radians</td></tr>
-                <tr><td>Show arc</td><td>Display the angle arc indicator</td></tr>
+                <tr><td>Zero direction</td><td>Where the zero of the scale points, measured anticlockwise from straight right</td></tr>
+                <tr><td>Span</td><td>How far round the vertex the scale runs. A whole turn closes the band into a dial and stands the vertex in the middle of the box</td></tr>
+                <tr><td>Divisions</td><td>How many numbered parts the scale is cut into &mdash; eighteen over a half circle is the ten degrees a protractor is marked in. Each part is divided ten ways by smaller marks</td></tr>
+                <tr><td>First number, Last number</td><td>What the two ends of the scale read, which is what decides whether the protractor is marked in degrees, radians or turns</td></tr>
+                <tr><td>Numbers</td><td>Whether the scale is numbered as plain numbers or as multiples of π, which is what a protractor marked in radians wants</td></tr>
+                <tr><td>Unit</td><td>What the angle is measured in, written after the value the pointer reads. The numbers round the band stay bare</td></tr>
+                <tr><td>Decimals</td><td>Decimals the angle under the pointer is read to</td></tr>
+                <tr><td>Colours</td><td>The band, its border, the marks, the numbers and the reading, each picked in the colour menu</td></tr>
             </tbody>
         </table>
 

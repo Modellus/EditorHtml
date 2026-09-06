@@ -66,6 +66,9 @@ class BuildingBlockRegistry {
             // What the object would fit its axes to while it is scaling itself, for a drawing that
             // knows its own range without plotting any points to measure.
             axisFit: registration.axisFit ?? null,
+            // The box an object is placed in when nothing said how big to draw it, for a drawing
+            // that is not square: a ruler is a strip, a protractor is wider than it is tall.
+            defaultSize: registration.defaultSize ?? null,
             aliases: registration.aliases ?? [],
             agentAccessible: registration.agentAccessible !== false,
             deprecated: registration.deprecated === true,

@@ -43,7 +43,7 @@ async function compileMarkup(page, componentType, preset, size, overrides = {}) 
 }
 
 test.describe('component visual snapshots', () => {
-    const components = ['clock', 'compass', 'speedometer', 'circular-gauge', 'rotating-vector', 'orbit-system', 'thermometer'];
+    const components = ['clock', 'compass', 'speedometer', 'circular-gauge', 'rotating-vector', 'orbit-system', 'thermometer', 'ruler', 'protractor'];
 
     for (const componentType of components) {
         test(`${componentType} renders identical markup for the same values`, async ({ page }) => {

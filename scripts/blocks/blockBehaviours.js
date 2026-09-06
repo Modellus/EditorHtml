@@ -319,7 +319,7 @@ var BlockBehaviours = {
         type: "drag-axis-tick",
         category: "behaviour",
         displayName: "Drag axis tick",
-        description: "Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have.",
+        description: "Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have. An axis whose ticks are placed by the logarithm of their value is dragged in decades rather than in values, and one that says how many parts it is cut into rather than how much one part is worth keeps the part and writes the count, so its numbers stay the same distance apart and there are more or fewer of them.",
         tags: ["interaction", "drag", "axis", "scale", "ticks"],
         capabilities: ["interaction"],
         inputSchema: {
@@ -328,6 +328,9 @@ var BlockBehaviours = {
                 value: { valueType: "number", defaultValue: 0, label: "Tick value" },
                 minimumProperty: { valueType: "string", defaultValue: "", label: "Minimum property", bindable: false, description: "Component property the axis starts at; it is held still while the tick is dragged." },
                 maximumProperty: { valueType: "string", defaultValue: "", label: "Maximum property", bindable: false },
+                scale: { valueType: "string", defaultValue: "linear", enumValues: ["linear", "logarithmic"], label: "Scale", description: "Whether a tick stands at its value or at the logarithm of it. A logarithmic axis is dragged in decades: the far end is written as a power of ten, so the decade under the pointer stays under it." },
+                countProperty: { valueType: "string", defaultValue: "", label: "Count property", bindable: false, description: "Component property holding how many parts the axis is cut into. Naming it makes the drag hold the step the axis was being read at and write the new count beside the new maximum, which is what a ruler numbered by its divisions needs. Left empty only the maximum is written." },
+                stepValue: { valueType: "number", defaultValue: 0, label: "Step", description: "How much one numbered part is worth at the moment the drag starts, in the units the ticks are spaced by — decades on a logarithmic axis. Nothing is written to the count without it." },
                 originPixel: { valueType: "number", defaultValue: 0, label: "Axis origin", description: "Pixel the axis minimum sits at." },
                 lengthPixels: { valueType: "number", defaultValue: 0, label: "Axis length", minimum: 0 }
             }

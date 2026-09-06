@@ -74,6 +74,30 @@ class BlockObjects {
         });
     }
 
+    // The box an object is drawn in when nothing said how big, and the box it is *previewed* in: a
+    // card, a palette thumbnail and a catalogue screenshot are all square, but an object that is not
+    // square is drawn at its own proportions inside that square rather than stretched to fill it —
+    // a ruler previewed as a square is a strip of scale over an acre of blank body.
+    static getDefaultSize(componentType, tokens = null) {
+        const scale = tokens ?? new BlockTokens();
+        const declared = BlockRegistry.get(componentType)?.defaultSize ?? null;
+        return {
+            width: Number(declared?.width) || scale.getNumber("size.default.width", 180),
+            height: Number(declared?.height) || scale.getNumber("size.default.height", 180)
+        };
+    }
+
+    static fitDrawingBox(componentType, size) {
+        const natural = BlockObjects.getDefaultSize(componentType);
+        const ratio = Math.min(size / natural.width, size / natural.height);
+        return {
+            width: natural.width * ratio,
+            height: natural.height * ratio,
+            offsetX: (size - natural.width * ratio) / 2,
+            offsetY: (size - natural.height * ratio) / 2
+        };
+    }
+
     static isComponentInstance(definition) {
         const root = definition?.root;
         if (!root)

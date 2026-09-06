@@ -71,7 +71,11 @@ class ShapeDrawController {
         this.activePointerId = event.pointerId;
         const shape = this.board.createShape(this.pendingShapeType, null);
         this.drawGesture = shape.getDrawGesture();
-        const minimumSize = shape.getMinimumDrawSize();
+        // Asked with the properties the shape is about to be handed, since a component is only the
+        // object it was placed for once it carries that object's definition — and asked before the
+        // draw gesture shrinks the shape, since every other shape answers with the size setDefaults
+        // gave it.
+        const minimumSize = shape.getMinimumDrawSize(this.pendingShapeProperties);
         this.minimumDrawSize = {
             width: Number(minimumSize?.width) || 100,
             height: Number(minimumSize?.height) || 100

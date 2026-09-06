@@ -472,6 +472,9 @@ var BlockComponentHelpers = {
             BlockComponentHelpers.parameter("valueStep", "Value step", "number", 1),
             BlockComponentHelpers.parameter("wrapAt", "Wrap at", "number", 12, { minimum: 0 }),
             BlockComponentHelpers.parameter("digits", "Decimals", "number", 0, { minimum: 0, maximum: 6 }),
+            // A ring marked in radians is numbered in radians: π/2 rather than 1.57, written by the
+            // same function the chart writes its own π axis with.
+            BlockComponentHelpers.parameter("numberFormat", "Number format", "string", "decimal", { enumValues: ["decimal", "pi"], description: "How a number is written: as a decimal, or as a multiple of π the way an axis marked in radians is." }),
             BlockComponentHelpers.parameter("texts", "Fixed texts", "string", "", { description: "Comma separated labels used instead of numbers." }),
             BlockComponentHelpers.parameter("fontSize", "Font size", "number", 12, { minimum: 1 }),
             BlockComponentHelpers.parameter("fontFamily", "Font family", "string", "token:font.family"),
@@ -491,7 +494,9 @@ var BlockComponentHelpers = {
                     const wrapAt = Number(parameters.wrapAt);
                     if (wrapAt > 0)
                         value = ((value - 1) % wrapAt + wrapAt) % wrapAt + 1;
-                    text = BlockComponentHelpers.formatNumber(value, parameters.digits);
+                    text = parameters.numberFormat === "pi"
+                        ? formatAxisTickValue(value, "pi")
+                        : BlockComponentHelpers.formatNumber(value, parameters.digits);
                 }
                 return {
                     id: `label-${index}`,
