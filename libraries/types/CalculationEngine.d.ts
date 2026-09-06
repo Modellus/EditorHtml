@@ -263,8 +263,20 @@ declare enum DiagnosticCode {
     CATEGORICAL_ARITHMETIC = "CATEGORICAL_ARITHMETIC",
     CATEGORICAL_LABEL_CONFLICT = "CATEGORICAL_LABEL_CONFLICT",
     INDEPENDENT_ASSIGNED = "INDEPENDENT_ASSIGNED",
-    EXPRESSION_CYCLE = "EXPRESSION_CYCLE"
+    EXPRESSION_CYCLE = "EXPRESSION_CYCLE",
+    FUTURE_ROW_READ = "FUTURE_ROW_READ",
+    SELF_REFERENCE = "SELF_REFERENCE"
 }
+/**
+ * One piece of a diagnostic's wording: prose to read, or a fragment of the model to typeset.  A UI
+ * renders the `latex` pieces with its maths typesetter and the `text` pieces with its own prose
+ * typography, so `c_{n}` is shown as the reader wrote it rather than spelled out in the sentence.
+ */
+type MessagePart = {
+    readonly text: string;
+} | {
+    readonly latex: string;
+};
 interface SourceLocation {
     line: number;
     column: number;
@@ -274,6 +286,11 @@ interface Diagnostic {
     code: DiagnosticCode;
     severity: DiagnosticSeverity;
     message: string;
+    /**
+     * The same wording split into prose and fragments of the model, so a UI can typeset the maths in
+     * it.  A single LaTeX string is one join away: `parts.map(p => "text" in p ? `\\text{${p.text}}` : p.latex).join("")`.
+     */
+    messageParts?: ReadonlyArray<MessagePart>;
     termName?: string;
     domainName?: string;
     /** The rejected value, for DOMAIN_VIOLATION. */
@@ -588,6 +605,16 @@ interface Singularity {
     iteration: number;
     caseNumber: number;
 }
+/** What the model held before a statement was read, so refusing the statement can put it back. */
+interface StatementMark {
+    termNames: string[];
+    differentialNames: string[];
+    expressionCount: number;
+    expressionTreeCounts: Map<string, number>;
+    previousStepNames: string[];
+    literalIterationIndexes: Map<string, number[]>;
+    futureRowReadCount: number;
+}
 declare class System {
     static readonly ZERO: number;
     static readonly INFINITY: number;
@@ -646,6 +673,12 @@ declare class System {
     private readonly literalIterationIndexesByName;
     /** Names read at a step before the row being built, `x_{n-1}`, whoever does the reading. */
     private readonly previousStepNames;
+    /**
+     * The reads that land past the row being built, kept until the run starts.  Whether such a read
+     * works turns on where the name's values come from, and a column is often loaded after the
+     * statements that read it are written, so the answer is only settled once the run is set up.
+     */
+    private futureRowReads;
     /** Names whose statements read each other within one row, so none of them can be evaluated first. */
     private cyclicTermNames;
     constructor(independent?: string, iterationTerm?: string, iterationTermStart?: number);
@@ -752,6 +785,29 @@ declare class System {
      */
     adoptLiteralStartValue(name: string, index: number, expression: Expression): void;
     markPreviousStepRead(name: string): void;
+    /**
+     * A mark of what the model holds, so a statement it turns out to refuse can be undone.  A statement
+     * is read by changing the model as it goes, and a reader told to rewrite a row should not be left
+     * holding the half of it that was accepted before the problem was found - a term list carrying a
+     * name that only ever appeared in the refused row least of all.
+     */
+    markStatement(): StatementMark;
+    /** Puts back what a refused statement had already added: its terms, its expressions and its trees. */
+    rollbackStatement(mark: StatementMark): void;
+    /** Rebuilds the lists the evaluation reads from, after the expressions themselves have changed. */
+    private reindexExpressions;
+    /** Records a read that lands past the row being built, for the run to answer for. */
+    markFutureRowRead(owner: string, name: string, indexText: string, location?: SourceLocation): void;
+    /** A name read further on than the row being built, where the run has still to work that row out. */
+    static futureRowReadDiagnostic(name: string, indexText: string, iterationTerm: string, location?: SourceLocation): Diagnostic;
+    /**
+     * Reports the reads that land past the row being built and have nothing to answer them.  A loaded
+     * column already holds every row, so reading one ahead is a plain lookup and is left alone; a name
+     * the run works out row by row has not reached that row, and never will before this one, so the
+     * statement can never produce a value.  A name standing on its own later value is beyond any
+     * column's help - the run itself is what would have to answer, one row too late.
+     */
+    private reportFutureRowReads;
     /**
      * The names some statement reads at an earlier step, with no statement giving the value the run
      * starts from.  The first row has no earlier value to read, so each of these needs a first value
@@ -905,7 +961,9 @@ declare class LatexVisitor {
     /**
      * A name written at an index is shown at that index - `a_{n}=...`, and a name given both a first
      * value and a rule as the two statements the reader wrote - rather than as a bare name followed by
-     * the branches run together, which is not a statement anybody could have written.
+     * the branches run together, which is not a statement anybody could have written.  A rule written
+     * with no index at all - `a=a_{n-1}+a_{n-2}`, standing beside `a_{1}=1` and `a_{2}=2` - keeps its
+     * bare name, so every row is shown back the way it was written.
      */
     private buildIndexedLatex;
     private getTermLatexName;
@@ -4597,6 +4655,12 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     private readonly domainBuilder;
     /** The term the expression being visited is assigned to, so `rnd` can read its domain. */
     private assignmentTargetName;
+    /**
+     * Where each subscript lands, and how far a statement written a step ahead of the row has to be
+     * moved back to state the row being built.  `x_{n+1}=x_{n}+2` states the same rule as
+     * `x_{n}=x_{n-1}+2` and is compiled as that one.
+     */
+    private readonly iterationIndex;
     constructor(system: System);
     /**
      * Visits an expression as a units expression: unit symbols such as m or s are turned
@@ -4616,11 +4680,23 @@ declare class Visitor extends LatexMathVisitor<Branch> {
      */
     private reportIndependentAssignment;
     /**
-     * An index that steps back from the row being built - `x_{n-1}` - reads a value the run does not
-     * hold yet when it is on its first row.  Who does the reading does not matter: `v_{n}=v_{n-1}+a_{n-1}`
-     * needs a first value for `a` exactly as much as `a` reading its own earlier value would.
+     * A read that lands ahead of the row being built - the `x_{n+1}` of `y_{n}=x_{n+1}` - answers only
+     * where the rows are already there, as they are for a loaded column; a name the run works out row
+     * by row has nothing at that index yet.  Which of the two it is turns on where the name's values
+     * come from, and a column is often loaded after the statements that read it, so the read is put on
+     * record and the run answers for it.  A statement written a step ahead is not this at all:
+     * `y_{n+1}=x_{n+1}` moves back with the statement and lands on the row being built.
      */
-    private isPreviousStepIndex;
+    private reportFutureRowRead;
+    /**
+     * A name written from its own value, at the row being built or at one the run reaches later.
+     * `c_{n}=c_{n}+22` has nothing to work that row out from - the value it reads is the one the
+     * statement is there to produce - and `c_{n}=c_{n+2}` is answered two rows too late.  No column
+     * can stand in for either: the run itself is what would have to answer.  Reading an earlier row
+     * is a different thing entirely, and is what a succession is made of.  So is the bare `c=c+22`,
+     * which says to carry the value from the row before rather than claiming the two are equal.
+     */
+    private reportSelfReference;
     private isLiteralIndexText;
     private markLiteralIterationIndexText;
     visitStatement: (context: StatementContext) => Branch;
@@ -4783,6 +4859,20 @@ declare class Visitor extends LatexMathVisitor<Branch> {
 }
 
 /**
+ * Converts a stored name back into the LaTeX a reader wrote and an editor renders.  `v.x` is a name
+ * carrying a subscript, so it goes back to `v_{\!x}` - the spelling the editor uses for a subscript
+ * that is part of the name rather than an index.  A name holding no subscript is already its own
+ * LaTeX and is returned unchanged.
+ */
+declare function toLatexName(name: string): string;
+/**
+ * The LaTeX for a name read at an index.  A name already carrying a subscript is braced first, so
+ * `v.x` at `n-1` is `{v_{\!x}}_{n-1}` rather than the two subscripts in a row that a typesetter
+ * refuses to read.
+ */
+declare function toIndexedLatexName(name: string, indexLatex: string): string;
+
+/**
  * `[1..5]` or `[0..10..2]`: the arithmetic progression from `start` towards `end` in `step`
  * increments.  The progression is kept structurally and only expanded through `listValues`, so a
  * range spanning millions of values costs nothing until something explicitly asks for the list.
@@ -4870,5 +4960,5 @@ declare class UnionDomain extends Domain {
     toMetadata(): DomainMetadata;
 }
 
-export { Body, Branch, BuiltinDomain, BuiltinDomainKind, CategoricalColumns, RegressionType as DataRegressionType, Deriver, DiagnosticCode, DiagnosticCollector, DiagnosticSeverity, DiscreteRangeDomain, Domain, DomainControl, DomainKind, DomainReference, DomainRegistry, DomainSerializer, Engine, EnumLiteral, EnumLiteralTable, Expression, ExpressionExpander, FiniteSetDomain, IntervalDomain, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, Simplifier, SingularitiesDetector, SingularityType, System, Term, TermType, UnionDomain, Visitor, formatDomainNumber };
-export type { CategoricalColumn, RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult, DataValue, Diagnostic, DomainJson, DomainMetadata, DomainResolver, DomainValueMetadata, DomainsJson, EncodedColumns, EnumLiteralEntry, FiniteSetMember, NamedDomainDeclaration, Singularity, SourceLocation, SystemProcessor };
+export { Body, Branch, BuiltinDomain, BuiltinDomainKind, CategoricalColumns, RegressionType as DataRegressionType, Deriver, DiagnosticCode, DiagnosticCollector, DiagnosticSeverity, DiscreteRangeDomain, Domain, DomainControl, DomainKind, DomainReference, DomainRegistry, DomainSerializer, Engine, EnumLiteral, EnumLiteralTable, Expression, ExpressionExpander, FiniteSetDomain, IntervalDomain, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, Simplifier, SingularitiesDetector, SingularityType, System, Term, TermType, UnionDomain, Visitor, formatDomainNumber, toIndexedLatexName, toLatexName };
+export type { CategoricalColumn, RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult, DataValue, Diagnostic, DomainJson, DomainMetadata, DomainResolver, DomainValueMetadata, DomainsJson, EncodedColumns, EnumLiteralEntry, FiniteSetMember, MessagePart, NamedDomainDeclaration, Singularity, SourceLocation, SystemProcessor };
