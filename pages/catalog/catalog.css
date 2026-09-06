@@ -1571,6 +1571,35 @@ body {
   background: var(--breakdown-accent);
   border-radius: inherit;
 }
+.usage-growth-rate {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-left: auto;
+  padding: 0.3rem 0.65rem;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #eef2f7;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+.usage-growth-rate span + span {
+  padding-left: 0.55rem;
+  border-left: 1px solid #e2e8f0;
+}
+.usage-growth-rate i {
+  color: var(--breakdown-accent);
+}
+.usage-growth-rate strong {
+  color: #1e293b;
+  font-family: "Inter", sans-serif;
+  font-size: 0.78rem;
+}
+.usage-growth-chart {
+  height: 280px;
+  margin-top: 0.8rem;
+}
 .usage-breakdown-empty {
   padding: 1.4rem 0;
   color: #94a3b8;

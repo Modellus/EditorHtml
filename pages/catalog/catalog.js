@@ -54,6 +54,8 @@ const treeNodeIds = {
   maintenanceWhatsNew: "maintenance-whats-new",
   maintenanceCharacterCategories: "maintenance-character-categories"
 };
+// The growth chart opens on this day; whoever signed up earlier is already counted in its first point.
+const dashboardGrowthFirstDay = { year: 2026, month: 0, day: 1 };
 const fontAwesomeIcons = [
   { value: "", label: "No icon" },
   { value: "fa-light fa-graduation-cap", label: "Graduation Cap" },
@@ -181,6 +183,7 @@ class ModelsApp {
     this.templatePickerPopupInstance = null;
     this.usersGridInstance = null;
     this.dashboardRefreshButtonInstance = null;
+    this.dashboardGrowthChartInstance = null;
     this.userFeaturesPopupInstance = null;
     this.favoriteModelIdSet = new Set();
     this.pickedModelIdSet = new Set();
@@ -4037,6 +4040,10 @@ class ModelsApp {
   }
 
   disposeUsageDashboard() {
+    if (this.dashboardGrowthChartInstance) {
+      this.dashboardGrowthChartInstance.dispose();
+      this.dashboardGrowthChartInstance = null;
+    }
     if (!this.dashboardRefreshButtonInstance)
       return;
     this.dashboardRefreshButtonInstance.dispose();
@@ -4125,6 +4132,164 @@ class ModelsApp {
         <div class="usage-breakdown-list">${rowsMarkup || emptyMarkup}</div>
       </article>
     `;
+  }
+
+  getDashboardGrowthFirstDay() {
+    return new Date(dashboardGrowthFirstDay.year, dashboardGrowthFirstDay.month, dashboardGrowthFirstDay.day);
+  }
+
+  buildDashboardGrowthSeries(users) {
+    // One point per day from the first day shown to today, so a quiet day reads as a flat step
+    // instead of a gap, and both totals only ever grow.
+    const signUps = [];
+    for (let userIndex = 0; userIndex < users.length; userIndex++) {
+      const signUpDate = new Date(users[userIndex].createdAt);
+      if (isNaN(signUpDate.getTime()))
+        continue;
+      signUps.push({
+        dayTime: new Date(signUpDate.getFullYear(), signUpDate.getMonth(), signUpDate.getDate()).getTime(),
+        country: users[userIndex].country || ""
+      });
+    }
+    if (!signUps.length)
+      return [];
+    signUps.sort((leftSignUp, rightSignUp) => leftSignUp.dayTime - rightSignUp.dayTime);
+    const today = new Date();
+    const lastDayTime = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const knownCountries = new Set();
+    const series = [];
+    // Walking the calendar with setDate keeps every point on local midnight across daylight saving.
+    // The first point carries everyone who signed up before it, so the totals stay whole.
+    const cursorDate = this.getDashboardGrowthFirstDay();
+    let signUpIndex = 0;
+    let totalUsers = 0;
+    while (cursorDate.getTime() <= lastDayTime) {
+      const dayTime = cursorDate.getTime();
+      let newUsers = 0;
+      let newCountries = 0;
+      while (signUpIndex < signUps.length && signUps[signUpIndex].dayTime <= dayTime) {
+        totalUsers++;
+        newUsers++;
+        const country = signUps[signUpIndex].country;
+        if (country && !knownCountries.has(country)) {
+          knownCountries.add(country);
+          newCountries++;
+        }
+        signUpIndex++;
+      }
+      series.push({
+        date: new Date(dayTime),
+        users: totalUsers,
+        countries: knownCountries.size,
+        newUsers,
+        newCountries
+      });
+      cursorDate.setDate(cursorDate.getDate() + 1);
+    }
+    const growthRates = this.getDashboardGrowthRates(series);
+    for (let dayIndex = 0; dayIndex < series.length; dayIndex++)
+      series[dayIndex].averageUsers = series[0].users + growthRates.usersPerDay * dayIndex;
+    return series;
+  }
+
+  getDashboardGrowthRates(growthSeries) {
+    // The average slope of the window drawn: what the dashed line runs along.
+    const spanInDays = growthSeries.length - 1;
+    if (spanInDays < 1)
+      return { usersPerDay: 0, countriesPerDay: 0 };
+    const firstDay = growthSeries[0];
+    const lastDay = growthSeries[growthSeries.length - 1];
+    return {
+      usersPerDay: (lastDay.users - firstDay.users) / spanInDays,
+      countriesPerDay: (lastDay.countries - firstDay.countries) / spanInDays
+    };
+  }
+
+  formatDashboardRate(value) {
+    const fractionDigits = Math.abs(value) >= 10 ? 0 : 2;
+    return new Intl.NumberFormat(this.translations.language, {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits
+    }).format(value);
+  }
+
+  buildDashboardGrowthRateMarkup(growthSeries) {
+    if (!growthSeries.length)
+      return "";
+    const growthRates = this.getDashboardGrowthRates(growthSeries);
+    const perDay = this.translations.get("day");
+    const buildRate = (rate, unitLabel) => `<span><strong>${rate > 0 ? "+" : ""}${this.escapeHtml(this.formatDashboardRate(rate))}</strong> ${this.escapeHtml(unitLabel)} / ${this.escapeHtml(perDay)}</span>`;
+    return `
+      <div class="usage-growth-rate" title="${this.translations.get("Average growth")}">
+        <i class="fa-light fa-arrow-trend-up" aria-hidden="true"></i>
+        ${buildRate(growthRates.usersPerDay, this.translations.get("users"))}
+        ${buildRate(growthRates.countriesPerDay, this.translations.get("countries"))}
+      </div>
+    `;
+  }
+
+  buildDashboardGrowthMarkup(growthSeries) {
+    const subtitle = `${this.translations.get("Users and countries per day since")} ${this.formatDashboardDate(this.getDashboardGrowthFirstDay())}`;
+    const bodyMarkup = growthSeries.length
+      ? `<div class="usage-growth-chart" id="usage-growth-chart"></div>`
+      : `<div class="usage-breakdown-empty">${this.translations.get("No data available")}</div>`;
+    return `
+      <article class="usage-breakdown-card usage-breakdown-card--wide" style="--breakdown-accent:#7c3aed">
+        <div class="usage-breakdown-header">
+          <span class="usage-breakdown-icon"><i class="fa-light fa-chart-line-up" aria-hidden="true"></i></span>
+          <div>
+            <h2>${this.translations.get("Growth")}</h2>
+            <p>${this.escapeHtml(subtitle)}</p>
+          </div>
+          ${this.buildDashboardGrowthRateMarkup(growthSeries)}
+        </div>
+        ${bodyMarkup}
+      </article>
+    `;
+  }
+
+  createDashboardGrowthChart(growthSeries) {
+    const chartHost = document.getElementById("usage-growth-chart");
+    if (!chartHost)
+      return;
+    const usersLabel = this.translations.get("Users");
+    const countriesLabel = this.translations.get("Countries");
+    this.dashboardGrowthChartInstance = new DevExpress.viz.dxChart(chartHost, {
+      dataSource: growthSeries,
+      commonSeriesSettings: { argumentField: "date", point: { visible: false } },
+      series: [
+        { valueField: "users", name: usersLabel, type: "steparea", color: "#7c3aed", opacity: 0.16 },
+        { valueField: "countries", name: countriesLabel, type: "stepline", color: "#2563eb", axis: "countries", width: 2 },
+        { valueField: "averageUsers", name: this.translations.get("Average growth"), type: "line", color: "#64748b", width: 1.5, dashStyle: "dash" }
+      ],
+      argumentAxis: {
+        argumentType: "datetime",
+        grid: { visible: false },
+        label: { overlappingBehavior: "hide" }
+      },
+      valueAxis: [
+        { name: "users", allowDecimals: false, title: { text: usersLabel, font: { size: 11, color: "#7c3aed" } } },
+        { name: "countries", position: "right", allowDecimals: false, grid: { visible: false }, title: { text: countriesLabel, font: { size: 11, color: "#2563eb" } } }
+      ],
+      legend: { verticalAlignment: "top", horizontalAlignment: "right", font: { size: 11 } },
+      crosshair: { enabled: true, horizontalLine: false, label: { visible: true } },
+      tooltip: {
+        enabled: true,
+        customizeTooltip: pointInfo => {
+          const day = pointInfo.point.data;
+          const newUsersLabel = day.newUsers ? ` (+${this.formatDashboardNumber(day.newUsers)})` : "";
+          const newCountriesLabel = day.newCountries ? ` (+${this.formatDashboardNumber(day.newCountries)})` : "";
+          return {
+            text: [
+              this.formatDashboardDate(day.date),
+              `${this.formatDashboardNumber(day.users)} ${usersLabel}${newUsersLabel}`,
+              `${this.formatDashboardNumber(day.countries)} ${countriesLabel}${newCountriesLabel}`
+            ].join("\n")
+          };
+        }
+      },
+      size: { height: 280 }
+    });
   }
 
   getModelUsageCount(model) {
@@ -4290,6 +4455,7 @@ class ModelsApp {
       const sampleModels = models.filter(model => model.is_sample === 1);
       const totalLikes = models.reduce((likes, model) => likes + model.likes_count, 0);
       const totalUsage = models.reduce((usage, model) => usage + this.getModelUsageCount(model), 0);
+      const growthSeries = this.buildDashboardGrowthSeries(users);
       const countries = this.countDashboardValues(users, "country");
       const profiles = this.countDashboardValues(users, "role");
       const sciences = this.countDashboardValues(models, "science_id");
@@ -4327,6 +4493,7 @@ class ModelsApp {
             ${this.buildDashboardInsightMarkup(this.translations.get("Countries"), this.formatDashboardNumber(representedCountries), this.translations.get("different user countries"), "fa-light fa-earth-europe", "#2563eb")}
           </section>
           <section class="usage-breakdowns-grid">
+            ${this.buildDashboardGrowthMarkup(growthSeries)}
             ${this.buildDashboardTopModelsMarkup(topModels)}
             ${this.buildDashboardDistributionMarkup(this.translations.get("Countries"), this.translations.get("Where users are located"), "fa-light fa-earth-europe", "#2563eb", countries, users.length, value => this.getDashboardCountryLabel(value))}
             ${this.buildDashboardDistributionMarkup(this.translations.get("Profiles"), this.translations.get("Community roles"), "fa-light fa-address-card", "#7c3aed", profiles, users.length, value => this.getDashboardRoleLabel(value))}
@@ -4335,6 +4502,7 @@ class ModelsApp {
           </section>
         </div>
       `;
+      this.createDashboardGrowthChart(growthSeries);
       const refreshButtonHost = document.getElementById("usage-dashboard-refresh");
       this.dashboardRefreshButtonInstance = new DevExpress.ui.dxButton(refreshButtonHost, {
         text: this.translations.get("Refresh"),
