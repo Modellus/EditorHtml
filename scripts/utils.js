@@ -814,6 +814,40 @@ class Utils {
         return Utils.escapeMathTermName(Utils.writeTermNames(text));
     }
 
+    // Maths shown outside a math-field - a card's picture, a message, a label - is typeset the way the
+    // field would show it, with dotted names as named indexes and the four plain-letter functions upright.
+    static renderMathMarkup(latex) {
+        return MathLive.convertLatexToMarkup(Utils.writeFunctionNames(Utils.writeTermNames(latex)));
+    }
+
+    // A message is prose with fragments of the model in it. The prose is shown in the page's own type
+    // and each fragment is typeset, so a name reads on the message the way it reads on the card.
+    static renderMessageHtml(parts) {
+        return (parts ?? []).map(part => "latex" in part
+            ? `<span class="mdl-message-math">${Utils.renderMathMarkup(part.latex)}</span>`
+            : Utils.escapeXmlText(part.text)).join("");
+    }
+
+    static builtinDomainLatex = { "ℝ": "\\mathbb{R}", "ℤ": "\\mathbb{Z}", "ℕ": "\\mathbb{N}", "\u{1D539}": "\\mathbb{B}", "ℚ": "\\mathbb{Q}" };
+
+    static categoricalLabelPattern = /(?<![A-Za-z0-9_\\])([A-Za-z][A-Za-z0-9_]*)(?![A-Za-z0-9_{])/g;
+
+    // A categorical value is written \text{red} in a field, so that is how one is typeset in a message.
+    static writeCategoricalLabel(label) {
+        return `\\text{${String(label ?? "")}}`;
+    }
+
+    // The engine describes a domain the way it prints - {red, blue}, [0, 1], ℝ ∪ ℤ - and a field
+    // writes it \{\text{red}, \text{blue}\}, [0, 1], \mathbb{R} \cup \mathbb{Z}. A number, a bracket,
+    // a comma and the range dots are spelled the same both ways, so only sets, words and symbols move.
+    static convertDomainTextToLatex(domainText) {
+        return String(domainText ?? "")
+            .replace(/[{}]/g, brace => `\\${brace}`)
+            .replace(Utils.categoricalLabelPattern, (word, label) => Utils.writeCategoricalLabel(label))
+            .replace(/∪/g, "\\cup")
+            .replace(/[ℝℤℕℚ\u{1D539}]/gu, symbol => Utils.builtinDomainLatex[symbol] ?? symbol);
+    }
+
     static buildReadOnlyMathFieldMarkup(mathText, styleText = "") {
         const normalizedStyle = String(styleText ?? "").trim();
         const styleAttribute = normalizedStyle === "" ? "" : ` style=\"${normalizedStyle}\"`;
@@ -1406,7 +1440,8 @@ class Utils {
 if (typeof module !== "undefined" && module.exports)
     module.exports = Utils;
 
-document.addEventListener("click", event => {
+if (typeof document !== "undefined")
+    document.addEventListener("click", event => {
     const item = event.target.closest(".mdl-dropdown-list-item");
     if (!item)
         return;

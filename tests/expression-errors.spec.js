@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const fs = require('fs');
+const path = require('path');
 
 const MathErrorMessage = require('../scripts/controls/mathErrorMessages.js');
 const BaseTranslations = require('../scripts/themes/baseTranslations.js');
@@ -7,6 +9,10 @@ const EDITOR_URL = '/pages/board/index.html';
 const BROKEN_GROUP = '\\displaylines{a=1\\\\b=\\\\c=3}';
 
 function translate(error, language) {
+    return MathErrorMessage.toPlainText(MathErrorMessage.translate(error, new BaseTranslations(language)));
+}
+
+function translateParts(error, language) {
     return MathErrorMessage.translate(error, new BaseTranslations(language));
 }
 
@@ -56,35 +62,86 @@ test.describe('a parse failure is written in the reader\'s language', () => {
 
     test('a row the grammar could not read names where it stopped', () => {
         const error = { message: "Syntax error at line 1, column 2: no viable alternative at input 'b='" };
-        expect(translate(error, 'en-US')).toBe("This row cannot be read around 'b='.");
-        expect(translate(error, 'pt-PT')).toBe('Não é possível ler esta linha junto a «b=».');
+        expect(translate(error, 'en-US')).toBe('This row cannot be read around b=.');
+        expect(translate(error, 'pt-PT')).toBe('Não é possível ler esta linha junto a b=.');
     });
 
     test('a missing symbol is named on its own', () => {
         const error = { message: "Syntax error at line 1, column 4: missing '=' at 'c'" };
-        expect(translate(error, 'en-US')).toBe("'=' is missing.");
-        expect(translate(error, 'pt-PT')).toBe('Falta «=».');
+        expect(translate(error, 'en-US')).toBe('= is missing.');
+        expect(translate(error, 'pt-PT')).toBe('Falta =.');
     });
 
-    test('a diagnostic is written from its code and the names it carries, not from the engine wording', () => {
-        const error = { code: 'INDEPENDENT_ASSIGNED', severity: 'error', message: "'t' is the independent variable: ...", termName: 't' };
-        expect(translate(error, 'en-US')).toContain("'t' is the independent variable");
-        expect(translate(error, 'pt-PT')).toContain('«t» é a variável independente');
+    test('a diagnostic is written from its key and the values it carries, not from the engine wording', () => {
+        const error = { code: 'INDEPENDENT_ASSIGNED', severity: 'error', message: "'t' is the independent variable: ...", parameters: { key: 'independentAssigned', name: 't' } };
+        expect(translate(error, 'en-US')).toContain('t is the independent variable');
+        expect(translate(error, 'pt-PT')).toContain('t é a variável independente');
     });
 
-    test('the two meanings of an unknown name are told apart by the domain it names', () => {
-        expect(translate({ code: 'DOMAIN_UNKNOWN_NAME', domainName: 'Colours' }, 'en-US')).toBe("The domain 'Colours' has not been declared.");
-        expect(translate({ code: 'DOMAIN_UNKNOWN_NAME', location: { text: 'blue' } }, 'en-US')).toBe("'blue' is not a categorical value of any declared domain.");
+    test('the two sentences sharing the unknown-name code are told apart by their key', () => {
+        expect(translate({ code: 'DOMAIN_UNKNOWN_NAME', parameters: { key: 'domainUnknownName', name: 'Colours', declaredNames: [] } }, 'en-US'))
+            .toBe('The domain Colours has not been declared. Declare it first with \\text{domain}\\ Colours = \\ldots.');
+        expect(translate({ code: 'DOMAIN_UNKNOWN_NAME', parameters: { key: 'domainUnknownName', name: 'Colours', declaredNames: ['Sizes', 'Shapes'] } }, 'pt-PT'))
+            .toBe('O domínio Colours não foi declarado. Declare-o com \\text{domain}\\ Colours = \\ldots ou use um dos domínios declarados: Sizes e Shapes.');
+        expect(translate({ code: 'DOMAIN_UNKNOWN_NAME', parameters: { key: 'unknownCategoricalValue', text: '\\text{blue}', label: 'blue' } }, 'en-US'))
+            .toBe('\\text{blue} is not a categorical value of any declared domain. Declare a domain holding \\text{blue} before comparing against it.');
     });
 
-    test('a same-row cycle names the terms caught in it', () => {
-        expect(translate(MathErrorMessage.cycleError(['F', 'a', 'v']), 'pt-PT')).toContain('F, a, v');
+    test('a same-row cycle names the terms caught in it, joined the way the language joins a list', () => {
+        expect(translate(MathErrorMessage.cycleError(['F', 'a', 'v']), 'pt-PT')).toContain('F, a e v');
+        expect(translate(MathErrorMessage.cycleError(['F', 'a', 'v']), 'en-US')).toContain('F, a and v');
     });
 
-    // A code the editor has no wording for, and a diagnostic missing the name its wording needs, both
-    // fall back rather than showing a half-written sentence or the engine's English.
-    test('an error the editor cannot word is reported as a row it could not read', () => {
-        expect(translate({ code: 'DOMAIN_RANDOM_COUNT' }, 'en-US')).toBe('This row could not be read.');
+    // Counts arrive as numbers, so the wording agrees with them; indexes arrive as written, so the
+    // suggestion is spelled the way the reader types it.
+    test('a rule reading itself ahead counts the rows and suggests the index to write instead', () => {
+        const one = { code: 'SELF_REFERENCE', parameters: { key: 'selfReferenceAhead', name: 'c', index: 'n+1', rowsAhead: 1, suggestedIndex: 'n-1' } };
+        const two = { code: 'SELF_REFERENCE', parameters: { key: 'selfReferenceAhead', name: 'c', index: 'n+2', rowsAhead: 2, suggestedIndex: 'n-2' } };
+        expect(translate(one, 'en-US')).toContain('at n+1, one row ahead');
+        expect(translate(two, 'en-US')).toContain('at n+2, 2 rows ahead');
+        expect(translate(two, 'en-US')).toContain('as {c}_{n-2}.');
+        expect(translate(two, 'pt-PT')).toContain('em n+2, 2 linhas à frente');
+        const current = { code: 'SELF_REFERENCE', parameters: { key: 'selfReferenceCurrentRow', name: 'c', index: 'n', suggestedIndex: 'n-1' } };
+        expect(translate(current, 'pt-PT')).toBe('c lê o seu próprio valor na linha que está a ser calculada, por isso não há de onde calcular essa linha. Escreva-o a partir de uma linha já calculada, como {c}_{n-1}.');
+    });
+
+    // Prose and maths are kept apart, so a name is typeset on the message the way it is on the card,
+    // and values the engine spells its own way are written the way a field writes them.
+    test('the maths in a message is split from the prose and spelled the way a field spells it', () => {
+        expect(translateParts({ code: 'SELF_REFERENCE', parameters: { key: 'selfReferenceCurrentRow', name: 'v.x', index: 'n', suggestedIndex: 'n-1' } }, 'en-US'))
+            .toEqual([{ latex: 'v.x' }, { text: ' reads its own value in the row being built, so there is nothing to work that row out from. Write it from a row already worked out, as ' }, { latex: '{v.x}_{n-1}' }, { text: '.' }]);
+        expect(translateParts(MathErrorMessage.cycleError(['F', 'a']), 'pt-PT'))
+            .toEqual([{ latex: 'F' }, { text: ' e ' }, { latex: 'a' }, { text: ' leem-se mutuamente na mesma linha, por isso nenhum deles pode ser calculado em primeiro lugar. Escreva pelo menos um deles a partir do passo anterior.' }]);
+        expect(translateParts({ code: 'DOMAIN_VIOLATION', parameters: { key: 'domainViolation', name: 'c', valueText: 'purple', domainText: '{red, blue} ∪ ℕ' } }, 'en-US'))
+            .toEqual([{ latex: 'c = \\text{purple}' }, { text: ' is outside ' }, { latex: '\\{\\text{red}, \\text{blue}\\} \\cup \\mathbb{N}' }, { text: '.' }]);
+        expect(translate({ code: 'DOMAIN_RANDOM_COUNT', parameters: { key: 'randomCountTooLarge', name: 'x', requested: 5, available: 2, domainText: '{1, 2}' } }, 'en-US'))
+            .toBe('\\mathrm{rnd}(5) asks for one of 5 values, but x only has 2 in \\{1, 2\\}.');
+    });
+
+    test('a categorical expression agrees with how many names hold a categorical value', () => {
+        expect(translate({ code: 'CATEGORICAL_ARITHMETIC', parameters: { key: 'categoricalArithmetic', names: ['color'], expression: 'color+1' } }, 'en-US'))
+            .toBe('color holds a categorical value, so color+1 is not a calculation the model can make.');
+        expect(translate({ code: 'CATEGORICAL_ARITHMETIC', parameters: { key: 'categoricalArithmetic', names: ['color', 'size'], expression: 'color+size' } }, 'pt-PT'))
+            .toBe('color e size guardam valores categóricos, por isso color+size não é um cálculo que o modelo possa fazer.');
+    });
+
+    test('every sentence the engine can say has a wording in every language', () => {
+        const typings = fs.readFileSync(path.join(__dirname, '..', 'libraries', 'types', 'CalculationEngine.d.ts'), 'utf8');
+        const keys = [...typings.matchAll(/^\s+key: "([a-zA-Z]+)";$/gm)].map(match => match[1]);
+        expect(keys.length).toBeGreaterThan(0);
+        expect(Object.keys(MathErrorMessage.wordings).sort()).toEqual([...keys].sort());
+        const values = { name: 'x', index: 'n+1', suggestedIndex: 'n-1', rowsAhead: 2, iterationTerm: 'n', names: ['a', 'b'], expression: 'a+b', statement: 's', declaredNames: ['D'], text: 't', label: 'l', command: 'c', range: '[0..1..1]', suggestedStep: '1', step: '1', start: '0', end: '1', interval: '[0, 1]', suggestedLower: '0', suggestedUpper: '1', valueText: '3', domainText: 'D', requested: 5, available: 2, storedVersion: 2, engineVersion: 1, lower: 0, upper: 1, builtin: 'B' };
+        for (const language of ['en-US', 'pt-PT'])
+            for (const key of keys)
+                expect(translate({ code: 'ANY', message: 'engine', parameters: { key, ...values } }, language), `${key} in ${language}`).not.toBe('engine');
+    });
+
+    // A sentence the editor has no wording for keeps the one the engine wrote, so a problem is never
+    // reduced to a generic line; only a diagnostic with no sentence at all is reported as unreadable.
+    test('an error the editor cannot word keeps the engine sentence', () => {
+        expect(translate({ code: 'DOMAIN_ENUMERATION_LIMIT', message: 'Too many values to list.', parameters: { key: 'somethingNewer' } }, 'en-US')).toBe('Too many values to list.');
+        expect(translate({ code: 'DOMAIN_CIRCULAR', message: "Domain 'A' cannot be defined in terms of itself.", parameters: { key: 'domainCircular' } }, 'pt-PT')).toBe("Domain 'A' cannot be defined in terms of itself.");
+        expect(translateParts({ code: 'DOMAIN_ENUMERATION_LIMIT', message: 'engine', messageParts: [{ text: 'read at ' }, { latex: 'n+1' }], parameters: { key: 'somethingNewer' } }, 'en-US')).toEqual([{ text: 'read at ' }, { latex: 'n+1' }]);
         expect(translate({ code: 'DOMAIN_CIRCULAR' }, 'pt-PT')).toBe('Não foi possível ler esta linha.');
         expect(translate({ message: 'an engine failure with no wording of its own' }, 'pt-PT')).toBe('Não foi possível ler esta linha.');
     });
@@ -100,7 +157,8 @@ test.describe('hovering a card the engine refused', () => {
         await expect(tooltip).toBeVisible();
         await expect(tooltip.locator('.mdl-expression-error-title')).toHaveText('Erro na expressão');
         await expect(tooltip.locator('.mdl-expression-error-row-label')).toHaveText('Linha 2');
-        await expect(tooltip.locator('.mdl-expression-error-row-message')).toHaveText('Não é possível ler esta linha junto a «b=».');
+        await expect(tooltip.locator('.mdl-expression-error-row-message')).toHaveText('Não é possível ler esta linha junto a b=.');
+        await expect(tooltip.locator('.mdl-expression-error-row-message .mdl-message-math .ML__latex')).toHaveCount(1);
     });
 
     test('the same card in English carries the English wording', async ({ page }) => {
@@ -111,7 +169,7 @@ test.describe('hovering a card the engine refused', () => {
         const tooltip = page.locator('.mdl-expression-error-tooltip');
         await expect(tooltip).toBeVisible();
         await expect(tooltip.locator('.mdl-expression-error-title')).toHaveText('Expression error');
-        await expect(tooltip.locator('.mdl-expression-error-row-message')).toHaveText("This row cannot be read around 'b='.");
+        await expect(tooltip.locator('.mdl-expression-error-row-message')).toHaveText('This row cannot be read around b=.');
     });
 
     test('a card the engine reads leaves the tooltip out of the way', async ({ page }) => {

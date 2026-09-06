@@ -131,8 +131,8 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         const translations = this.board.translations;
         const rowsHtml = this.failingRows.map(failingRow => {
             const label = translations.get("Expression Error Row").replace("{number}", failingRow.rowIndex + 1);
-            const message = MathErrorMessage.translate(failingRow.error, translations);
-            return `<div class="mdl-expression-error-row"><span class="mdl-expression-error-row-label">${Utils.escapeXmlText(label)}</span><span class="mdl-expression-error-row-message">${Utils.escapeXmlText(message)}</span></div>`;
+            const messageHtml = Utils.renderMessageHtml(MathErrorMessage.translate(failingRow.error, translations));
+            return `<div class="mdl-expression-error-row"><span class="mdl-expression-error-row-label">${Utils.escapeXmlText(label)}</span><span class="mdl-expression-error-row-message">${messageHtml}</span></div>`;
         }).join("");
         return `<div class="mdl-expression-error-title">${Utils.escapeXmlText(translations.get("Expression Error Title"))}</div>${rowsHtml}`;
     }
@@ -438,7 +438,7 @@ if (typeof BaseShape !== "undefined") ExpressionShape = class ExpressionShape ex
         const height = this.properties.height;
         const color = this.properties.foregroundColor || "black";
         const backgroundColor = this.properties.backgroundColor || "transparent";
-        const markup = MathLive.convertLatexToMarkup(Utils.writeFunctionNames(Utils.writeTermNames(this.properties.expression)));
+        const markup = Utils.renderMathMarkup(this.properties.expression);
         const mathStyles = BaseShape.embeddedMathStyles || "";
         const isMidSchool = document.body.classList.contains("mid-school");
         const handwrittenOverride = isMidSchool

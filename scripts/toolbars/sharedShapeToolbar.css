@@ -1051,3 +1051,14 @@ math-field {
     min-width: 0;
     font-size: 12px;
 }
+
+/* A fragment of the model inside a message is typeset, and sits on the prose's own line. */
+.mdl-message-math {
+    display: inline-block;
+    vertical-align: baseline;
+    white-space: nowrap;
+}
+
+.mdl-message-math .ML__latex {
+    font-size: 1.05em;
+}

@@ -277,6 +277,135 @@ type MessagePart = {
 } | {
     readonly latex: string;
 };
+/**
+ * The values a diagnostic's wording is composed from, named rather than spelled into a sentence, so
+ * a UI can write the message itself - in its own language, or in its own words - instead of showing
+ * the engine's English.  `key` says which sentence it is: a code classifies a kind of problem and
+ * several sentences can share one, but a key is one sentence and so is what a translation is written
+ * against.  Reading `key` narrows the rest of the fields to exactly the ones that sentence uses.
+ *
+ * Names arrive as the model stores them - `v.x` rather than `v_{\!x}` - so pass them through
+ * `toLatexName` to typeset one.  Lists arrive unjoined, and counts as numbers, so the wording can
+ * agree with them in a language whose plurals do not work the way English's do.
+ */
+type DiagnosticParameters = {
+    key: "independentAssigned";
+    name: string;
+} | {
+    key: "selfReferenceCurrentRow";
+    name: string;
+    index: string;
+    suggestedIndex: string;
+} | {
+    key: "selfReferenceAhead";
+    name: string;
+    index: string;
+    rowsAhead: number;
+    suggestedIndex: string;
+} | {
+    key: "futureRowReadUnsettled";
+    name: string;
+    index: string;
+    iterationTerm: string;
+} | {
+    key: "futureRowReadComputed";
+    name: string;
+    index: string;
+    iterationTerm: string;
+} | {
+    key: "expressionCycle";
+    names: string[];
+} | {
+    key: "categoricalArithmetic";
+    names: string[];
+    expression: string;
+} | {
+    key: "domainKeywordExpected";
+    statement: string;
+    name: string;
+} | {
+    key: "domainNameConflict";
+    name: string;
+} | {
+    key: "domainCircular";
+    name: string;
+} | {
+    key: "domainUnknownName";
+    name: string;
+    declaredNames: string[];
+} | {
+    key: "domainUnknownBuiltin";
+    text: string;
+} | {
+    key: "domainEmpty";
+} | {
+    key: "domainMixedMembers";
+} | {
+    key: "elementNotFinite";
+    text: string;
+} | {
+    key: "labelReserved";
+    label: string;
+} | {
+    key: "labelIsTerm";
+    label: string;
+} | {
+    key: "labelNotWritable";
+    command: string;
+} | {
+    key: "unknownCategoricalValue";
+    text: string;
+    label: string;
+} | {
+    key: "rangeBoundsNotFinite";
+    range: string;
+} | {
+    key: "rangeStepZero";
+    range: string;
+    suggestedStep: string;
+} | {
+    key: "rangeStepDirection";
+    step: string;
+    start: string;
+    end: string;
+    suggestedStep: string;
+} | {
+    key: "intervalInvalid";
+    interval: string;
+    suggestedLower: string;
+    suggestedUpper: string;
+} | {
+    key: "domainViolation";
+    name: string;
+    valueText: string;
+    domainText: string;
+} | {
+    key: "randomCountTooLarge";
+    name: string;
+    requested: number;
+    available: number;
+    domainText: string;
+} | {
+    key: "storedSchemaNewer";
+    storedVersion: number;
+    engineVersion: number;
+} | {
+    key: "storedFiniteEmpty";
+} | {
+    key: "storedRangeUnwalkable";
+    start: number;
+    end: number;
+    step: number;
+} | {
+    key: "storedIntervalBounds";
+    lower: number;
+    upper: number;
+} | {
+    key: "storedUnknownBuiltin";
+    builtin: string;
+} | {
+    key: "storedUnknownKind";
+};
 interface SourceLocation {
     line: number;
     column: number;
@@ -291,6 +420,11 @@ interface Diagnostic {
      * it.  A single LaTeX string is one join away: `parts.map(p => "text" in p ? `\\text{${p.text}}` : p.latex).join("")`.
      */
     messageParts?: ReadonlyArray<MessagePart>;
+    /**
+     * The values the wording is composed from, for a UI writing its own message.  `message` stays the
+     * fallback for a sentence the UI has no wording of its own for.
+     */
+    parameters?: DiagnosticParameters;
     termName?: string;
     domainName?: string;
     /** The rejected value, for DOMAIN_VIOLATION. */
@@ -4961,4 +5095,4 @@ declare class UnionDomain extends Domain {
 }
 
 export { Body, Branch, BuiltinDomain, BuiltinDomainKind, CategoricalColumns, RegressionType as DataRegressionType, Deriver, DiagnosticCode, DiagnosticCollector, DiagnosticSeverity, DiscreteRangeDomain, Domain, DomainControl, DomainKind, DomainReference, DomainRegistry, DomainSerializer, Engine, EnumLiteral, EnumLiteralTable, Expression, ExpressionExpander, FiniteSetDomain, IntervalDomain, LatexVisitor, Parser, PhysicalBody, PhysicalEngine, PreloadedData, RegressionTerm, Regressor, Simplifier, SingularitiesDetector, SingularityType, System, Term, TermType, UnionDomain, Visitor, formatDomainNumber, toIndexedLatexName, toLatexName };
-export type { CategoricalColumn, RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult, DataValue, Diagnostic, DomainJson, DomainMetadata, DomainResolver, DomainValueMetadata, DomainsJson, EncodedColumns, EnumLiteralEntry, FiniteSetMember, MessagePart, NamedDomainDeclaration, Singularity, SourceLocation, SystemProcessor };
+export type { CategoricalColumn, RegressionPoint as DataRegressionPoint, RegressionResult as DataRegressionResult, DataValue, Diagnostic, DiagnosticParameters, DomainJson, DomainMetadata, DomainResolver, DomainValueMetadata, DomainsJson, EncodedColumns, EnumLiteralEntry, FiniteSetMember, MessagePart, NamedDomainDeclaration, Singularity, SourceLocation, SystemProcessor };
