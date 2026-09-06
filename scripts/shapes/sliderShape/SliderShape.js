@@ -118,7 +118,7 @@ class SliderShape extends BaseShape {
                 buildControl: $container => $container.append(this.createScaleValueControl("maximum", "showMaximumValue"))
             },
             {
-                text: "Precision",
+                text: "Accuracy",
                 buildControl: $container => {
                     $('<div>').dxNumberBox({
                         value: this.properties.precision,
