@@ -890,7 +890,7 @@ svg:active.pan-available {
 
 .mdl-dropdown-grid {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: 6px 10px;
     padding: 8px 12px;
@@ -905,6 +905,25 @@ svg:active.pan-available {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    min-width: 0;
+}
+
+/* A row of axis bounds fills its cell and its boxes share the width, so a long value scrolls
+   inside its box instead of widening the menu past its edge. */
+.mdl-axis-range-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+}
+
+.mdl-axis-range-box {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.mdl-axis-range-box .dx-numberbox {
+    width: 100%;
 }
 
 .mdl-collab-panel {

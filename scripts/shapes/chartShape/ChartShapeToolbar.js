@@ -212,7 +212,7 @@ var ChartShapeToolbarMixin = {
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: this.getShapeOverlayWrapperAttr(),
-                width: 280,
+                width: 300,
                 contentTemplate: contentElement => this.buildChartTypeMenuContent(contentElement)
             }
         });

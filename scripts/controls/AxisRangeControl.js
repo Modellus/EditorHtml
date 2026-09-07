@@ -12,8 +12,10 @@ class AxisRangeControl {
         this.boxes = {};
     }
 
+    // The row is as wide as the cell it is put in, and its boxes share that width whatever they
+    // hold: a long value scrolls inside its box rather than pushing the row past the menu.
     createRow(axis) {
-        const wrapper = $('<div style="display: flex; gap: 6px;">');
+        const wrapper = $('<div class="mdl-axis-range-row">');
         this.createBox(wrapper, axis, "Min");
         this.createBox(wrapper, axis, "Max");
         const trailing = this.options.trailing ? this.options.trailing(axis) : null;
@@ -42,7 +44,7 @@ class AxisRangeControl {
         const editorOptions = this.options.editorOptions
             ? this.options.editorOptions(boxOptions)
             : Utils.getNumericEditorOptions(Object.assign({ showSpinButtons: false, stylingMode: "filled" }, boxOptions));
-        $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(editorOptions);
+        $('<div class="mdl-axis-range-box">').appendTo(wrapper).dxNumberBox(editorOptions);
     }
 
     isDisabled(axis) {

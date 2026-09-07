@@ -60,6 +60,42 @@ test.describe('one control for how far an axis runs', () => {
         expect(await page.evaluate(() => shell.board.shapes.getByName('Chart').properties.domainOverride.xMax)).toBe(25);
     });
 
+    test('the chart menu keeps every control inside itself whatever the bounds hold', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Values');
+            shell.board.shapes.getByName('Values').properties.expression = 'y=2\\cdot t';
+            shell.reset();
+            shell.commands.addShape('ChartShape', 'Chart');
+        });
+        await page.waitForTimeout(500);
+        await page.evaluate(() => {
+            const chart = shell.board.shapes.getByName('Chart');
+            chart.properties.autoScale = false;
+            chart.properties.domainOverride = { xMin: -1500000, xMax: 2500000, yMin: -0.125, yMax: 12.5 };
+            shell.board.markDirty(chart);
+        });
+        await openSettings(page, 'Chart', '.mdl-chart-type-selector');
+        const layout = await page.evaluate(() => {
+            const content = document.querySelector('.mdl-shape-overlay-popup .dx-overlay-content');
+            const menuRight = content.getBoundingClientRect().right;
+            const controls = Array.from(content.querySelectorAll('.mdl-dropdown-grid-control'));
+            // A switch keeps a sliding strip twice its width under its own clip, so the visible edge
+            // of each control is what is measured rather than what the grid could scroll to.
+            return {
+                menuRight: menuRight,
+                controlRights: controls.map(control => Math.max(...Array.from(control.children).map(child => child.getBoundingClientRect().right))),
+                boxWidths: Array.from(content.querySelectorAll('.dx-numberbox')).map(box => box.getBoundingClientRect().width)
+            };
+        });
+        expect(layout.controlRights).toHaveLength(6);
+        for (const controlRight of layout.controlRights)
+            expect(controlRight).toBeLessThanOrEqual(layout.menuRight);
+        // The two boxes of a row share its width rather than growing with what they hold.
+        expect(layout.boxWidths).toHaveLength(4);
+        expect(Math.max(...layout.boxWidths) - Math.min(...layout.boxWidths)).toBeLessThan(1);
+    });
+
     test('the referential turns a bound back into an origin and a scale', async ({ page }) => {
         await setupBoard(page);
         await page.evaluate(() => {
