@@ -30,6 +30,9 @@ var RulerShapeToolbarMixin = {
         );
         return items;
     },
+    hasSettingsMenu() {
+        return true;
+    },
     createRulerSettingsDropDownButton(itemElement) {
         this._rulerSettingsDropdownElement = $('<div class="mdl-ruler-settings-selector">');
         this._rulerSettingsDropdownElement.dxDropDownButton({
@@ -92,6 +95,7 @@ var RulerShapeToolbarMixin = {
                 }
             }
         ];
+        listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 220, scrollContent => {
             $('<div>').appendTo(scrollContent).dxList({
                 dataSource: listItems,

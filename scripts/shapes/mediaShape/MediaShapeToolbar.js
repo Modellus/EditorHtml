@@ -30,6 +30,9 @@ var MediaShapeToolbarMixin = {
         );
         return items;
     },
+    hasSettingsMenu() {
+        return true;
+    },
     createMediaSettingsDropDownButton(container) {
         this._mediaSettingsDropdownElement = $('<div class="mdl-image-settings-selector">');
         this._mediaSettingsDropdownElement.dxDropDownButton({
@@ -147,6 +150,7 @@ var MediaShapeToolbarMixin = {
         ];
         if (this.applyEmbedLink)
             listItems.splice(1, 0, this.buildEmbedLinkMenuItem());
+        listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 350, scrollContent => {
             $('<div>').appendTo(scrollContent).dxList({
                 dataSource: listItems,

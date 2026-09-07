@@ -84,11 +84,13 @@ function nicePiTickStep(rawStep) {
 // too big to read otherwise - a million or more, the threshold every value on the board switches
 // at - or too small to show in three decimals. Every axis in the editor labels itself this way —
 // the chart, and the objects built from blocks that draw against a scale.
-function formatAxisTickValue(value, axisType = "decimal") {
+function formatAxisTickValue(value, axisType = "decimal", notation = "decimal") {
     if (!Number.isFinite(value))
         return "";
     if (axisType === "pi")
         return formatPiTickValue(value);
+    if (Utils.writesScientific(value, notation))
+        return Utils.formatScientific(value, 2, notation);
     const absoluteValue = Math.abs(value);
     if (Utils.isBigNumber(value) || (absoluteValue > 0 && absoluteValue < 0.001))
         return Utils.formatScientific(value, 2);

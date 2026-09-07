@@ -98,7 +98,8 @@ if (typeof BaseShape !== "undefined") FrequencyChartShape = class FrequencyChart
             borderColor: this.getBorderColor(),
             borderRadius: this.getBorderRadius(),
             ...(this.properties.axisColor ? { axisColor: this.properties.axisColor } : {}),
-            getPrecision: () => this.board.calculator.getPrecision()
+            getPrecision: () => this.board.calculator.getPrecision(),
+            getNotation: () => this.getNotation()
         };
     }
 
@@ -137,7 +138,7 @@ if (typeof BaseShape !== "undefined") FrequencyChartShape = class FrequencyChart
         }
         seenValues.sort((left, right) => left - right);
         const areWholeNumbers = seenValues.every(value => Number.isInteger(value));
-        return { labels: seenValues.map(value => areWholeNumbers ? String(value) : Utils.formatModelValue(value, precision, "")), values: seenValues, isCategorical: false };
+        return { labels: seenValues.map(value => areWholeNumbers ? String(value) : Utils.formatModelValue(value, precision, "", this.getNotation())), values: seenValues, isCategorical: false };
     }
 
     roundToPrecision(value, precision) {
@@ -325,6 +326,7 @@ if (typeof BaseShape !== "undefined") FrequencyChartShape = class FrequencyChart
             dataAreaColor: this.properties.dataAreaColor,
             axisColor: this.properties.axisColor || undefined,
             borderColor: this.getBorderColor(),
+            notation: this.getNotation(),
             valueRanges: this.getValueRanges()
         };
         const dataConfig = {

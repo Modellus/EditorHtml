@@ -1087,7 +1087,7 @@ class TableControl {
     }
 
     formatNumber(value, precision) {
-        return Utils.formatModelValue(value, precision, "");
+        return Utils.formatModelValue(value, precision, "", this.options.notation);
     }
 
     getCellPrecision(row, column) {

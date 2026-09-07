@@ -181,7 +181,7 @@ var BlockMemoryComponents = {
                 const row = rows[index];
                 const top = Number(parameters.y) + index * rowHeight;
                 const middle = top + rowHeight / 2;
-                const valueText = BlockComponentHelpers.formatNumber(BlockMemory.readField(row, "x"), parameters.digits);
+                const valueText = BlockComponentHelpers.formatNumber(BlockMemory.readField(row, "x"), parameters.digits, context.notation);
                 const stacked = parameters.layout === "stacked";
                 const valueWidth = stacked ? 0 : Math.min(width * 0.45, valueText.length * fontSize * 0.6 + 4);
                 const labelWidth = stacked ? width - 8 : width - valueWidth - 10;

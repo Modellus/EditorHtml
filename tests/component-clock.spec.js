@@ -173,7 +173,7 @@ test.describe('clock component', () => {
         await page.waitForTimeout(300);
         const labels = await page.$$eval('.mdl-shape-overlay-popup .mdl-dropdown-list-label',
             elements => elements.map(element => element.textContent.trim()));
-        expect(labels).toEqual(['Buttons']);
+        expect(labels).toEqual(['Buttons', 'Notation']);
         // A hand is dragged whenever its term can be written, so nothing here switches that on.
         expect(labels.join('|')).not.toContain('dragged');
         // A part is left out by being unpainted, so nothing here switches a hand or a value on.
@@ -576,7 +576,7 @@ test.describe('clock component', () => {
         await page.waitForTimeout(400);
         const labels = await page.$$eval('.mdl-shape-overlay-popup .mdl-dropdown-list-label',
             elements => elements.map(element => element.textContent.trim()));
-        expect(labels).toEqual(['Buttons']);
+        expect(labels).toEqual(['Buttons', 'Notation']);
     });
 
     test('the keys are drawn once they are asked for, and the face makes room for them', async ({ page }) => {

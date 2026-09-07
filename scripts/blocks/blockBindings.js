@@ -644,7 +644,7 @@ class BlockBindings {
         // multiple of π, so an instrument marked in radians reads in radians.
         const style = String(binding.style ?? "");
         if (style === "pi" || style === "axis")
-            return `${prefix}${formatAxisTickValue(numeric, style === "pi" ? "pi" : "decimal")}${suffix}`;
+            return `${prefix}${formatAxisTickValue(numeric, style === "pi" ? "pi" : "decimal", context?.notation)}${suffix}`;
         const requestedDigits = Number(this.resolve(binding.digits, context, NaN));
         const digits = Number.isFinite(requestedDigits) ? Math.max(0, Math.min(10, Math.floor(requestedDigits))) : 2;
         // "scale" writes it the way a number is written along a scale: to the decimals asked for,
@@ -652,8 +652,8 @@ class BlockBindings {
         // them, which is what a scale running over decades needs. A plain readout only switches
         // when the number is big.
         if (style === "scale")
-            return `${prefix}${Utils.formatScaleDigits(numeric, digits)}${suffix}`;
-        return `${prefix}${Utils.formatFixedDigits(numeric, digits)}${suffix}`;
+            return `${prefix}${Utils.formatScaleDigits(numeric, digits, context?.notation)}${suffix}`;
+        return `${prefix}${Utils.formatFixedDigits(numeric, digits, context?.notation)}${suffix}`;
     }
 
     // The case a binding is read in. It is a binding like any other, so a row of a list of terms can

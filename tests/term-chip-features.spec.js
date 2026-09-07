@@ -212,9 +212,9 @@ test.describe('Term chip features', () => {
     });
 
     // A field that can be written in says so the moment it is focused: the chip stands down and a
-    // math field takes its place, with the caret in it, and what is written is the size of what it
-    // is being chosen against in the list below.
-    test('a focused field shows the caret and writes at the size of the list it drops', async ({ page }) => {
+    // math field takes its place, with the caret in it, written at the size a value is written in
+    // any number box.
+    test('a focused field shows the caret and writes at the size of a number box', async ({ page }) => {
         await setupEditor(page);
         await addModel(page, '\\frac{dx}{dt}=v', 'v');
         await page.evaluate(() => {
@@ -235,8 +235,7 @@ test.describe('Term chip features', () => {
                 hasWidth: typingField.getBoundingClientRect().width > 0,
                 inputWidth: input.getBoundingClientRect().width,
                 chipDisplay: chip ? getComputedStyle(chip).display : 'none',
-                fieldFontSize: getComputedStyle(typingField).fontSize,
-                listFontSize: getComputedStyle(document.querySelector('.mdl-term-tree-popup math-field')).fontSize
+                fieldFontSize: getComputedStyle(typingField).fontSize
             };
         });
         expect(written.hasWidth).toBe(true);
@@ -244,7 +243,7 @@ test.describe('Term chip features', () => {
         expect(written.inputWidth).toBe(0);
         // The chip is what the field wears at rest, and a field being written in is not at rest.
         expect(written.chipDisplay).toBe('none');
-        expect(written.fieldFontSize).toBe(written.listFontSize);
+        expect(written.fieldFontSize).toBe('12px');
     });
 
     // The list offers what the model holds. The value the row already carries is read on the field

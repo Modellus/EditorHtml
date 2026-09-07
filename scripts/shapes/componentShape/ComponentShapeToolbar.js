@@ -324,6 +324,9 @@ var ComponentShapeToolbarMixin = {
             return;
         this.buildComponentModelMenu(contentElement);
     },
+    hasSettingsMenu() {
+        return true;
+    },
     createComponentSettingsDropDownButton(itemElement) {
         this._componentSettingsDropdownElement = $('<div class="mdl-component-settings-selector">');
         this._componentSettingsDropdownElement.dxDropDownButton({
@@ -365,6 +368,7 @@ var ComponentShapeToolbarMixin = {
                 buildControl: $container => $container.append(this.createComponentParameterControl(parameter))
             });
         }
+        items.push(this.createNotationMenuItem());
         this.renderComponentMenuList(contentElement, items);
     },
     // An object that says how far its axes run edits them the way the chart and the referential do:

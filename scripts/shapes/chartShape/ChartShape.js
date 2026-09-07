@@ -96,6 +96,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             getCalculator: () => this.board.calculator,
             getRotationDegrees: () => this.getHandleRotationDegrees(),
             getPrecision: () => this.board.calculator.getPrecision(),
+            getNotation: () => this.getNotation(),
             calculateArea: (argumentValues, values) => this.board.calculator.calculateArea(argumentValues, values),
             getArgumentPrecision: () => this.board.calculator.getTermPrecision(this.getXTermName()),
             onDomainChanged: domain => this.onDomainChanged(domain),
@@ -429,6 +430,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             axisColor: this.properties.axisColor || undefined,
             xAxisType: this.properties.xAxisType || "decimal",
             yAxisType: this.properties.yAxisType || "decimal",
+            notation: this.getNotation(),
             border: this.getBorderColor(),
             categories: categories ? categories.labels : [],
             argTitle: categories ? this.getCategoryArgumentTitle(ySeries, categories) : this.getTermLabelWithCase(xTerm, xCase)
@@ -454,6 +456,7 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
                 axisColor: config.axisColor,
                 xAxisType: config.xAxisType,
                 yAxisType: config.yAxisType,
+                notation: config.notation,
                 borderColor: config.border,
                 argumentTitle: config.argTitle
             });

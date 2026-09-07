@@ -362,7 +362,7 @@ test.describe('steering wheel component', () => {
         await page.locator('.shape-context-toolbar.visible .mdl-component-settings-selector').click();
         await page.waitForTimeout(500);
         const readGroup = () => page.evaluate(() => {
-            const groups = Array.from(document.querySelectorAll('.mdl-pill-group'));
+            const groups = Array.from(document.querySelectorAll('.mdl-pill-group:not(.mdl-notation-group)'));
             const group = groups[groups.length - 1];
             const icon = group.querySelector('.dx-icon');
             return {

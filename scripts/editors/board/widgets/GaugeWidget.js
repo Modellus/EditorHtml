@@ -331,6 +331,8 @@ class GaugeShape extends BaseShape {
     }
 
     formatGaugeValue(value) {
+        if (Utils.writesScientific(value, this.getNotation()))
+            return Utils.formatScientific(value, 2, this.getNotation());
         const rounded = parseFloat(value.toFixed(2));
         const rawValue = Object.is(rounded, -0) || rounded === 0 ? "0" : rounded.toString();
         return rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, " ");

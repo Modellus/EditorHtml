@@ -1095,7 +1095,7 @@ math-field {
     min-width: 0;
     box-sizing: border-box;
     padding: 6px 9px;
-    font-size: 16px;
+    font-size: 12px;
     color: inherit;
     background: transparent;
     border: none;
@@ -1137,8 +1137,9 @@ math-field {
 }
 
 /* A term field that can be typed into is typed into through a math field of its own, so a value
-   and a name are written the way they are read. The editor's input stays where it was, out of
-   sight, so the placeholder and the box's own focus still work. */
+   and a name are written the way they are read, at the size a value is written in a number box.
+   The editor's input stays where it was, out of sight, so the placeholder and the box's own focus
+   still work. */
 .mdl-term-chip-editor.mdl-term-editing:has(.mdl-term-typing-field) .dx-texteditor-input {
     position: absolute;
     width: 0;
@@ -1152,7 +1153,7 @@ math-field {
     flex: 1 1 auto;
     min-width: 40px;
     padding: 0;
-    font-size: 16px;
+    font-size: 12px;
     color: inherit;
     background: transparent;
     border: none;

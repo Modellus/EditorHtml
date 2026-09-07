@@ -47,6 +47,9 @@ var ReferentialShapeToolbarMixin = {
     renderSettingsButtonTemplate(element) {
         element.innerHTML = `<span class="mdl-shape-color-btn"><i class="fa-light fa-ruler-combined"></i></span>`;
     },
+    hasSettingsMenu() {
+        return true;
+    },
     createSettingsDropDownButton(itemElement) {
         this._settingsDropdownElement = $('<div class="mdl-settings-selector">');
         this._displayOptionsItems = [
@@ -183,6 +186,7 @@ var ReferentialShapeToolbarMixin = {
                             }
                         }
                     ];
+                    listItems.push(this.createNotationMenuItem());
                     Utils.renderDropdownMenuScroll(contentElement, 450, scrollContent => {
                         const grid = $('<div class="mdl-dropdown-grid">');
                         for (const item of listItems) {

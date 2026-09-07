@@ -413,12 +413,17 @@ class ChartControl {
     formatAxisValue(value, axisType = "decimal") {
         if (axisType === "category")
             return this.getCategoryLabel(value);
-        return formatAxisTickValue(value, axisType);
+        return formatAxisTickValue(value, axisType, this.getNotation());
+    }
+
+    // How the chart's owner writes its numbers; a chart with no owner writes them plainly.
+    getNotation() {
+        return Utils.normalizeNotation(typeof this.options.getNotation === "function" ? this.options.getNotation() : this.options.notation);
     }
 
     formatCrosshairValue(value) {
         const precision = typeof this.options.getPrecision === "function" ? this.options.getPrecision() : (Number.isFinite(this.options.precision) ? this.options.precision : 2);
-        return Utils.formatModelValue(value, precision, "");
+        return Utils.formatModelValue(value, precision, "", this.getNotation());
     }
 
     formatArgumentValue(value) {
@@ -427,7 +432,7 @@ class ChartControl {
         if (this.isCategoryMode())
             return this.getCategoryLabel(value);
         if (typeof this.options.getArgumentPrecision === "function")
-            return Utils.formatModelValue(value, this.options.getArgumentPrecision(), "");
+            return Utils.formatModelValue(value, this.options.getArgumentPrecision(), "", this.getNotation());
         return this.formatCrosshairValue(value);
     }
 

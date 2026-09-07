@@ -52,6 +52,7 @@ class BlockCompiler {
             iteration: Number(context.iteration) || 1,
             playing: context.playing === true,
             precision: Number.isFinite(Number(context.precision)) ? Number(context.precision) : 2,
+            notation: Utils.normalizeNotation(context.notation),
             componentStack: [],
             componentDepth: 0
         };
@@ -372,6 +373,7 @@ class BlockCompiler {
         // How many decimals the model is read to, so a value shown beside the drawing is rounded the
         // way the same value is rounded everywhere else on the board.
         resolved.$precision = context.precision;
+        resolved.$notation = context.notation;
         return resolved;
     }
 

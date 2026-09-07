@@ -203,6 +203,11 @@ class BaseShape {
             this.properties.nameColor = this.properties.foregroundColor;
         if (this.properties.borderColor == null)
             this.properties.borderColor = this.properties.foregroundColor;
+        // The notation is written down from the start, so the first change of it can be undone:
+        // a change is undone by writing the old properties back, and a key that was never there
+        // is not written back.
+        if (this.properties.notation == null)
+            this.properties.notation = "decimal";
         this.initializeTermDisplayLayer();
         this.initializeShapeNameLayer();
         this.draw();
@@ -2556,7 +2561,12 @@ class BaseShape {
     }
 
     formatModelValue(value, termName) {
-        return Utils.formatModelValue(value, this.getTermModelPrecision(termName));
+        return Utils.formatModelValue(value, this.getTermModelPrecision(termName), "\u2014", this.getNotation());
+    }
+
+    // How this shape writes its numbers, chosen on its own menu and kept with it.
+    getNotation() {
+        return Utils.normalizeNotation(this.properties?.notation);
     }
 
     getTermModelPrecision(termName) {

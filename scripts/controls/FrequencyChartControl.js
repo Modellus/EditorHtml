@@ -227,10 +227,14 @@ class FrequencyChartControl {
         return Number.isFinite(this.options.precision) ? this.options.precision : 2;
     }
 
+    getNotation() {
+        return Utils.normalizeNotation(typeof this.options.getNotation === "function" ? this.options.getNotation() : this.options.notation);
+    }
+
     formatValue(value, wholeNumbered) {
         if (!Number.isFinite(value))
             return "";
-        return wholeNumbered ? String(Math.round(value)) : Utils.formatModelValue(value, this.getPrecision(), "");
+        return wholeNumbered ? String(Math.round(value)) : Utils.formatModelValue(value, this.getPrecision(), "", this.getNotation());
     }
 
     getNumericValue(row, fieldName) {
@@ -329,7 +333,7 @@ class FrequencyChartControl {
         for (const axisKey of FrequencyChartControl.axisKeys) {
             let widest = 0;
             for (const tickValue of ticksByAxis[axisKey] ?? []) {
-                const labelWidth = this.estimateTextWidth(formatAxisTickValue(tickValue), tickFontSize);
+                const labelWidth = this.estimateTextWidth(formatAxisTickValue(tickValue, "decimal", this.getNotation()), tickFontSize);
                 if (labelWidth > widest)
                     widest = labelWidth;
             }
@@ -560,7 +564,7 @@ class FrequencyChartControl {
         let markup = "";
         for (const tickValue of plan.ticksByAxis[axisKey]) {
             const position = this.getValuePosition(tickValue, axisKey, layout, plan.domains);
-            const labelText = this.escapeMarkupText(formatAxisTickValue(tickValue));
+            const labelText = this.escapeMarkupText(formatAxisTickValue(tickValue, "decimal", this.getNotation()));
             if (horizontal) {
                 const axisY = atStart ? layout.plotBottom : layout.plotTop;
                 const tickEndY = atStart ? axisY + 4 : axisY - 4;

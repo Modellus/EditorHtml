@@ -81,6 +81,10 @@ class SliderShape extends BaseShape {
         this._scaleDropdownElement.appendTo(container);
     }
 
+    hasSettingsMenu() {
+        return true;
+    }
+
     buildScaleMenuContent(contentElement) {
         const listItems = [
             {
@@ -133,6 +137,7 @@ class SliderShape extends BaseShape {
                 }
             }
         ];
+        listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 300, scrollContent => {
             $('<div>').appendTo(scrollContent).dxList({
                 dataSource: listItems,

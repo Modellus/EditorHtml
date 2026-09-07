@@ -833,7 +833,7 @@ class ReferentialShape extends BaseShape {
     }
 
     formatTickValue(value, precision) {
-        return Utils.formatModelValue(value, precision);
+        return Utils.formatModelValue(value, precision, "\u2014", this.getNotation());
     }
 
     normalizeScale(value) {

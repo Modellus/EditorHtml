@@ -258,6 +258,7 @@ class ComponentShape extends BaseShape {
             iteration: this.board.calculator.getIteration(),
             playing: this.board.calculator.isPlaying(),
             precision: this.board.calculator.getPrecision(),
+            notation: this.getNotation(),
             tokens: new BlockTokens(this.properties.preset ?? this.properties.definition?.preset ?? "standard")
         };
     }

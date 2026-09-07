@@ -263,6 +263,9 @@ var FrequencyChartShapeToolbarMixin = {
         );
         return items;
     },
+    hasSettingsMenu() {
+        return true;
+    },
     createFrequencySettingsDropDownButton(container) {
         this._settingsDropdownElement = $('<div class="mdl-frequency-settings-selector">');
         this._settingsDropdownElement.dxDropDownButton({
@@ -309,6 +312,7 @@ var FrequencyChartShapeToolbarMixin = {
         this._valueRangeControl = this.createValueRangeControl();
         for (const axisItem of this.getSeriesAxisItems())
             listItems.push({ text: axisItem.text, buildControl: $container => this._valueRangeControl.createRow(axisItem.key).appendTo($container) });
+        listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 400, scrollContent => {
             const grid = $('<div class="mdl-dropdown-grid">');
             for (const item of listItems) {

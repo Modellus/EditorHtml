@@ -62,6 +62,9 @@ var SlopeShapeToolbarMixin = {
         });
         buttonElement.appendTo(itemElement);
     },
+    hasSettingsMenu() {
+        return true;
+    },
     createSlopeSettingsDropDownButton(itemElement) {
         this._slopeSettingsDropdownElement = $('<div class="mdl-slope-settings-selector">');
         this._slopeSettingsDropdownElement.dxDropDownButton({
@@ -90,6 +93,7 @@ var SlopeShapeToolbarMixin = {
             this.createSlopeNumberListItem("Vertical maximum", "verticalMaximum"),
             this.createSlopeTicksListItem("Vertical ticks", "verticalMajorTicks")
         ];
+        listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 320, scrollContent => {
             $('<div>').appendTo(scrollContent).dxList({
                 dataSource: listItems,

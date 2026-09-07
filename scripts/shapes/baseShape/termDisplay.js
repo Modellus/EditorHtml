@@ -66,7 +66,7 @@
     }
 
     formatModelValue(value, termName) {
-        return Utils.formatModelValue(value, this.shape.getTermModelPrecision(termName));
+        return Utils.formatModelValue(value, this.shape.getTermModelPrecision(termName), "\u2014", this.shape.getNotation?.());
     }
 
     formatTermForDisplay(term) {

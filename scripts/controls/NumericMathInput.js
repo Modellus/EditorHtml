@@ -191,7 +191,7 @@ class NumericMathInput {
         if (!this.ensureMounted())
             return;
         const field = this.field;
-        if (!force && this.typing && typeof field.hasFocus === "function" && field.hasFocus())
+        if (!force && this.isBeingTyped())
             return;
         const disabled = this.component.option("disabled") === true || this.component.option("readOnly") === true;
         field.disabled = disabled;
@@ -210,6 +210,15 @@ class NumericMathInput {
         field.toggleAttribute("data-empty", text === "");
         // What was just written is the box's, not the reader's.
         this.typing = false;
+    }
+
+    // The reader is in the middle of typing when the field is theirs and what it holds is no longer
+    // what was last written into it.
+    isBeingTyped() {
+        const field = this.field;
+        if (!this.typing || typeof field.hasFocus !== "function" || !field.hasFocus())
+            return false;
+        return this.readText() !== (this.shownText ?? "");
     }
 
     focus() {

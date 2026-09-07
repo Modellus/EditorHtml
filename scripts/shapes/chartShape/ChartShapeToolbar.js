@@ -198,6 +198,9 @@ var ChartShapeToolbarMixin = {
         );
         return items;
     },
+    hasSettingsMenu() {
+        return true;
+    },
     createChartTypeDropDownButton(container) {
         this._chartTypeDropdownElement = $('<div class="mdl-chart-type-selector">');
         this._chartTypeDropdownElement.dxDropDownButton({
@@ -264,6 +267,7 @@ var ChartShapeToolbarMixin = {
         this._axisRangeControl = this.createAxisRangeControl();
         listItems.push({ text: "Horizontal", buildControl: $container => this._axisRangeControl.createRow("x").appendTo($container) });
         listItems.push({ text: "Vertical", buildControl: $container => this._axisRangeControl.createRow("y").appendTo($container) });
+        listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 400, scrollContent => {
             const grid = $('<div class="mdl-dropdown-grid">');
             for (const item of listItems) {

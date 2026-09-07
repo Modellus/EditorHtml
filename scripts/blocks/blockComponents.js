@@ -13,11 +13,11 @@ var BlockComponentHelpers = {
             category: "general"
         }, extra);
     },
-    formatNumber(value, digits) {
+    formatNumber(value, digits, notation = "decimal") {
         const numeric = Number(value);
         if (!Number.isFinite(numeric))
             return "";
-        return Utils.formatFixedDigits(numeric, Math.max(0, Math.min(6, Math.floor(digits))));
+        return Utils.formatFixedDigits(numeric, Math.max(0, Math.min(6, Math.floor(digits))), notation);
     },
 
     strokeLine(id, x1, y1, x2, y2, color, width, opacity = 1) {
@@ -143,8 +143,8 @@ var BlockComponentHelpers = {
         const axisBadge = Object.assign({}, badge, { backgroundColor: axisBadgeColor, textColor: Utils.getContrastColor(axisBadgeColor) });
         const valueBadge = Object.assign({}, badge, { backgroundColor: valueBadgeColor, textColor: Utils.getContrastColor(valueBadgeColor) });
         const digits = Math.max(0, Math.min(6, Math.floor(Number(parameters.digits))));
-        const valueText = BlockComponentHelpers.readingText(nearestY, digits, parameters.yUnit);
-        const axisText = BlockComponentHelpers.readingText(nearestX, digits, parameters.xUnit);
+        const valueText = BlockComponentHelpers.readingText(nearestY, digits, parameters.yUnit, context.notation);
+        const axisText = BlockComponentHelpers.readingText(nearestX, digits, parameters.xUnit, context.notation);
         const gapX = Number(badge.fontSize) * context.tokens.getNumber("axis.labelGapX", 1.8);
         return [
             {
@@ -290,9 +290,11 @@ var BlockComponentHelpers = {
 
     // A value read on a badge is read in what it is measured in: the unit follows the number the way
     // it follows one everywhere else on the board, and a value measured in nothing is read bare.
-    readingText(value, digits, unit) {
+    readingText(value, digits, unit, notation = "decimal") {
         const unitText = String(unit ?? "").trim();
-        const numberText = Utils.isBigNumber(value) ? Utils.formatScientific(value, digits) : Utils.formatNumber(Number(value), digits);
+        const numberText = Utils.writesScientific(value, notation)
+            ? Utils.formatScientific(value, digits, notation)
+            : (Utils.isBigNumber(value) ? Utils.formatScientific(value, digits) : Utils.formatNumber(Number(value), digits));
         return unitText === "" ? numberText : `${numberText} ${unitText}`;
     },
 
@@ -496,7 +498,7 @@ var BlockComponentHelpers = {
                         value = ((value - 1) % wrapAt + wrapAt) % wrapAt + 1;
                     text = parameters.numberFormat === "pi"
                         ? formatAxisTickValue(value, "pi")
-                        : BlockComponentHelpers.formatNumber(value, parameters.digits);
+                        : BlockComponentHelpers.formatNumber(value, parameters.digits, context.notation);
                 }
                 return {
                     id: `label-${index}`,
@@ -770,7 +772,7 @@ var BlockComponentHelpers = {
                     properties: {
                         x: labelX,
                         y: box.bottom + labelGapX,
-                        text: formatAxisTickValue(ticks.x.major[index]),
+                        text: formatAxisTickValue(ticks.x.major[index], "decimal", context.notation),
                         fontSize: fontSize,
                         fontFamily: parameters.fontFamily,
                         fill: labelColor,
@@ -792,7 +794,7 @@ var BlockComponentHelpers = {
                     properties: {
                         x: box.left - labelGapY - Number(parameters.tickLength),
                         y: position + labelRise,
-                        text: formatAxisTickValue(ticks.y.major[index]),
+                        text: formatAxisTickValue(ticks.y.major[index], "decimal", context.notation),
                         fontSize: fontSize,
                         fontFamily: parameters.fontFamily,
                         fill: labelColor,
@@ -864,7 +866,7 @@ var BlockComponentHelpers = {
             };
             // Where the pointer itself is, read under it as a pair.
             const digits = Math.max(0, Math.min(6, Math.floor(Number(parameters.digits))));
-            const pointerText = `${BlockComponentHelpers.readingText(parameters.valueX, digits, parameters.xUnit)}, ${BlockComponentHelpers.readingText(parameters.valueY, digits, parameters.yUnit)}`;
+            const pointerText = `${BlockComponentHelpers.readingText(parameters.valueX, digits, parameters.xUnit, context.notation)}, ${BlockComponentHelpers.readingText(parameters.valueY, digits, parameters.yUnit, context.notation)}`;
             children.push(...BlockComponentHelpers.badgeNodes("pointer-values", pointerText, pointX, pointY + fontSize * 1.2, badge));
             children.push(...BlockComponentHelpers.pointAtPointerNodes(parameters, box, badge, context));
             return { id: "plot-crosshair", type: "group", children: children };

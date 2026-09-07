@@ -245,6 +245,7 @@ class BaseTableShape extends BaseShape {
             borderColor: this.getBorderColor(),
             borderRadius: this.getBorderRadius(),
             precision: this.board.calculator.getPrecision(),
+            notation: this.getNotation(),
             onCellValueChanged: payload => this.onTableCellValueChanged(payload),
             onColumnWidthChanged: payload => this.onTableColumnWidthChanged(payload),
             onRowDeleteRequested: payload => this.onTableRowDeleteRequested(payload),
@@ -278,7 +279,7 @@ class BaseTableShape extends BaseShape {
 
     getTableStyleKey() {
         const precision = this.board.calculator.getPrecision();
-        return `${this.properties.foregroundColor}|${this.properties.backgroundColor}|${this.getHeaderBackgroundColor()}|${this.getBorderColor()}|${precision}`;
+        return `${this.properties.foregroundColor}|${this.properties.backgroundColor}|${this.getHeaderBackgroundColor()}|${this.getBorderColor()}|${precision}|${this.getNotation()}`;
     }
 
     onTableColumnWidthChanged(payload) {

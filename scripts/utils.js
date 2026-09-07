@@ -11,6 +11,7 @@ class Utils {
         const pill = element.querySelector(".mdl-pill");
         if (!pill)
             return;
+        // The button group marks the chosen button itself as the selected item.
         const selected = element.querySelector(".dx-item-selected .dx-button");
         if (!selected)
             return;
@@ -1043,7 +1044,7 @@ class Utils {
         return Math.floor(numericPrecision);
     }
 
-    static formatModelValue(value, precision, nonFiniteText = "\u2014") {
+    static formatModelValue(value, precision, nonFiniteText = "\u2014", notation = "decimal") {
         const numericValue = Number(value);
         if (numericValue === Infinity)
             return "\u221e";
@@ -1052,6 +1053,8 @@ class Utils {
         if (!Number.isFinite(numericValue))
             return nonFiniteText;
         const normalizedPrecision = Utils.normalizePrecision(precision);
+        if (Utils.writesScientific(numericValue, notation))
+            return Utils.formatScientific(numericValue, normalizedPrecision, notation);
         const rounded = Utils.roundToPrecision(numericValue, normalizedPrecision);
         const normalized = Object.is(rounded, -0) ? 0 : rounded;
         if (Utils.isBigNumber(normalized))
@@ -1142,24 +1145,69 @@ class Utils {
     // 1 234 567.00. The exponent is written bare, without the plus a JavaScript exponent carries.
     static scientificNotationThreshold = 1e6;
 
+    // How a shape writes its numbers, chosen on its own menu: "decimal" writes 0.1 and only a big
+    // number as an exponent; "scientific" writes every number as 1×10⁻¹; "e" writes every number
+    // as 1e-1. Zero is zero in any notation.
+    static notations = ["decimal", "scientific", "e"];
+    static notationItems = [
+        { key: "decimal", text: "0.1" },
+        { key: "scientific", text: "1\u00d710\u207b\u00b9" },
+        { key: "e", text: "1e-1" }
+    ];
+
+    static normalizeNotation(value) {
+        return Utils.notations.includes(value) ? value : "decimal";
+    }
+
+    static writesScientific(value, notation) {
+        const numeric = Number(value);
+        return Utils.normalizeNotation(notation) !== "decimal" && Number.isFinite(numeric) && numeric !== 0;
+    }
+
+    // The row of a shape's menu that chooses its notation: three pills, each showing a tenth written
+    // its way.
+    static createNotationButtonGroup(notation, onChanged) {
+        return $('<div>').dxButtonGroup({
+            items: Utils.notationItems,
+            keyExpr: "key",
+            selectedItemKeys: [Utils.normalizeNotation(notation)],
+            stylingMode: "outlined",
+            elementAttr: { class: "mdl-pill-group mdl-notation-group" },
+            onContentReady: e => Utils.initPillButtonGroup(e.element[0]),
+            onSelectionChanged: e => {
+                if (e.addedItems.length === 0)
+                    return;
+                Utils.movePillButtonGroup(e.component.element()[0]);
+                onChanged(e.addedItems[0].key);
+            }
+        });
+    }
+
     static isBigNumber(value) {
         const numeric = Number(value);
         return Number.isFinite(numeric) && Math.abs(numeric) >= Utils.scientificNotationThreshold;
     }
 
-    static formatScientific(value, digits) {
+    // A number written as a mantissa and a power of ten: 1.23e6 in the e notation, 1.23×10⁶ in the
+    // scientific one. The exponent is written bare, without the plus a JavaScript exponent carries.
+    static formatScientific(value, digits, notation = "e") {
         const numeric = Number(value);
         if (!Number.isFinite(numeric))
             return "";
-        return numeric.toExponential(Utils.normalizePrecision(digits)).replace("e+", "e");
+        const [mantissa, exponent] = numeric.toExponential(Utils.normalizePrecision(digits)).split("e");
+        if (Utils.normalizeNotation(notation) === "scientific")
+            return `${mantissa}\u00d710${Utils.getSuperscriptText(String(Number(exponent)))}`;
+        return `${mantissa}e${Number(exponent)}`;
     }
 
     // A value written to a fixed number of decimals, unless it is too big to be read that way.
-    static formatFixedDigits(value, digits) {
+    static formatFixedDigits(value, digits, notation = "decimal") {
         const numeric = Number(value);
         if (!Number.isFinite(numeric))
             return "";
         const normalizedDigits = Utils.normalizePrecision(digits);
+        if (Utils.writesScientific(numeric, notation))
+            return Utils.formatScientific(numeric, normalizedDigits, notation);
         if (Utils.isBigNumber(numeric))
             return Utils.formatScientific(numeric, normalizedDigits);
         return numeric.toFixed(normalizedDigits);
@@ -1169,13 +1217,15 @@ class Utils {
     // decades, so a number that is too big to read at those decimals, or too small to show at all
     // in them - 0.001 read to two decimals - is written in scientific notation instead. Zero is
     // always zero.
-    static formatScaleDigits(value, digits) {
+    static formatScaleDigits(value, digits, notation = "decimal") {
         const numeric = Number(value);
         if (!Number.isFinite(numeric))
             return "";
         const normalizedDigits = Utils.normalizePrecision(digits);
         if (numeric === 0)
             return (0).toFixed(normalizedDigits);
+        if (Utils.writesScientific(numeric, notation))
+            return Utils.formatScientific(numeric, normalizedDigits, notation);
         const magnitude = Math.abs(numeric);
         if (magnitude >= Utils.scientificNotationThreshold || Math.round(magnitude * 10 ** normalizedDigits) === 0)
             return Utils.formatScientific(numeric, normalizedDigits);

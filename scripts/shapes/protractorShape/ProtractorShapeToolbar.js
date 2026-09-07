@@ -30,6 +30,9 @@ var ProtractorShapeToolbarMixin = {
         );
         return items;
     },
+    hasSettingsMenu() {
+        return true;
+    },
     createScaleDropDownButton(container) {
         this._scaleDropdownContainer = container;
         this._scaleDropdownElement = $('<div>');
@@ -69,6 +72,7 @@ var ProtractorShapeToolbarMixin = {
                 }
             }
         ];
+        listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 250, scrollContent => {
             $('<div>').appendTo(scrollContent).dxList({
                 dataSource: listItems,

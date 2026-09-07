@@ -23,7 +23,7 @@ Object.assign(BaseShape.prototype, {
         return caseNumber;
     },
     formatModelValue(value, termName) {
-        return Utils.formatModelValue(value, this.getTermModelPrecision(termName));
+        return Utils.formatModelValue(value, this.getTermModelPrecision(termName), "\u2014", this.getNotation?.());
     },
     getTermModelPrecision(termName) {
         if (termName != null && this.board?.calculator?.isIterationTerm(termName))

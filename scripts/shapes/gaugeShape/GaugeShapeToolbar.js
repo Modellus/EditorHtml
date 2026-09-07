@@ -47,6 +47,9 @@ var GaugeShapeToolbarMixin = {
         );
         return items;
     },
+    hasSettingsMenu() {
+        return true;
+    },
     createGaugeSettingsDropDownButton(itemElement) {
         this._gaugeSettingsDropdownElement = $('<div class="mdl-gauge-settings-selector">');
         this._gaugeSettingsDropdownElement.dxDropDownButton({
@@ -284,6 +287,7 @@ var GaugeShapeToolbarMixin = {
                 }
             }
         ];
+        listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 360, scrollContent => {
             $('<div>').appendTo(scrollContent).dxList({
                 dataSource: listItems,

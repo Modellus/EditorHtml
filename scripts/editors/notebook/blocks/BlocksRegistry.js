@@ -246,6 +246,10 @@ class BlockShape {
     populateTermsMenuSections(listItems) {
     }
 
+    getNotation() {
+        return Utils.normalizeNotation(this.properties?.notation);
+    }
+
     getPrecisionNumberEditorOptions(opts = {}) {
         return Utils.getNumericEditorOptions(Object.assign({ stylingMode: "filled", width: 90, typedTextHost: this.properties }, opts));
     }
@@ -327,7 +331,8 @@ class BlockShape {
                     $('<div>').appendTo(contentElement).dxList({
                         dataSource: [
                             { text: "Background", buildControl: $container => $container.append(this._bgColorPicker) },
-                            { text: "Border", buildControl: $container => $container.append(this._borderColorPicker) }
+                            { text: "Border", buildControl: $container => $container.append(this._borderColorPicker) },
+                            { text: "Notation", buildControl: $container => $container.append(Utils.createNotationButtonGroup(this.getNotation(), notation => this.setPropertyCommand("notation", notation))) }
                         ],
                         scrollingEnabled: false,
                         itemTemplate: (data, _, element) => Utils.renderDropdownListItem(element, data)

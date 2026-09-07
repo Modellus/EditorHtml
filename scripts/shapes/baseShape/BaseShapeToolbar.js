@@ -442,6 +442,16 @@ var BaseShapeToolbarMixin = {
             }
         };
     },
+    // Every shape writes numbers somewhere - a label, a tick, a cell, a reading - and every shape
+    // chooses how on the same row: the last of its settings menu, or of its own menu when it has no
+    // settings.
+    createNotationMenuItem() {
+        const notationLabel = this.board.translations.get("Notation") ?? "Notation";
+        return {
+            text: notationLabel,
+            buildControl: $container => $container.append(Utils.createNotationButtonGroup(this.getNotation(), notation => this.setPropertyCommand("notation", notation)))
+        };
+    },
     createOpacityMenuItem() {
         const opacityLabel = this.board.translations.get("Opacity") ?? "Opacity";
         return {
@@ -584,6 +594,10 @@ var BaseShapeToolbarMixin = {
         this.populateShapeColorMenuSections(sections);
         sections[0].items.push(this.createPulseMenuItem());
         sections[0].items.push(this.createOpacityMenuItem());
+        // The notation stands at the end of the settings menu when the shape has one, and here,
+        // beside the opacity, when it has not.
+        if (this.hasSettingsMenu?.() !== true)
+            sections[0].items.push(this.createNotationMenuItem());
         const listItems = sections.flatMap(section => section.items);
         Utils.renderDropdownMenuScroll(contentElement, 300, scrollContent => {
             $('<div>').appendTo(scrollContent).dxList({
