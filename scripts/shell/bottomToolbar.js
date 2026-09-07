@@ -206,36 +206,42 @@ class BottomToolbar {
             {
                 text: this.shell.board.translations.get("Independent.Start"),
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: independent.start,
+                        typedTextKey: "independent.start",
+                        typedTextHost: this.shell.calculator.properties,
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: e => this.shell.setPropertyCommand("independent.start", e.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             },
             {
                 text: this.shell.board.translations.get("Independent.Step"),
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: independent.step,
+                        typedTextKey: "independent.step",
+                        typedTextHost: this.shell.calculator.properties,
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: e => this.shell.setPropertyCommand("independent.step", e.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             },
             {
                 text: this.shell.board.translations.get("StepDelay"),
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.shell.calculator.properties.iterationDuration,
+                        typedTextKey: "iterationDuration",
+                        typedTextHost: this.shell.calculator.properties,
                         stylingMode: "filled",
                         min: 0,
                         showClearButton: true,
                         inputAttr: { style: "font-family: Atma, sans-serif" },
                         onValueChanged: e => this.shell.setPropertyCommand("iterationDuration", e.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             }
         ];
@@ -275,13 +281,15 @@ class BottomToolbar {
             {
                 text: this.shell.board.translations.get("Independent.End"),
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.getPlayerTermEnd(),
+                        typedTextKey: "independent.end",
+                        typedTextHost: this.shell.calculator.properties,
                         stylingMode: "filled",
                         disabled: independent.noLimit,
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: e => this.setPlayerTermEnd(e.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                     this._endEditor = $container.find(".dx-numberbox").dxNumberBox("instance");
                 }
             },
@@ -384,7 +392,7 @@ class BottomToolbar {
             {
                 text: this.shell.board.translations.get("Grid Size"),
                 buildControl: $container => {
-                    const sizeElement = $('<div>').appendTo($container).dxNumberBox({
+                    const sizeElement = $('<div>').appendTo($container).dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.shell.properties.gridSize,
                         min: 5,
                         max: 100,
@@ -397,7 +405,7 @@ class BottomToolbar {
                             if (e.value !== this.shell.properties.gridSize)
                                 this.shell.setPropertyCommand("gridSize", e.value);
                         }
-                    });
+                    }));
                     this._gridSizeEditor = sizeElement.dxNumberBox("instance");
                 }
             }
@@ -450,7 +458,7 @@ class BottomToolbar {
             {
                 text: this.shell.board.translations.get("CasesCount"),
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.shell.properties.casesCount,
                         min: 1,
                         max: 9,
@@ -460,13 +468,13 @@ class BottomToolbar {
                         elementAttr: { class: "mdl-math-input" },
                         inputAttr: { style: "font-family: Atma, sans-serif" },
                         onValueChanged: e => this.shell.setPropertyCommand("casesCount", e.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             },
             {
                 text: this.shell.board.translations.get("Precision"),
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.shell.properties.precision,
                         min: 0,
                         max: 10,
@@ -476,7 +484,7 @@ class BottomToolbar {
                         elementAttr: { class: "mdl-math-input" },
                         inputAttr: { style: "font-family: Atma, sans-serif" },
                         onValueChanged: e => this.shell.setPropertyCommand("precision", e.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             },
             {

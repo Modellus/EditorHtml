@@ -52,7 +52,7 @@ var MindMapNodeShapeToolbarMixin = {
             {
                 text: this.board.translations.get("Mind Map Font Size"),
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.properties.fontSize,
                         min: 8,
                         max: 72,
@@ -61,7 +61,7 @@ var MindMapNodeShapeToolbarMixin = {
                         width: 90,
                         stylingMode: "filled",
                         onValueChanged: event => this.setPropertyCommand("fontSize", event.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             },
             {
@@ -71,7 +71,7 @@ var MindMapNodeShapeToolbarMixin = {
             {
                 text: this.board.translations.get("Mind Map Border Width"),
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.properties.lineWidth,
                         min: 0,
                         max: 20,
@@ -80,7 +80,7 @@ var MindMapNodeShapeToolbarMixin = {
                         width: 90,
                         stylingMode: "filled",
                         onValueChanged: event => this.setPropertyCommand("lineWidth", event.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             }
         ];

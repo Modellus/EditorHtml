@@ -130,9 +130,26 @@ test.describe('the ruler read logarithmically', () => {
         await addObject(page, 'ruler', 'Ruler', logRuler);
         await movePointerInto(page, RULER_AT, SCALE_LEFT + SCALE_WIDTH / 2, TICK_BAND_Y);
         await expect.poll(() => readNodes(page, 'Ruler', 'crosshair')).toHaveLength(1);
-        expect(await readTexts(page, 'Ruler')).toContain('31.623');
+        expect(await readTexts(page, 'Ruler')).toContain('31.62');
         await movePointerAway(page);
         await expect.poll(() => readNodes(page, 'Ruler', 'crosshair')).toHaveLength(0);
+    });
+
+    // The decimals the ruler reads to are the decimals it reads to on either scale: the reading
+    // follows them, and so do the numbers along the scale once it runs below 1 and needs them. A
+    // decade too small to show at those decimals is written in scientific notation, so the scale
+    // still reads however far down it runs.
+    test('reads to its decimals on the logarithmic scale as well', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'ruler', 'Ruler', Object.assign({}, logRuler, { minimumX: 0.001, maximumX: 100 }));
+        expect((await readNodes(page, 'Ruler', 'log-tick-label')).map(node => node.text)).toEqual(['1.00e-3', '0.01', '0.10', '1.00', '10.00', '100.00']);
+        await page.evaluate(() => { const ruler = shell.board.shapes.getByName('Ruler'); ruler.setProperties({ digits: 3 }); ruler.draw(); });
+        await expect.poll(() => readNodes(page, 'Ruler', 'log-tick-label').then(nodes => nodes.map(node => node.text))).toEqual(['0.001', '0.010', '0.100', '1.000', '10.000', '100.000']);
+        await page.evaluate(() => { const ruler = shell.board.shapes.getByName('Ruler'); ruler.setProperties({ minimumX: 1, maximumX: 1000 }); ruler.draw(); });
+        await expect.poll(() => readNodes(page, 'Ruler', 'log-tick-label').then(nodes => nodes.map(node => node.text))).toEqual(['1', '10', '100', '1000']);
+        await movePointerInto(page, RULER_AT, SCALE_LEFT + SCALE_WIDTH / 2, TICK_BAND_Y);
+        await expect.poll(() => readTexts(page, 'Ruler')).toContain('31.623');
+        await movePointerAway(page);
     });
 
     test('is stretched a decade at a time by pulling one of its decades', async ({ page }) => {

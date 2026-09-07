@@ -213,14 +213,14 @@ test.describe('Term units', () => {
         await page.locator('.shape-term-units').first().click();
         await page.waitForSelector('.mdl-units-dropdown .mdl-units-item');
         await page.waitForTimeout(400);
-        const listBox = await page.locator('.mdl-units-list-host').boundingBox();
+        const listBox = await page.locator('.mdl-units-dropdown .dx-scrollable-container').boundingBox();
         await page.mouse.move(listBox.x + listBox.width / 2, listBox.y + listBox.height / 2);
         await page.mouse.wheel(0, 400);
         await page.waitForTimeout(400);
-        const scrolled = await page.evaluate(() => ({
-            offset: UnitsControl.scrollView.scrollTop(),
-            reach: UnitsControl.scrollView.scrollHeight() > UnitsControl.scrollView.clientHeight()
-        }));
+        const scrolled = await page.evaluate(() => {
+            const container = document.querySelector('.mdl-units-dropdown .dx-scrollable-container');
+            return { offset: container.scrollTop, reach: container.scrollHeight > container.clientHeight };
+        });
         expect(scrolled.reach).toBe(true);
         expect(scrolled.offset).toBeGreaterThan(0);
         await page.locator('.mdl-units-dropdown .mdl-units-item[data-unit="rad"]').click();
@@ -244,6 +244,7 @@ test.describe('Term units', () => {
         expect(await page.evaluate(() => shell.calculator.getTermUnit('x'))).toBe('');
     });
 
+    // The unit is written in the field itself, so it is read there as the text it is.
     test('the player names its independent and iteration terms with a unit beside each, in the term font', async ({ page }) => {
         await setupEditor(page);
         await page.evaluate(() => shell.setTermUnitCommand('t', 's'));
@@ -252,11 +253,11 @@ test.describe('Term units', () => {
         await page.waitForTimeout(700);
         const rows = await page.evaluate(() => ({
             editors: document.querySelectorAll('.mdl-independent-dropdown .term-packed-control__units .mdl-units-editor').length,
-            typeset: [...document.querySelectorAll('.mdl-independent-dropdown .mdl-units-editor-math-field')].map(field => field.value),
+            written: [...document.querySelectorAll('.mdl-independent-dropdown .mdl-units-editor .mdl-units-editor-input')].map(input => input.value),
             nameFont: getComputedStyle(document.querySelector('.mdl-independent-dropdown .term-packed-control__select .dx-texteditor-input')).fontFamily
         }));
         expect(rows.editors).toBe(2);
-        expect(rows.typeset).toEqual(['\\mathrm{s}', '']);
+        expect(rows.written).toEqual(['s', '']);
         expect(rows.nameFont).toContain('Katex_Math');
     });
 
@@ -293,12 +294,12 @@ test.describe('Term units', () => {
         await openTermChip(page);
         const editor = await page.evaluate(() => ({
             labels: [...document.querySelectorAll('.mdl-term-editor-row-label')].map(label => label.textContent),
-            typeset: document.querySelector('.mdl-term-editor-rows .shape-term-units .mdl-units-editor-math-field').value,
-            value: $('.mdl-term-editor-rows .shape-term-units .mdl-units-editor').dxDropDownBox('instance').option('value')
+            written: document.querySelector('.mdl-term-editor-rows .shape-term-units .mdl-units-editor-input').value,
+            value: $('.mdl-term-editor-rows .shape-term-units .mdl-units-editor').dxSelectBox('instance').option('value')
         }));
         expect(editor.labels).toContain('Unit');
         expect(editor.value).toBe('m');
-        expect(editor.typeset).toBe('\\mathrm{m}');
+        expect(editor.written).toBe('m');
     });
 
     test('choosing a unit in a shape toolbar sets it on the term, and the shape shows it', async ({ page }) => {
@@ -314,12 +315,13 @@ test.describe('Term units', () => {
         expect(await page.evaluate(() => shell.properties.termUnits)).toEqual({ x: 'km' });
         expect(await page.evaluate(() => shell.calculator.getTermUnit('x'))).toBe('km');
         expect(await page.evaluate(() => shell.board.shapes.getByName('Value1').valueText.textContent)).toContain('km');
-        const list = await page.evaluate(() => ({ parent: UnitsControl.listElement.parentElement.className, items: UnitsControl.listElement.children.length }));
-        expect(list.parent).toBe('mdl-units-warm-host');
-        expect(list.items).toBe(await page.evaluate(() => Utils.isoUnits.length));
+        // The typeset items were built once, one for every unit, and none was built twice.
+        expect(await page.evaluate(() => UnitsControl.itemElements.size)).toBe(await page.evaluate(() => Utils.isoUnits.length));
     });
 
-    test('a unit the list does not carry is written in the drop down as mathematics', async ({ page }) => {
+    // The unit is typed into the field itself; one the list does not carry leaves the list empty
+    // and is kept as written.
+    test('a unit the list does not carry is written in the field and kept', async ({ page }) => {
         await setupEditor(page);
         await addModelTerms(page);
         await openValueTermSelector(page);
@@ -332,8 +334,8 @@ test.describe('Term units', () => {
         await page.keyboard.type('mm/h');
         await page.waitForTimeout(300);
         const typing = await page.evaluate(() => ({
-            typed: Utils.getUnitsPlainText(document.querySelector('.mdl-units-dropdown math-field.mdl-units-input').value),
-            listed: [...document.querySelectorAll('.mdl-units-dropdown .mdl-units-item')].filter(item => !item.classList.contains('mdl-units-item--hidden')).map(item => item.dataset.unit)
+            typed: document.querySelector('.shape-term-units .mdl-units-editor-input').value,
+            listed: [...document.querySelectorAll('.mdl-units-dropdown .mdl-units-item')].map(item => item.dataset.unit)
         }));
         expect(typing.typed).toBe('mm/h');
         expect(typing.listed).toEqual([]);
@@ -354,17 +356,17 @@ test.describe('Term units', () => {
         await page.keyboard.press('Backspace');
         await page.keyboard.type('m/s');
         await page.waitForTimeout(300);
-        const listed = await page.evaluate(() => [...document.querySelectorAll('.mdl-units-dropdown .mdl-units-item')].filter(item => !item.classList.contains('mdl-units-item--hidden')).map(item => item.dataset.unit));
+        const listed = await page.evaluate(() => [...document.querySelectorAll('.mdl-units-dropdown .mdl-units-item')].map(item => item.dataset.unit));
         expect(listed).toEqual(['m/s', 'm/s\u00b2', 'kg\u00b7m/s']);
     });
 
-    test('every picker shares one typeset list, built once and moved into whichever is open', async ({ page }) => {
+    test('every picker shares one set of typeset items, built once and carried into whichever list is open', async ({ page }) => {
         await setupEditor(page);
         await addModelTerms(page);
         await openValueTermSelector(page);
         const built = await page.evaluate(() => {
-            UnitsControl.listElement.dataset.probe = 'first';
-            return { items: UnitsControl.listElement.children.length, warmed: UnitsControl.listElement.parentElement.className };
+            UnitsControl.getItemElement('m').dataset.probe = 'first';
+            return { items: UnitsControl.itemElements.size, warmed: UnitsControl.getItemElement('m').parentElement.className };
         });
         expect(built.items).toBe(await page.evaluate(() => Utils.isoUnits.length));
         expect(built.warmed).toBe('mdl-units-warm-host');
@@ -373,14 +375,11 @@ test.describe('Term units', () => {
         await page.waitForSelector('.mdl-units-dropdown .mdl-units-item');
         await page.waitForTimeout(300);
         const opened = await page.evaluate(() => ({
-            probe: document.querySelector('.mdl-units-dropdown .mdl-units-list').dataset.probe,
-            listsInPage: document.querySelectorAll('.mdl-units-list').length
+            probe: document.querySelector('.mdl-units-dropdown .mdl-units-item[data-unit="m"]').dataset.probe,
+            fieldsInPage: document.querySelectorAll('.mdl-units-item math-field').length
         }));
         expect(opened.probe).toBe('first');
-        expect(opened.listsInPage).toBe(1);
-        await page.keyboard.press('Escape');
-        await page.waitForTimeout(600);
-        expect(await page.evaluate(() => UnitsControl.listElement.parentElement.className)).toBe('mdl-units-warm-host');
+        expect(opened.fieldsInPage).toBe(built.items);
     });
 
     test('the unit of a term is held by the calculation engine and survives a re-parse', async ({ page }) => {
@@ -621,7 +620,7 @@ test.describe('Term units', () => {
         expect(await page.evaluate(() => [...document.querySelectorAll('.shape-term-units')].filter(host => host.offsetParent !== null).length)).toBe(1);
         await page.evaluate(() => {
             const host = [...document.querySelectorAll('.shape-term-units')].find(element => element.offsetParent !== null);
-            $(host).find('.mdl-units-editor').first().dxDropDownBox('instance').option('value', 'm');
+            $(host).find('.mdl-units-editor').first().dxSelectBox('instance').option('value', 'm');
         });
         await page.waitForTimeout(800);
         const written = await page.evaluate(() => ({
@@ -653,7 +652,7 @@ test.describe('Term units', () => {
         expect(await readout()).toBe('20.0 °C');
         await page.evaluate(() => {
             const host = [...document.querySelectorAll('.shape-term-units')].find(element => element.offsetParent !== null);
-            $(host).find('.mdl-units-editor').first().dxDropDownBox('instance').option('value', '°F');
+            $(host).find('.mdl-units-editor').first().dxSelectBox('instance').option('value', '°F');
         });
         await page.waitForTimeout(800);
         expect(await page.evaluate(() => shell.board.shapes.getByName('Thermometer').properties.unit)).toBe('°F');
@@ -699,7 +698,7 @@ test.describe('Term units', () => {
         expect(afterTerm).toBe(1);
         await page.evaluate(() => {
             const host = [...document.querySelectorAll('.shape-term-units')].find(element => element.offsetParent !== null);
-            $(host).find('.mdl-units-editor').first().dxDropDownBox('instance').option('value', 'm');
+            $(host).find('.mdl-units-editor').first().dxSelectBox('instance').option('value', 'm');
         });
         await page.waitForTimeout(700);
         const written = await page.evaluate(() => ({

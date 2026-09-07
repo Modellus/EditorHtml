@@ -1062,3 +1062,112 @@ math-field {
 .mdl-message-math .ML__latex {
     font-size: 1.05em;
 }
+
+/* A number box is written into through a math field laid over its own input, so a value is typeset
+   as it is typed - 1e-3 as written, 1.5*10^3 as a power of ten - and read back as the number it
+   says. The input stays underneath, holding the value for the box, but out of the way of the
+   pointer and the tab key. */
+.mdl-numeric-box .dx-texteditor-input-container {
+    display: flex;
+    align-items: center;
+    position: relative;
+    min-width: 0;
+}
+
+.mdl-numeric-box .dx-texteditor-input {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 0;
+    min-width: 0;
+    height: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.mdl-numeric-math-field {
+    position: relative;
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 6px 9px;
+    font-size: 16px;
+    color: inherit;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    --caret-color: currentColor;
+    --selection-background-color: rgba(24, 113, 194, 0.25);
+    --placeholder-opacity: 0.5;
+}
+
+.mdl-numeric-math-field:focus-within {
+    outline: none;
+}
+
+.mdl-numeric-math-field::part(container) {
+    min-height: 0;
+}
+
+.mdl-numeric-math-field::part(content) {
+    padding: 0;
+}
+
+.mdl-numeric-math-field::part(menu-toggle),
+.mdl-numeric-math-field::part(virtual-keyboard-toggle),
+.mdl-term-typing-field::part(menu-toggle),
+.mdl-term-typing-field::part(virtual-keyboard-toggle) {
+    display: none;
+}
+
+/* The box's placeholder is drawn over the empty field, the way the input drew it. */
+.mdl-numeric-math-field[data-empty]::before {
+    content: attr(data-placeholder);
+    position: absolute;
+    left: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* A term field that can be typed into is typed into through a math field of its own, so a value
+   and a name are written the way they are read. The editor's input stays where it was, out of
+   sight, so the placeholder and the box's own focus still work. */
+.mdl-term-chip-editor.mdl-term-editing:has(.mdl-term-typing-field) .dx-texteditor-input {
+    position: absolute;
+    width: 0;
+    min-width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.mdl-term-typing-field {
+    flex: 1 1 auto;
+    min-width: 40px;
+    padding: 0;
+    font-size: 16px;
+    color: inherit;
+    background: transparent;
+    border: none;
+    --caret-color: currentColor;
+    --selection-background-color: rgba(24, 113, 194, 0.25);
+}
+
+.mdl-term-typing-field:focus-within {
+    outline: none;
+}
+
+.mdl-term-typing-field::part(container) {
+    min-height: 0;
+}
+
+.mdl-term-typing-field::part(content) {
+    padding: 0;
+}

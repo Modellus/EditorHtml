@@ -648,7 +648,7 @@ class ChildShape extends BaseShape {
             },
             {
                 text: "Interval",
-                buildControl: $p => $('<div>').dxNumberBox({
+                buildControl: $p => $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                     value: this.properties.stroboscopyInterval,
                     showSpinButtons: true,
                     min: 1,
@@ -656,12 +656,14 @@ class ChildShape extends BaseShape {
                     stylingMode: "filled",
                     onInitialized: e => { this.stroboscopyIntervalToolbarWidget = e.component; },
                     onValueChanged: e => this.setPropertyCommand("stroboscopyInterval", e.value)
-                }).appendTo($p)
+                })).appendTo($p)
             },
             {
                 text: "Opacity",
-                buildControl: $p => $('<div>').dxNumberBox({
+                buildControl: $p => $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                     value: this.properties.stroboscopyOpacity,
+                    typedTextKey: "stroboscopyOpacity",
+                    typedTextHost: this.properties,
                     showSpinButtons: true,
                     min: 0,
                     max: 1,
@@ -670,7 +672,7 @@ class ChildShape extends BaseShape {
                     stylingMode: "filled",
                     onInitialized: e => { this.stroboscopyOpacityToolbarWidget = e.component; },
                     onValueChanged: e => this.setPropertyCommand("stroboscopyOpacity", e.value)
-                }).appendTo($p)
+                })).appendTo($p)
             }
         );
     }

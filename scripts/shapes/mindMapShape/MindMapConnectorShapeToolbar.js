@@ -222,7 +222,7 @@ var MindMapConnectorShapeToolbarMixin = {
             {
                 text: this.board.translations.get("Mind Map Font Size"),
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.properties.fontSize,
                         min: 8,
                         max: 48,
@@ -231,7 +231,7 @@ var MindMapConnectorShapeToolbarMixin = {
                         width: 90,
                         stylingMode: "filled",
                         onValueChanged: event => this.setPropertyCommand("fontSize", event.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             },
             {

@@ -385,9 +385,11 @@ var ComponentShapeToolbarMixin = {
     getAxisRangeControl() {
         this._axisRangeControl ??= new AxisRangeControl({
             read: (axis, bound) => this.getEffectiveAxisRange()[`${axis}${bound}`],
-            write: (axis, bound, value) => this.setPropertyCommand(this.getAxisRangeProperty(axis, bound), value),
+            // A parameter is read by parsing, so what was typed is stored as it was typed.
+            write: (axis, bound, value, event) => this.setPropertyCommand(this.getAxisRangeProperty(axis, bound), event?.typedText ?? value),
             isDisabled: axis => this.properties.autoScale === true || (axis === "y" && this.properties.equalScales === true),
-            editorOptions: () => this.getPrecisionNumberEditorOptions({ showSpinButtons: false })
+            typedTextKey: (axis, bound) => this.getAxisRangeProperty(axis, bound),
+            editorOptions: boxOptions => this.getPrecisionNumberEditorOptions(Object.assign({ showSpinButtons: false, storesTypedValue: true }, boxOptions))
         });
         return this._axisRangeControl;
     },
@@ -441,9 +443,27 @@ var ComponentShapeToolbarMixin = {
             return this.createComponentCharacterControl(parameter);
         if (parameter.valueType === "audio")
             return this.createComponentAudioControl(parameter);
+        if (parameter.valueType === "unit")
+            return this.createComponentUnitControl(parameter);
         if (parameter.enumValues)
             return this.createComponentEnumControl(parameter);
         return this.createComponentTextControl(parameter);
+    },
+    // A unit is picked from the same picker every unit on the board is picked from - the one a
+    // term row and the player open - rather than typed into a box of its own.
+    createComponentUnitControl(parameter) {
+        const host = $('<div class="mdl-component-unit-control">');
+        UnitsControl.createEditor(host, {
+            value: String(this.properties[parameter.id] ?? ""),
+            nested: true,
+            width: 130,
+            onValueChanged: unitText => {
+                if (unitText === String(this.properties[parameter.id] ?? ""))
+                    return;
+                this.setPropertyCommand(parameter.id, unitText);
+            }
+        });
+        return host;
     },
     createComponentVariableControl(parameter) {
         // A component input takes a model variable or a plain number, so the selector accepts both.
@@ -559,19 +579,24 @@ var ComponentShapeToolbarMixin = {
             return;
         this.buildComponentSettingsMenu(contentElement);
     },
+    // A parameter is read by parsing wherever it is used, so a value typed here is stored as it
+    // was typed - 1e-3 stays 1e-3 - and only a value the object works out for itself is a number.
     createComponentNumberControl(parameter) {
         const editorOptions = {
-            value: Number(this.properties[parameter.id]),
+            value: Utils.parseNumericText(this.properties[parameter.id]),
+            typedTextKey: parameter.id,
+            typedTextHost: this.properties,
+            storesTypedValue: true,
             min: Number.isFinite(parameter.minimum) ? parameter.minimum : undefined,
             max: Number.isFinite(parameter.maximum) ? parameter.maximum : undefined,
             width: 100,
             onValueChanged: event => {
                 if (!event.event)
                     return;
-                this.setPropertyCommand(parameter.id, event.value);
+                this.setPropertyCommand(parameter.id, event.typedText ?? event.value);
             }
         };
-        return $('<div>').dxNumberBox(Object.assign({ showSpinButtons: true, stylingMode: "filled" }, editorOptions));
+        return $('<div>').dxNumberBox(Utils.getNumericEditorOptions(Object.assign({ showSpinButtons: true, stylingMode: "filled" }, editorOptions)));
     },
     createComponentEnumControl(parameter) {
         if (parameter.enumIcons)

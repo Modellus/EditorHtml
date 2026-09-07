@@ -322,7 +322,9 @@ class BlockCompiler {
         if (value === null || value === undefined)
             return fallbackValue;
         if (definition.valueType === "number") {
-            const numeric = Number(value);
+            // A value written as text is read the one way every field reads it; a switch read as a
+            // number counts as 1 or 0, the way a formula multiplies by it.
+            const numeric = typeof value === "string" ? Utils.parseNumericText(value) : Number(value);
             if (!Number.isFinite(numeric))
                 return fallbackValue;
             if (Number.isFinite(definition.minimum) && numeric < definition.minimum)
@@ -336,7 +338,7 @@ class BlockCompiler {
                 return value;
             return value === "true" || value === 1;
         }
-        if (definition.valueType === "string" || definition.valueType === "colour" || definition.valueType === "variable" || definition.valueType === "expression") {
+        if (definition.valueType === "string" || definition.valueType === "unit" || definition.valueType === "colour" || definition.valueType === "variable" || definition.valueType === "expression") {
             const text = String(value);
             if (definition.enumValues && !definition.enumValues.includes(text)) {
                 this.addDiagnostic(compilation, "INVALID_ENUM_VALUE", path, `"${text}" is not one of ${definition.enumValues.join(", ")}.`, "warning");
@@ -385,7 +387,7 @@ class BlockCompiler {
         if (resolved === undefined || resolved === null)
             return fallbackValue;
         if (parameter.valueType === "number") {
-            const numeric = Number(resolved);
+            const numeric = typeof resolved === "string" ? Utils.parseNumericText(resolved) : Number(resolved);
             if (!Number.isFinite(numeric))
                 return fallbackValue;
             if (Number.isFinite(parameter.minimum) && numeric < parameter.minimum)

@@ -58,7 +58,9 @@ var RulerShapeToolbarMixin = {
             {
                 text: "Minimum",
                 buildControl: container => {
-                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    $('<div>').dxNumberBox(this.getPrecisionNumberEditorOptions({
+                        showSpinButtons: false,
+                        typedTextKey: "minimum",
                         value: this.properties.minimum,
                         onValueChanged: e => this.setPropertyCommand("minimum", e.value)
                     })).appendTo(container);
@@ -67,7 +69,9 @@ var RulerShapeToolbarMixin = {
             {
                 text: "Maximum",
                 buildControl: container => {
-                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    $('<div>').dxNumberBox(this.getPrecisionNumberEditorOptions({
+                        showSpinButtons: false,
+                        typedTextKey: "maximum",
                         value: this.properties.maximum,
                         onValueChanged: e => this.setPropertyCommand("maximum", e.value)
                     })).appendTo(container);

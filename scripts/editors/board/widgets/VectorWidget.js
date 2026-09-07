@@ -328,7 +328,7 @@ class VectorShape extends ChildShape {
                         {
                             text: "Width",
                             buildControl: $container => {
-                                $('<div>').dxNumberBox({
+                                $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                                     value: this.properties.lineWidth,
                                     min: 1,
                                     max: 50,
@@ -337,7 +337,7 @@ class VectorShape extends ChildShape {
                                     width: 80,
                                     stylingMode: "filled",
                                     onValueChanged: e => this.setPropertyCommand("lineWidth", e.value)
-                                }).appendTo($container);
+                                })).appendTo($container);
                             }
                         },
                         {
@@ -352,7 +352,9 @@ class VectorShape extends ChildShape {
                         {
                             text: "Horizontal Scale",
                             buildControl: $container => {
-                                $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                                $('<div>').dxNumberBox(this.getPrecisionNumberEditorOptions({
+                                    showSpinButtons: false,
+                                    typedTextKey: "scaleX",
                                     value: this.properties.scaleX ?? 1,
                                     onInitialized: e => { this._vectorScaleXBoxInstance = e.component; },
                                     onValueChanged: e => {
@@ -366,7 +368,9 @@ class VectorShape extends ChildShape {
                         {
                             text: "Vertical Scale",
                             buildControl: $container => {
-                                $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                                $('<div>').dxNumberBox(this.getPrecisionNumberEditorOptions({
+                                    showSpinButtons: false,
+                                    typedTextKey: "scaleY",
                                     value: this.properties.scaleY ?? 1,
                                     onInitialized: e => { this._vectorScaleYBoxInstance = e.component; },
                                     onValueChanged: e => {
@@ -474,7 +478,7 @@ class VectorShape extends ChildShape {
             calculator.setTermValue(term, value + termDelta, calculator.system.iteration, caseNumber);
             calculator.calculate();
         } else {
-            const currentTermValue = parseFloat(this.properties[termMapping.termProperty]);
+            const currentTermValue = Utils.parseNumericText(this.properties[termMapping.termProperty]);
             const baseValue = Number.isFinite(currentTermValue) ? currentTermValue : 0;
             this.properties[termMapping.termProperty] = Utils.roundToPrecision(baseValue + termDelta, calculator.getPrecision());
         }

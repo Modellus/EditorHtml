@@ -258,74 +258,14 @@ math-field.mdl-expression-aligned {
     height: 100%;
 }
 
-.mdl-units-dropdown-content {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-math-field.mdl-units-input {
-    font-size: 15px;
-    height: 34px;
-    padding: 0 8px;
-    border: none;
-    border-bottom: 1px solid #e0e0e0;
-    background: transparent;
-    flex: 0 0 auto;
-}
-
-math-field.mdl-units-input::part(container) {
-    padding: 0;
-    min-height: 0;
-}
-
-math-field.mdl-units-input::part(menu-toggle) {
-    display: none;
-}
-
-.mdl-units-list-host {
-    flex: 1 1 auto;
-    min-height: 0;
-}
-
-.mdl-units-list {
-    display: flex;
-    flex-direction: column;
+.mdl-units-dropdown .dx-list-item-content {
+    padding: 5px 8px;
 }
 
 .mdl-units-item {
     display: flex;
     align-items: center;
     line-height: 1;
-    padding: 5px 8px;
-    cursor: pointer;
-}
-
-.mdl-units-item:hover {
-    background-color: rgba(0, 0, 0, 0.06);
-}
-
-.mdl-units-item--hidden {
-    display: none;
-}
-
-.mdl-units-editor .mdl-units-editor-math-field {
-    font-size: 15px;
-    align-self: center;
-}
-
-.mdl-units-editor .mdl-units-editor-math-field::part(container) {
-    padding: 0;
-    min-height: 0;
-}
-
-.mdl-units-editor .mdl-units-editor-math-field::part(menu-toggle) {
-    display: none;
-}
-
-.mdl-units-editor .mdl-units-editor-input {
-    color: transparent;
-    caret-color: transparent;
 }
 
 /* The chart's tick labels are compiled from blocks, so they carry no class of their own. Every

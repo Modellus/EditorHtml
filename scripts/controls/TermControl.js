@@ -43,7 +43,7 @@ class TermControl {
             return false;
         if (calculator.isTerm(term))
             return false;
-        if (allowNumeric && Number.isFinite(Number(term)))
+        if (allowNumeric && Number.isFinite(Utils.parseNumericText(term)))
             return false;
         return true;
     }
@@ -167,28 +167,29 @@ class TermControl {
         return TermControl.normalizeTermValue(value);
     }
 
+    // A value typed here is a reading, so it is rounded to the model's precision - and written
+    // without the spaces that group the thousands on a label, since what is stored has to read
+    // back as a number.
     static normalizeBaseShapeCustomTermValue(baseShape, value) {
         const normalizedValue = TermControl.normalizeBaseShapeTermValue(value);
         if (normalizedValue === "")
             return normalizedValue;
-        const numeric = Number(normalizedValue);
+        const numeric = Utils.parseNumericText(normalizedValue);
         if (!Number.isFinite(numeric))
             return normalizedValue;
-        return baseShape.formatModelValue(numeric);
+        return Utils.formatValueForEditing(numeric, baseShape.getModelPrecision());
     }
 
-    // A value the reader types is an input, not a reading, so it is kept as written instead of
-    // being rounded to the model's display precision. Anything that is not a number is left
-    // alone, so a term name can still be typed.
+    // A value the reader types is an input, not a reading, so it is kept exactly as written
+    // rather than rounded to the model's display precision or rewritten in another form:
+    // -0.03e2 stays -0.03e2, and 0.125 keeps its three decimals whatever the model shows. What
+    // is stored is the text itself, which reads as a number wherever it is used. Anything that
+    // is not a number is left alone too, so a term name can still be typed.
     static normalizeExactTypedValue(value) {
         const normalizedValue = TermControl.normalizeBaseShapeTermValue(value);
         if (typeof normalizedValue !== "string")
             return normalizedValue;
-        const trimmedValue = normalizedValue.trim();
-        if (trimmedValue === "")
-            return trimmedValue;
-        const numeric = Number(trimmedValue);
-        return Number.isFinite(numeric) ? String(numeric) : trimmedValue;
+        return normalizedValue.trim();
     }
 
     static getBaseShapeCaseVisibilityConfig(baseShape) {
@@ -1538,7 +1539,7 @@ class TermControl {
         const text = TermControl.normalizeTermValue(value);
         if (typeof text !== "string" || text.trim() === "")
             return false;
-        return Number.isFinite(Number(text));
+        return Number.isFinite(Utils.parseNumericText(text));
     }
 
     // font-style is set because the selector italicises terms, and a value is not a term.
@@ -1563,13 +1564,28 @@ class TermControl {
 
     // The chip is what the field wears at rest. It is taken off the moment the field is focused, so
     // the caret stands where the reader is about to write and what they write is read as they write
-    // it; the next sync puts the chip back on.
+    // it; the next sync puts the chip back on. What is written goes into a math field laid over the
+    // editor's own input, so a value is typeset as it is typed - in either notation - and a name
+    // reads the way the chip will read it. Where no math field is defined the input itself takes
+    // the typing, as it did.
     enterTermEditorEditing(component) {
         component.$element().addClass("mdl-term-editing");
         const inputContainer = this.getTermEditorInputContainer(component);
         if (!inputContainer?.length)
             return;
-        inputContainer.find(".dx-texteditor-input").css({ color: "", caretColor: "", opacity: "", textShadow: "" });
+        const field = this.getTypedTermField(component, true);
+        if (!field) {
+            inputContainer.find(".dx-texteditor-input").css({ color: "", caretColor: "", opacity: "", textShadow: "" });
+            return;
+        }
+        if (typeof field.hasFocus === "function" && field.hasFocus())
+            return;
+        field.mdlCommitted = false;
+        Utils.writeMathField(field, component.mdlTypedTerm?.latex() ?? "");
+        component.mdlEnteringTyping = true;
+        field.focus();
+        component.mdlEnteringTyping = false;
+        field.executeCommand?.("selectAll");
     }
 
     // A drop down takes the focus with it when it opens, so a field that can be typed into asks for it
@@ -1577,12 +1593,131 @@ class TermControl {
     // stands in place of the value that was there.
     focusTypedTermValueInput(component) {
         requestAnimationFrame(() => {
+            if (this.getTypedTermField(component, true)) {
+                this.enterTermEditorEditing(component);
+                return;
+            }
             const inputElement = component.$element().find(".dx-texteditor-input")[0];
             if (!inputElement)
                 return;
             inputElement.focus();
             inputElement.select();
         });
+    }
+
+    // The math field a value or a name is typed into, made the first time the editor is written in
+    // and kept for as long as the editor stands. Nothing is made where no math field is defined.
+    getTypedTermField(component, create) {
+        const inputContainer = this.getTermEditorInputContainer(component);
+        if (!inputContainer?.length)
+            return null;
+        let field = inputContainer.find(".mdl-term-typing-field")[0] ?? null;
+        if (field || !create || typeof customElements === "undefined" || !customElements.get("math-field"))
+            return field;
+        field = document.createElement("math-field");
+        field.className = "mdl-term-typing-field";
+        field.setAttribute("math-virtual-keyboard-policy", "manual");
+        field.setAttribute("popover-policy", "off");
+        field.setAttribute("smart-mode", "false");
+        field.setAttribute("tabindex", "0");
+        Utils.configureMathFieldOnMount(field, mounted => { mounted.inlineShortcuts = Utils.valueFieldInlineShortcuts; });
+        inputContainer.append(field);
+        field.addEventListener("keydown", event => this.onTypedTermFieldKeyDown(event, component, field), true);
+        field.addEventListener("blur", () => this.onTypedTermFieldBlur(component, field));
+        return field;
+    }
+
+    // Focus leaving the editor's input for the typing field laid over it is not the editor being left.
+    isFocusMovingToTypedTermField(component, event) {
+        if (component.mdlEnteringTyping === true)
+            return true;
+        const field = this.getTypedTermField(component, false);
+        const relatedTarget = event?.event?.relatedTarget ?? event?.event?.originalEvent?.relatedTarget ?? null;
+        if (!field || !relatedTarget)
+            return false;
+        return field === relatedTarget || field.contains(relatedTarget);
+    }
+
+    isTypedTermFieldFocused(component) {
+        const field = this.getTypedTermField(component, false);
+        return !!field && !field.mdlDetached && typeof field.hasFocus === "function" && field.hasFocus();
+    }
+
+    // Enter takes what is written and closes the drop down; Escape closes it and keeps what was
+    // there; Tab takes what is written on its way to the next field.
+    onTypedTermFieldKeyDown(event, component, field) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            this.commitTypedTermField(component, field);
+            component.close?.();
+            return;
+        }
+        if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            field.mdlCommitted = true;
+            component.close?.();
+            this.endTypedTermEditing(component);
+            return;
+        }
+        if (event.key === "Tab") {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            this.commitTypedTermField(component, field);
+            Utils.moveFocusFromElement(field, event.shiftKey);
+        }
+    }
+
+    onTypedTermFieldBlur(component, field) {
+        if (field.mdlDetached)
+            return;
+        this.commitTypedTermField(component, field);
+    }
+
+    // What the field holds is read once, when it is left: a number is kept spelt as typed, in
+    // either notation; anything else is the name of a term. What has not changed is not written.
+    commitTypedTermField(component, field) {
+        if (field.mdlDetached || field.mdlCommitted === true)
+            return;
+        field.mdlCommitted = true;
+        const typed = component.mdlTypedTerm;
+        const text = TermControl.readTypedTermFieldText(field);
+        this.endTypedTermEditing(component);
+        if (typed && text !== typed.current())
+            typed.commit(text);
+    }
+
+    // The field is let go of before it is taken away, so whatever answers its losing the focus has
+    // answered while it still stands where it was.
+    endTypedTermEditing(component) {
+        const field = this.getTypedTermField(component, false);
+        if (field) {
+            field.mdlDetached = true;
+            field.blur?.();
+            field.parentNode?.removeChild(field);
+        }
+        component.mdlTypedTerm?.sync();
+    }
+
+    static readTypedTermFieldText(field) {
+        const latex = String(field.getValue("latex-unstyled") || field.getValue() || "").trim();
+        if (latex === "")
+            return "";
+        if (Utils.isNumericText(latex))
+            return latex;
+        return Utils.readTermNameLatex(latex);
+    }
+
+    // What the typing field starts with: a plain value as its own text, a term as the name the
+    // chip typesets it by.
+    getTypedTermFieldLatex(value, system) {
+        const text = this.normalizeTermValue(value);
+        if (text === "")
+            return "";
+        if (TermControl.isPlainValue(text))
+            return text;
+        return Utils.formatMathTermName(Utils.getDisplayedTerm(text, system));
     }
 
     acceptsTypedTermValue(item, index) {
@@ -1618,10 +1753,19 @@ class TermControl {
     // input is left underneath so the placeholder still shows through a chip with no term in it yet.
     syncTermEditorMathField(component, fallbackValue, system, item = null, index = 0, isPrimary = true) {
         const selectedValue = component.option("value") ?? fallbackValue;
-        component.$element().removeClass("mdl-term-editing");
         const inputContainer = this.getTermEditorInputContainer(component);
         if (!inputContainer?.length)
             return;
+        // A field still being written in is not put back to rest by a refresh from elsewhere.
+        if (this.isTypedTermFieldFocused(component))
+            return;
+        const typingField = this.getTypedTermField(component, false);
+        if (typingField) {
+            typingField.mdlDetached = true;
+            typingField.blur?.();
+            typingField.parentNode?.removeChild(typingField);
+        }
+        component.$element().removeClass("mdl-term-editing");
         inputContainer.find(".dx-texteditor-input").css({ color: "transparent", caretColor: "transparent", opacity: 0, textShadow: "none" });
         let chip = inputContainer.find(".mdl-term-chip").first();
         if (!chip.length) {
@@ -1671,8 +1815,14 @@ class TermControl {
         const displayedText = String(Utils.getDisplayedTerm(selectedValue, system));
         if (displayedText === "")
             return;
-        if (TermControl.isPlainValue(selectedValue))
-            return chip.append(TermControl.createPlainValueLabel(displayedText, "mdl-term-editor-value"));
+        if (TermControl.isPlainValue(selectedValue)) {
+            const valueText = String(selectedValue).trim();
+            if (Utils.numericTextPattern.test(valueText))
+                return chip.append(TermControl.createPlainValueLabel(valueText, "mdl-term-editor-value"));
+            // A value written in scientific notation is mathematics, and is typeset as it was written.
+            chip.append("<math-field read-only class='form-math-field mdl-term-editor-math-field mdl-term-editor-value-field' style='height:auto;width:auto;display:inline-block'></math-field>");
+            return Utils.writeMathField(chip.find(".mdl-term-editor-math-field").last()[0], valueText);
+        }
         chip.append("<math-field read-only class='form-math-field mdl-term-editor-math-field' style='height:auto;width:auto;display:inline-block'></math-field>");
         this.setMathFieldValue(chip.find(".mdl-term-editor-math-field").last()[0], Utils.formatMathTermName(displayedText));
     }
@@ -1770,6 +1920,12 @@ class TermControl {
             },
             onInitialized: e => {
                 this.termChipEditors[index] = e.component;
+                e.component.mdlTypedTerm = {
+                    current: () => this.normalizeTermValue(termValue),
+                    latex: () => this.getTypedTermFieldLatex(termValue, system),
+                    commit: text => this.commitTypedTermValue(item, index, text, value => this.onTermChanged(index, value), this.options.termEditor?.onCustomItemCreating, e.component),
+                    sync: () => this.syncTermEditorMathField(e.component, termValue, system, item, index, true)
+                };
                 this.syncTermEditorMathField(e.component, termValue, system, item, index, true);
             },
             onContentReady: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, true),
@@ -1777,7 +1933,10 @@ class TermControl {
                 if (acceptsTypedValue)
                     this.enterTermEditorEditing(e.component);
             },
-            onFocusOut: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, true),
+            onFocusOut: e => {
+                if (!this.isFocusMovingToTypedTermField(e.component, e))
+                    this.syncTermEditorMathField(e.component, termValue, system, item, index, true);
+            },
             onValueChanged: e => {
                 if (acceptsTypedValue && e.event)
                     this.commitTypedTermValue(item, index, e.value, value => this.onTermChanged(index, value), this.options.termEditor?.onCustomItemCreating, e.component);
@@ -1848,6 +2007,12 @@ class TermControl {
             },
             onInitialized: e => {
                 dropDownBoxInstance = e.component;
+                e.component.mdlTypedTerm = {
+                    current: () => this.normalizeTermValue(termValue),
+                    latex: () => this.getTypedTermFieldLatex(termValue, system),
+                    commit: text => this.commitTypedTermValue(item, index, text, onChanged, onCustomItemCreating, e.component),
+                    sync: () => this.syncTermEditorMathField(e.component, termValue, system, item, index, false)
+                };
                 this.syncTermEditorMathField(e.component, termValue, system, item, index, false);
             },
             onContentReady: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, false),
@@ -1855,7 +2020,10 @@ class TermControl {
                 if (acceptCustomValue)
                     this.enterTermEditorEditing(e.component);
             },
-            onFocusOut: e => this.syncTermEditorMathField(e.component, termValue, system, item, index, false),
+            onFocusOut: e => {
+                if (!this.isFocusMovingToTypedTermField(e.component, e))
+                    this.syncTermEditorMathField(e.component, termValue, system, item, index, false);
+            },
             onValueChanged: e => {
                 if (acceptCustomValue && e.event)
                     this.commitTypedTermValue(item, index, e.value, onChanged, onCustomItemCreating, e.component);

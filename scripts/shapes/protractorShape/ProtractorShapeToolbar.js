@@ -147,10 +147,11 @@ var ProtractorShapeToolbarMixin = {
     },
     getAngleNumberEditorOptions(useRadians, angleMax, value, propertyName) {
         const angleSuffix = useRadians ? "\u03c0" : "\u00ba";
-        return Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: true, min: 0, max: angleMax }), {
+        return this.getPrecisionNumberEditorOptions({
+            showSpinButtons: true, min: 0, max: angleMax,
             value: value,
+            typedTextKey: propertyName,
             step: 0.01,
-            format: { type: "fixedPoint", precision: 2 },
             onInitialized: e => this.applyAngleSuffix(e.element, angleSuffix),
             onContentReady: e => this.applyAngleSuffix(e.element, angleSuffix),
             onValueChanged: e => this.setPropertyCommand(propertyName, e.value)

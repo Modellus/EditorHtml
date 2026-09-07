@@ -126,12 +126,16 @@ var GaugeShapeToolbarMixin = {
     renderGaugeRangeItem(data, index, element) {
         const invalidClass = this.isGaugeRangeInvalid(index) ? " mdl-missing-term" : "";
         element[0].innerHTML = `<div class="mdl-gauge-range-row${invalidClass}"><label class="mdl-gauge-range-field"><span>Start</span><div class="mdl-gauge-range-minimum"></div></label><label class="mdl-gauge-range-field"><span>End</span><div class="mdl-gauge-range-maximum"></div></label><div class="mdl-gauge-range-color"></div><div class="mdl-gauge-range-delete"></div></div>`;
-        $(element).find(".mdl-gauge-range-minimum").dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false, width: 90 }), {
+        $(element).find(".mdl-gauge-range-minimum").dxNumberBox(this.getPrecisionNumberEditorOptions({
+            showSpinButtons: false, width: 90,
+            typedTextKey: `ranges.${index}.minimum`,
             value: data.minimum,
             placeholder: "Start",
             onValueChanged: e => this.updateGaugeRange(index, "minimum", e.value)
         }));
-        $(element).find(".mdl-gauge-range-maximum").dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false, width: 90 }), {
+        $(element).find(".mdl-gauge-range-maximum").dxNumberBox(this.getPrecisionNumberEditorOptions({
+            showSpinButtons: false, width: 90,
+            typedTextKey: `ranges.${index}.maximum`,
             value: data.maximum,
             placeholder: "End",
             onValueChanged: e => this.updateGaugeRange(index, "maximum", e.value)
@@ -200,7 +204,9 @@ var GaugeShapeToolbarMixin = {
             {
                 text: "Minimum",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    $('<div>').dxNumberBox(this.getPrecisionNumberEditorOptions({
+                        showSpinButtons: false,
+                        typedTextKey: "minimum",
                         value: this.getGaugeToolbarRange().minimum,
                         disabled: this.properties.autoScale === true,
                         onInitialized: e => { this._gaugeMinimumBoxInstance = e.component; },
@@ -215,7 +221,9 @@ var GaugeShapeToolbarMixin = {
             {
                 text: "Maximum",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                    $('<div>').dxNumberBox(this.getPrecisionNumberEditorOptions({
+                        showSpinButtons: false,
+                        typedTextKey: "maximum",
                         value: this.getGaugeToolbarRange().maximum,
                         disabled: this.properties.autoScale === true,
                         onInitialized: e => { this._gaugeMaximumBoxInstance = e.component; },
@@ -230,7 +238,9 @@ var GaugeShapeToolbarMixin = {
             {
                 text: "Tick step",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false, min: 0 }), {
+                    $('<div>').dxNumberBox(this.getPrecisionNumberEditorOptions({
+                        showSpinButtons: false, min: 0,
+                        typedTextKey: "precision",
                         value: this.properties.precision,
                         onValueChanged: e => this.setPropertyCommand("precision", e.value)
                     })).appendTo($container);
@@ -248,25 +258,29 @@ var GaugeShapeToolbarMixin = {
             {
                 text: "Start angle (°)",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.properties.startAngle,
+                        typedTextKey: "startAngle",
+                        typedTextHost: this.properties,
                         showSpinButtons: true,
                         step: 1,
                         stylingMode: "filled",
                         onValueChanged: e => this.setPropertyCommand("startAngle", e.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             },
             {
                 text: "End angle (°)",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.properties.endAngle,
+                        typedTextKey: "endAngle",
+                        typedTextHost: this.properties,
                         showSpinButtons: true,
                         step: 1,
                         stylingMode: "filled",
                         onValueChanged: e => this.setPropertyCommand("endAngle", e.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             }
         ];

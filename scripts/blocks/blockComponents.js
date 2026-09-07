@@ -17,7 +17,7 @@ var BlockComponentHelpers = {
         const numeric = Number(value);
         if (!Number.isFinite(numeric))
             return "";
-        return numeric.toFixed(Math.max(0, Math.min(6, Math.floor(digits))));
+        return Utils.formatFixedDigits(numeric, Math.max(0, Math.min(6, Math.floor(digits))));
     },
 
     strokeLine(id, x1, y1, x2, y2, color, width, opacity = 1) {
@@ -292,7 +292,7 @@ var BlockComponentHelpers = {
     // it follows one everywhere else on the board, and a value measured in nothing is read bare.
     readingText(value, digits, unit) {
         const unitText = String(unit ?? "").trim();
-        const numberText = Utils.formatNumber(Number(value), digits);
+        const numberText = Utils.isBigNumber(value) ? Utils.formatScientific(value, digits) : Utils.formatNumber(Number(value), digits);
         return unitText === "" ? numberText : `${numberText} ${unitText}`;
     },
 

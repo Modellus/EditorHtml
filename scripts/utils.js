@@ -376,6 +376,53 @@ class Utils {
         return normalizedText.replace(/(^|[^\\])_(?!\{\\!)/g, "$1\\_");
     }
 
+    // A name typed into a math field, read back as the model spells it: an upright run is the
+    // letters it wraps, the braces come off a subscript, and a brace the reader typed - which the
+    // field writes as a fence - goes with them. What is left is what was typed: x_1, v.x, NO_2.
+    static readTermNameLatex(latex) {
+        let text = Utils.unwrapUprightMath(String(latex ?? ""))
+            .replace(/\\left\\lbrace/g, "{")
+            .replace(/\\right\\rbrace/g, "}")
+            .replace(/\\(?:[,;:! ]|quad|qquad)/g, "");
+        text = Utils.convertTermNamedIndexesToPlainText(text);
+        let previousText = null;
+        while (previousText !== text) {
+            previousText = text;
+            text = text.replace(/([_^])\{([^{}]*)\}/g, "$1$2").replace(/\{([^{}]*)\}/g, "$1");
+        }
+        return text.replace(/\\_/g, "_").trim();
+    }
+
+    // A math field keeps the tab key for moving between the places in its own mathematics, so a
+    // field standing in a form moves the focus on itself: to the next thing that can take it, or
+    // the one before when the shift key is held.
+    static moveFocusFromElement(element, backwards = false) {
+        const candidates = Array.from(document.querySelectorAll('a[href], button, input, select, textarea, math-field, [tabindex]'))
+            .filter(candidate => candidate.tabIndex >= 0 && !candidate.disabled && candidate.getClientRects().length > 0);
+        const index = candidates.indexOf(element);
+        if (index < 0)
+            return element.blur?.();
+        const next = candidates[(index + (backwards ? -1 : 1) + candidates.length) % candidates.length];
+        if (next && next !== element)
+            next.focus();
+        else
+            element.blur?.();
+    }
+
+    // A math field is configured once it is mounted, which is the moment it is connected: one that
+    // is already connected is configured now, and one still waiting to be is configured on the
+    // event it sends when it is.
+    static configureMathFieldOnMount(field, configure) {
+        if (field.isConnected)
+            configure(field);
+        else
+            field.addEventListener("mount", () => configure(field), { once: true });
+    }
+
+    // What a field for a value or a name turns typed letters into: nothing, save the star that
+    // writes a multiplication sign, so a name like "in" or "int" is the letters it is spelt with.
+    static valueFieldInlineShortcuts = { "*": "\\cdot" };
+
     static isMathTermText(text) {
         return String(text ?? "").includes("\\");
     }
@@ -1007,6 +1054,8 @@ class Utils {
         const normalizedPrecision = Utils.normalizePrecision(precision);
         const rounded = Utils.roundToPrecision(numericValue, normalizedPrecision);
         const normalized = Object.is(rounded, -0) ? 0 : rounded;
+        if (Utils.isBigNumber(normalized))
+            return Utils.formatScientific(normalized, normalizedPrecision);
         return Utils.formatNumber(normalized, normalizedPrecision);
     }
 
@@ -1027,6 +1076,217 @@ class Utils {
         if (rounded == null)
             return "";
         return rounded.toFixed(Utils.normalizePrecision(precision));
+    }
+
+    // The one way a number is written by hand anywhere in the editor: an optional sign, digits with
+    // "." between the whole part and the decimal part, and an optional exponent, so 0.5, -3, .25
+    // and -0.03e2 all read as values. Nothing groups the thousands and the comma is not a decimal
+    // mark, so "1,5" and "1,000" are not values.
+    static numericTextPattern = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+    // The same number written the way a math field writes it in scientific notation: a mantissa, a
+    // multiplication sign and a power of ten - 1.5\cdot10^{3}, 1.5\times10^3 - or a power of ten
+    // on its own, signed or not: 10^{-3}, -10^{6}.
+    static numericLatexPattern = /^(?:([+-]?(?:\d+\.?\d*|\.\d+))(?:\\times|\\cdot|\\ast|\*|×|⋅)|([+-]?))10\^(?:\{([+-]?\d+)\}|(\d))$/;
+
+    // A math field pads what it writes with spacing commands and writes a typed brace as a fence,
+    // and neither is any part of the number.
+    static normalizeNumericLatex(text) {
+        return Utils.unwrapUprightMath(String(text ?? ""))
+            .replace(/\\left\\lbrace/g, "{")
+            .replace(/\\right\\rbrace/g, "}")
+            .replace(/\\(?:[,;:! ]|quad|qquad)/g, "")
+            .replace(/\{\{([^{}]*)\}\}/g, "{$1}")
+            .trim();
+    }
+
+    static isNumericText(text) {
+        return typeof text === "string" && Number.isFinite(Utils.parseNumericText(text));
+    }
+
+    // A number held as text becomes the number, whichever of the two ways it is written; a number
+    // stays itself; anything else - an empty text, a comma decimal, a term name - is NaN, so
+    // callers test with Number.isFinite.
+    static parseNumericText(value) {
+        if (typeof value === "number")
+            return value;
+        if (typeof value !== "string")
+            return NaN;
+        const text = value.trim();
+        if (Utils.numericTextPattern.test(text))
+            return Number(text);
+        const latex = Utils.normalizeNumericLatex(text);
+        if (Utils.numericTextPattern.test(latex))
+            return Number(latex);
+        const match = Utils.numericLatexPattern.exec(latex);
+        if (!match)
+            return NaN;
+        const mantissa = match[1] ?? `${match[2]}1`;
+        return Number(`${mantissa}e${match[3] ?? match[4]}`);
+    }
+
+    // How a number is written back into a field: the shortest text that reads as the same number,
+    // with the noise a floating-point sum leaves in its sixteenth digit trimmed off, so a step of
+    // 0.1 taken from 0.7 shows 0.8 rather than 0.7999999999999999. A value that is no number
+    // is written as nothing.
+    static formatNumericText(value) {
+        const numeric = Utils.parseNumericText(value);
+        if (!Number.isFinite(numeric))
+            return "";
+        const trimmed = Number(numeric.toPrecision(15));
+        return String(Object.is(trimmed, -0) ? 0 : trimmed);
+    }
+
+    // A number read on the board - a tick, a readout, a cell - is written in scientific notation once
+    // it is a million or more, so a big number takes the room of a small one: 1.23e6 rather than
+    // 1 234 567.00. The exponent is written bare, without the plus a JavaScript exponent carries.
+    static scientificNotationThreshold = 1e6;
+
+    static isBigNumber(value) {
+        const numeric = Number(value);
+        return Number.isFinite(numeric) && Math.abs(numeric) >= Utils.scientificNotationThreshold;
+    }
+
+    static formatScientific(value, digits) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric))
+            return "";
+        return numeric.toExponential(Utils.normalizePrecision(digits)).replace("e+", "e");
+    }
+
+    // A value written to a fixed number of decimals, unless it is too big to be read that way.
+    static formatFixedDigits(value, digits) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric))
+            return "";
+        const normalizedDigits = Utils.normalizePrecision(digits);
+        if (Utils.isBigNumber(numeric))
+            return Utils.formatScientific(numeric, normalizedDigits);
+        return numeric.toFixed(normalizedDigits);
+    }
+
+    // A value written along a scale, to the decimals the scale is read to. A scale can run over
+    // decades, so a number that is too big to read at those decimals, or too small to show at all
+    // in them - 0.001 read to two decimals - is written in scientific notation instead. Zero is
+    // always zero.
+    static formatScaleDigits(value, digits) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric))
+            return "";
+        const normalizedDigits = Utils.normalizePrecision(digits);
+        if (numeric === 0)
+            return (0).toFixed(normalizedDigits);
+        const magnitude = Math.abs(numeric);
+        if (magnitude >= Utils.scientificNotationThreshold || Math.round(magnitude * 10 ** normalizedDigits) === 0)
+            return Utils.formatScientific(numeric, normalizedDigits);
+        return numeric.toFixed(normalizedDigits);
+    }
+
+    // The text a value was typed as, so -1e-3 comes back as -1e-3 rather than as -0.001. A
+    // property that is read by parsing - a component's parameter, a term control's value - holds
+    // the text itself; one that is used in arithmetic holds the number, and the text is kept
+    // beside it under typedTexts. Either is only ever read against the value it was written
+    // for: once the value is something else - dragged, undone, worked out - the text no longer
+    // describes it and the value is written the plain way.
+    static getTypedText(host, key, value) {
+        const own = host?.[key];
+        const text = typeof own === "string" && Utils.isNumericText(own) ? own : host?.typedTexts?.[key];
+        if (typeof text !== "string" || !Utils.isNumericText(text))
+            return null;
+        return Utils.parseNumericText(text) === Number(value) ? text.trim() : null;
+    }
+
+    static setTypedText(host, key, text) {
+        if (!host)
+            return;
+        const typedTexts = Object.assign({}, host.typedTexts);
+        if (text == null)
+            delete typedTexts[key];
+        else
+            typedTexts[key] = text;
+        if (Object.keys(typedTexts).length === 0)
+            delete host.typedTexts;
+        else
+            host.typedTexts = typedTexts;
+    }
+
+    // The options of a number box that is written into through a math field: the value is typed
+    // in either notation - 1e-3, or 1.5×10³ written as 1.5*10^3 - and read as the number it says;
+    // the comma key is refused, and a pasted text that is not a value refused with it. The value
+    // is shown the way it was typed for as long as it is the value typed - remembered on the box,
+    // and under typedTextKey on the typedTextHost when the caller names them, so the text
+    // outlives the box. A caller that stores the text as the value itself says so with
+    // storesTypedValue and writes event.typedText, which every onValueChanged is handed;
+    // otherwise the text is kept in the host's typedTexts beside the number. The caller's own
+    // handlers still run. Where no math field is defined - a page without MathLive - the box's
+    // own input takes the typing.
+    static getNumericEditorOptions(editorOptions = {}) {
+        const { typedTextKey, typedTextHost, storesTypedValue, onInitialized, onContentReady, onOptionChanged, onKeyDown, onPaste, onValueChanged, ...options } = editorOptions;
+        let typedText = typedTextKey ? Utils.getTypedText(typedTextHost, typedTextKey, options.value) : null;
+        let mathInput = null;
+        const readTypedText = value => {
+            if (typeof value === "string" && Utils.isNumericText(value))
+                return value.trim();
+            const text = typedTextKey ? Utils.getTypedText(typedTextHost, typedTextKey, value) : typedText;
+            return text != null && Utils.parseNumericText(text) === Number(value) ? text : null;
+        };
+        const keepTypedText = text => {
+            typedText = text;
+            if (typedTextKey && !storesTypedValue)
+                Utils.setTypedText(typedTextHost, typedTextKey, text);
+        };
+        if (typeof options.value === "string")
+            options.value = Utils.parseNumericText(options.value);
+        return Object.assign(options, {
+            format: null,
+            displayValueFormatter: value => readTypedText(value) ?? Utils.formatNumericText(value),
+            onInitialized: event => {
+                if (typeof NumericMathInput !== "undefined")
+                    mathInput = NumericMathInput.attach(event.component, {
+                        getText: value => readTypedText(value) ?? Utils.formatNumericText(value),
+                        // The same number written another way is still a change to what is shown.
+                        onRespelt: (text, event) => {
+                            keepTypedText(text);
+                            if (storesTypedValue)
+                                onValueChanged?.(Object.assign({ component: event.component, element: event.component.$element(), event: event.event, value: event.component.option("value"), previousValue: event.component.option("value") }, { typedText: text }));
+                        }
+                    });
+                onInitialized?.(event);
+            },
+            onContentReady: event => {
+                mathInput?.sync();
+                onContentReady?.(event);
+            },
+            onOptionChanged: event => {
+                if (event.name === "disabled" || event.name === "readOnly" || event.name === "placeholder")
+                    mathInput?.sync();
+                onOptionChanged?.(event);
+            },
+            onKeyDown: event => {
+                if (event.event?.key === ",")
+                    event.event.preventDefault();
+                onKeyDown?.(event);
+            },
+            onPaste: event => {
+                const pastedText = event.event?.originalEvent?.clipboardData?.getData("text") ?? event.event?.clipboardData?.getData("text") ?? "";
+                if (!Utils.isNumericText(pastedText))
+                    event.event?.preventDefault();
+                onPaste?.(event);
+            },
+            onValueChanged: event => {
+                // Only a change the reader made has a text to keep; one made by the code that owns
+                // the box - a drag, an undo, a refresh - leaves whatever text was kept to be judged
+                // against the new value.
+                if (event.event) {
+                    const inputText = mathInput?.takeTypedText() ?? String($(event.component.element()).find("input.dx-texteditor-input").val() ?? "").trim();
+                    const asTyped = Utils.isNumericText(inputText) && Utils.parseNumericText(inputText) === Number(event.value);
+                    keepTypedText(asTyped ? inputText : null);
+                }
+                event.typedText = event.event ? typedText : null;
+                onValueChanged?.(event);
+                mathInput?.sync();
+            }
+        });
     }
 
     static avatarPalette = ["#4C9AFF", "#F5515F", "#36B37E", "#FFAB00", "#8777D9", "#00B8D9", "#FF7452", "#57D9A3"];

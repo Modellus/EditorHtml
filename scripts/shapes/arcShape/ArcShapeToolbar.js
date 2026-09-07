@@ -87,7 +87,7 @@ var ArcShapeToolbarMixin = {
                         {
                             text: "Width",
                             buildControl: $container => {
-                                $('<div>').dxNumberBox({
+                                $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                                     value: this.properties.lineWidth,
                                     min: 1,
                                     max: 50,
@@ -96,7 +96,7 @@ var ArcShapeToolbarMixin = {
                                     width: 80,
                                     stylingMode: "filled",
                                     onValueChanged: e => this.setPropertyCommand("lineWidth", e.value)
-                                }).appendTo($container);
+                                })).appendTo($container);
                             }
                         }
                     ];

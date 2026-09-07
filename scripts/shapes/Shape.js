@@ -1382,7 +1382,7 @@ class BaseShape {
                 calculator.setTermValue(term, value + delta, calculator.system.iteration, caseNumber);
                 calculator.calculate();
             } else {
-                const currentTermValue = parseFloat(this.properties[termMapping.termProperty]);
+                const currentTermValue = Utils.parseNumericText(this.properties[termMapping.termProperty]);
                 const baseValue = Number.isFinite(currentTermValue) ? currentTermValue : 0;
                 this.properties[termMapping.termProperty] = Utils.roundToPrecision(baseValue + delta, calculator.getPrecision());
             }
@@ -2200,16 +2200,20 @@ class BaseShape {
         return Math.floor(precision);
     }
 
+    // A box for a value of the model: it takes any value written the way Utils.numericTextPattern
+    // reads, an exponent and all, so the model's precision only sizes the step its spin buttons
+    // take rather than masking what can be typed. Given a typedTextKey, the text the value was
+    // typed as is kept in the shape's properties and shown again under that key.
     getPrecisionNumberEditorOptions(editorOptions = {}) {
         const precision = this.getModelPrecision();
         const step = precision > 0 ? 1 / (10 ** precision) : 1;
-        return Object.assign({
+        return Utils.getNumericEditorOptions(Object.assign({
             showSpinButtons: true,
             stylingMode: "filled",
             elementAttr: { class: "mdl-math-input" },
-            format: { type: "fixedPoint", precision: precision },
-            step: step
-        }, editorOptions);
+            step: step,
+            typedTextHost: this.properties
+        }, editorOptions));
     }
 
     createForeignObjectGroup() {
@@ -2506,7 +2510,7 @@ class BaseShape {
         const calculator = this.board.calculator;
         if (calculator.isTerm(term))
             return calculator.getByName(term, caseNumber);
-        return parseFloat(term);
+        return Utils.parseNumericText(term);
     }
 
     resolveTermNumericAtIteration(term, caseNumber, iteration) {

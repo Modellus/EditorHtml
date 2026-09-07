@@ -80,17 +80,18 @@ function nicePiTickStep(rawStep) {
     return niceTickStep(rawStepInPi) * Math.PI;
 }
 
-// How a number reads under a tick: rounded to three decimals, and in exponent form once it is too
-// long to read otherwise. Every axis in the editor labels itself this way — the chart, and the
-// objects built from blocks that draw against a scale.
+// How a number reads under a tick: rounded to three decimals, and in scientific notation once it is
+// too big to read otherwise - a million or more, the threshold every value on the board switches
+// at - or too small to show in three decimals. Every axis in the editor labels itself this way —
+// the chart, and the objects built from blocks that draw against a scale.
 function formatAxisTickValue(value, axisType = "decimal") {
     if (!Number.isFinite(value))
         return "";
     if (axisType === "pi")
         return formatPiTickValue(value);
     const absoluteValue = Math.abs(value);
-    if (absoluteValue >= 10000 || (absoluteValue > 0 && absoluteValue < 0.001))
-        return value.toExponential(2);
+    if (Utils.isBigNumber(value) || (absoluteValue > 0 && absoluteValue < 0.001))
+        return Utils.formatScientific(value, 2);
     return String(Math.round(value * 1000) / 1000);
 }
 

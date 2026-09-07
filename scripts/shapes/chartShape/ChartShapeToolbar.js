@@ -288,7 +288,8 @@ var ChartShapeToolbarMixin = {
                 this.board.markDirty(this);
             },
             isDisabled: axis => this.properties.autoScale === true || (axis === "y" && this.properties.equalScales === true),
-            editorOptions: () => this.getPrecisionNumberEditorOptions({ showSpinButtons: false }),
+            typedTextKey: (axis, bound) => `domainOverride.${axis}${bound}`,
+            editorOptions: boxOptions => this.getPrecisionNumberEditorOptions(Object.assign({ showSpinButtons: false }, boxOptions)),
             trailing: axis => this.createAxisTypeButtonGroup(`${axis}AxisType`)
         });
     },

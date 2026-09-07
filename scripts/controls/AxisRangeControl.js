@@ -22,19 +22,27 @@ class AxisRangeControl {
         return wrapper;
     }
 
+    // The box's own options are handed to the caller's factory rather than laid over what it
+    // returns, so the factory's handlers - the ones that keep a value as it was typed - wrap
+    // these instead of being replaced by them. The key the typed text is kept under is the
+    // caller's to name, since only it knows where the bound is stored.
     createBox(wrapper, axis, bound) {
-        const editorOptions = this.options.editorOptions ? this.options.editorOptions() : { showSpinButtons: false, stylingMode: "filled" };
-        $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(Object.assign(editorOptions, {
+        const boxOptions = {
             value: this.options.read(axis, bound),
             placeholder: bound,
             disabled: this.isDisabled(axis),
+            typedTextKey: this.options.typedTextKey ? this.options.typedTextKey(axis, bound) : undefined,
             onInitialized: event => { this.boxes[`${axis}${bound}`] = event.component; },
             onValueChanged: event => {
                 if (this.isDisabled(axis))
                     return;
-                this.options.write(axis, bound, event.value);
+                this.options.write(axis, bound, event.value, event);
             }
-        }));
+        };
+        const editorOptions = this.options.editorOptions
+            ? this.options.editorOptions(boxOptions)
+            : Utils.getNumericEditorOptions(Object.assign({ showSpinButtons: false, stylingMode: "filled" }, boxOptions));
+        $('<div style="flex: 1;">').appendTo(wrapper).dxNumberBox(editorOptions);
     }
 
     isDisabled(axis) {

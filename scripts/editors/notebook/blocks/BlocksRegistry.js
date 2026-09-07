@@ -247,7 +247,7 @@ class BlockShape {
     }
 
     getPrecisionNumberEditorOptions(opts = {}) {
-        return Object.assign({ stylingMode: "filled", width: 90 }, opts);
+        return Utils.getNumericEditorOptions(Object.assign({ stylingMode: "filled", width: 90, typedTextHost: this.properties }, opts));
     }
 
     refreshDomainBoxes() {

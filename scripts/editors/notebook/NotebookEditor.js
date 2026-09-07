@@ -454,23 +454,27 @@ class NotebookEditor extends Workspace {
             {
                 text: "Start",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.getIndependentStart(),
+                        typedTextKey: "independent.start",
+                        typedTextHost: this.calculator?.properties,
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: event => this._setIndependentStart(event.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             },
             {
                 text: "Step",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.getIndependentStep(),
+                        typedTextKey: "independent.step",
+                        typedTextHost: this.calculator?.properties,
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: event => this._setIndependentStep(event.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             }
         ];
@@ -509,12 +513,14 @@ class NotebookEditor extends Workspace {
             {
                 text: "End",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.getIndependentEnd(),
+                        typedTextKey: "independent.end",
+                        typedTextHost: this.calculator?.properties,
                         stylingMode: "filled",
                         elementAttr: { class: "mdl-math-input" },
                         onValueChanged: event => this._setIndependentEnd(event.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             }
         ];

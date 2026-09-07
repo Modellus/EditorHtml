@@ -120,14 +120,16 @@ class SliderShape extends BaseShape {
             {
                 text: "Accuracy",
                 buildControl: $container => {
-                    $('<div>').dxNumberBox({
+                    $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.properties.precision,
+                        typedTextKey: "precision",
+                        typedTextHost: this.properties,
                         min: 0,
                         step: 0.1,
                         showSpinButtons: true,
                         stylingMode: "filled",
                         onValueChanged: e => this.setPropertyCommand("precision", e.value)
-                    }).appendTo($container);
+                    })).appendTo($container);
                 }
             }
         ];
@@ -169,7 +171,9 @@ class SliderShape extends BaseShape {
             this.setPropertyCommand(visibilityProperty, value);
         });
         const inputHost = $("<div>").addClass("name-packed-control__input").appendTo(control);
-        inputHost.dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+        inputHost.dxNumberBox(this.getPrecisionNumberEditorOptions({
+            showSpinButtons: false,
+            typedTextKey: valueProperty,
             value: this.properties[valueProperty],
             onValueChanged: e => this.setPropertyCommand(valueProperty, e.value)
         }));

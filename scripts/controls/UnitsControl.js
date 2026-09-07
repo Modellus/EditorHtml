@@ -1,13 +1,13 @@
-// One units picker serves every place a unit can be chosen — a shape toolbar, the scenarios table,
-// the units grid — and the list it shows is typeset once and kept alive off screen. Seventy odd
-// read-only math fields cost about a fifth of a second to build, which is long enough to feel on
-// every open, so the built list is moved into whichever drop down is open and moved back on close.
+// One units picker serves every place a unit can be chosen — a term row, the player, the scenarios
+// table, the units grid, an object's settings. It is a select box: the unit is typed straight into
+// the field, and the list under it offers the ISO units typeset as mathematics, narrowed to what
+// has been typed so far. A unit the list does not carry is kept as written. Seventy odd read-only
+// math fields cost long enough to build to feel on every open, so each is built once, off screen,
+// and the same element is carried into whichever list is open.
 class UnitsControl {
     static itemStyle = "height:auto;width:auto;display:inline-block;pointer-events:none";
-    static listElement = null;
+    static itemElements = new Map();
     static warmHostElement = null;
-    static onUnitPicked = null;
-    static scrollView = null;
 
     static getWarmHost() {
         if (UnitsControl.warmHostElement)
@@ -17,48 +17,42 @@ class UnitsControl {
         return UnitsControl.warmHostElement;
     }
 
-    static getListElement() {
-        if (UnitsControl.listElement)
-            return UnitsControl.listElement;
-        const itemsMarkup = Utils.isoUnits.map(unitText => `<div class="mdl-units-item" data-unit="${Utils.escapeAvatarText(unitText)}">${Utils.buildUnitsMathFieldMarkup(unitText, UnitsControl.itemStyle)}</div>`).join("");
-        UnitsControl.getWarmHost().insertAdjacentHTML("beforeend", `<div class="mdl-units-list">${itemsMarkup}</div>`);
-        UnitsControl.listElement = UnitsControl.getWarmHost().lastElementChild;
-        UnitsControl.listElement.addEventListener("pointerdown", event => UnitsControl.pickItem(event));
-        return UnitsControl.listElement;
+    static getItemElement(unitText) {
+        let itemElement = UnitsControl.itemElements.get(unitText);
+        if (itemElement)
+            return itemElement;
+        UnitsControl.getWarmHost().insertAdjacentHTML("beforeend", `<div class="mdl-units-item" data-unit="${Utils.escapeAvatarText(unitText)}">${Utils.buildUnitsMathFieldMarkup(unitText, UnitsControl.itemStyle)}</div>`);
+        itemElement = UnitsControl.getWarmHost().lastElementChild;
+        UnitsControl.itemElements.set(unitText, itemElement);
+        return itemElement;
     }
 
     // The first picker to open would otherwise pay for the whole list, so the editor builds it
     // while the reader is still looking at the board.
     static warm() {
-        UnitsControl.getListElement();
+        for (const unitText of Utils.isoUnits)
+            UnitsControl.getItemElement(unitText);
     }
 
-    static pickItem(event) {
-        const itemElement = event.target.closest(".mdl-units-item");
-        if (!itemElement)
-            return;
-        event.preventDefault();
-        UnitsControl.onUnitPicked?.(itemElement.dataset.unit);
+    static renderItem(unitText, itemElement) {
+        $(itemElement).append(UnitsControl.getItemElement(unitText));
     }
 
-    static attachList(hostElement, onUnitPicked) {
-        UnitsControl.onUnitPicked = onUnitPicked;
-        UnitsControl.filterItems("");
-        hostElement.appendChild(UnitsControl.getListElement());
+    // What is typed is matched against the unit as it is written and as it is typed on a plain
+    // keyboard, so m/s2 finds m/s² and um finds µm.
+    static getSearchText(unitText) {
+        return `${unitText} ${UnitsControl.foldUnitText(unitText)}`;
     }
 
-    static detachList() {
-        UnitsControl.onUnitPicked = null;
-        UnitsControl.scrollView = null;
-        if (UnitsControl.listElement)
-            UnitsControl.getWarmHost().appendChild(UnitsControl.listElement);
+    static foldUnitText(unitText) {
+        return Array.from(String(unitText)).map(character => Utils.unitsSuperscripts[character] ?? character).join("")
+            .replace(/µ/g, "u")
+            .replace(/·/g, ".");
     }
 
-    static filterItems(searchText) {
-        const search = Utils.getUnitsPlainText(searchText).toLowerCase();
-        for (const itemElement of UnitsControl.getListElement().children)
-            itemElement.classList.toggle("mdl-units-item--hidden", search !== "" && !itemElement.dataset.unit.toLowerCase().includes(search));
-        UnitsControl.scrollView?.update();
+    static findListedUnit(unitText) {
+        const folded = UnitsControl.foldUnitText(unitText);
+        return Utils.isoUnits.find(listedUnit => UnitsControl.foldUnitText(listedUnit) === folded) ?? null;
     }
 
     static getWrapperClass(isNested) {
@@ -67,46 +61,39 @@ class UnitsControl {
         return "mdl-units-dropdown";
     }
 
-    // The field reads as mathematics rather than as text: the unit is typeset into a read-only math
-    // field laid over the editor's own input, which is left in place so the placeholder still shows
-    // through when no unit is named.
-    static syncEditorMathField(component) {
-        const inputContainer = component.element().find(".dx-texteditor-input-container").first();
-        if (!inputContainer.length)
-            return;
-        let mathFieldElement = inputContainer.find(".mdl-units-editor-math-field").first()[0];
-        if (!mathFieldElement) {
-            inputContainer.prepend('<math-field read-only class="form-math-field mdl-units-editor-math-field" style="height:auto;width:auto;display:inline-block"></math-field>');
-            mathFieldElement = inputContainer.find(".mdl-units-editor-math-field").first()[0];
-        }
-        Utils.setMathFieldValue(mathFieldElement, Utils.getUnitsLatex(component.option("value") ?? ""));
-    }
-
     static getEditorOptions(config) {
         const unitText = Utils.getUnitsPlainText(config.value ?? "");
-        let editorInstance = null;
         return {
             value: unitText === "" ? null : unitText,
-            dataSource: Utils.isoUnits,
+            items: Utils.isoUnits,
+            acceptCustomValue: true,
+            searchEnabled: true,
+            searchMode: "contains",
+            searchExpr: item => UnitsControl.getSearchText(item),
+            minSearchLength: 0,
+            searchTimeout: 0,
+            showDataBeforeSearch: true,
+            showClearButton: false,
+            width: config.width,
             stylingMode: "filled",
             disabled: config.disabled === true,
             placeholder: config.placeholder ?? "",
             elementAttr: { class: "mdl-units-editor" },
             inputAttr: { class: "mdl-units-editor-input" },
-            onInitialized: e => editorInstance = e.component,
-            onContentReady: e => UnitsControl.syncEditorMathField(e.component),
-            onValueChanged: e => {
-                UnitsControl.syncEditorMathField(e.component);
-                config.onValueChanged(Utils.getUnitsPlainText(e.value ?? ""));
+            itemTemplate: (item, index, itemElement) => UnitsControl.renderItem(item, itemElement),
+            // A unit written rather than picked is read the way a typed unit is read everywhere:
+            // m/s^2 is m/s², and m/s2 on a plain keyboard is the m/s² the list carries. Nothing
+            // written clears the unit.
+            onCustomItemCreating: event => {
+                const typedUnit = Utils.getUnitsPlainText(event.text);
+                event.customItem = typedUnit === "" ? null : (UnitsControl.findListedUnit(typedUnit) ?? typedUnit);
             },
-            contentTemplate: (templateData, contentElement) => UnitsControl.renderDropDownContent(contentElement, editorInstance),
-            onOpened: e => UnitsControl.openDropDown(e.component),
-            // A row redraws as soon as the unit it names changes, so an editor can be taken apart
-            // with the shared list still inside it: the list goes home before the drop down goes.
-            onDisposing: () => UnitsControl.detachList(),
+            onValueChanged: event => config.onValueChanged(Utils.getUnitsPlainText(event.value ?? "")),
+            // The typeset items are shared by every list, so a list that was left holding them may
+            // have lent them out since: it lays them out again each time it opens.
+            onOpened: event => event.component.getDataSource()?.reload(),
             dropDownOptions: {
                 container: document.body,
-                onHidden: () => UnitsControl.detachList(),
                 width: Utils.unitsDropDownWidth,
                 height: Utils.unitsDropDownHeight,
                 wrapperAttr: { class: UnitsControl.getWrapperClass(config.nested === true) }
@@ -114,52 +101,10 @@ class UnitsControl {
         };
     }
 
-    // A unit the list does not carry is written rather than picked, and it is written as
-    // mathematics too: what the reader types is typeset as they type and read back as a unit.
-    static renderDropDownContent(contentElement, component) {
-        const hostElement = $(contentElement)[0];
-        hostElement.insertAdjacentHTML("beforeend", '<div class="mdl-units-dropdown-content"><math-field class="mdl-units-input" math-virtual-keyboard-policy="manual" popover-policy="off" smart-mode="false"></math-field><div class="mdl-units-list-host"></div></div>');
-        // The wheel over a drop down belongs to whatever the drop down scrolls, and inside an overlay
-        // only a scroll view is given it, so the list is carried by one like every other menu here.
-        $(hostElement).find(".mdl-units-list-host").dxScrollView({ width: "100%", height: "100%", direction: "vertical", showScrollbar: "always" });
-        const inputField = hostElement.querySelector(".mdl-units-input");
-        inputField.addEventListener("input", () => UnitsControl.filterItems(inputField.value));
-        inputField.addEventListener("keydown", event => UnitsControl.handleInputKeydown(event, component, inputField), true);
-    }
-
-    static handleInputKeydown(event, component, inputField) {
-        if (event.key === "Escape")
-            return component.close();
-        // A unit is written on one line: the slash of m/s divides the unit, it does not stack it.
-        if (event.key === "/") {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            return inputField.insert("/");
-        }
-        if (event.key !== "Enter")
-            return;
-        event.preventDefault();
-        const typedUnit = Utils.getUnitsPlainText(inputField.value);
-        component.option("value", typedUnit === "" ? null : typedUnit);
-        component.close();
-    }
-
-    static openDropDown(component) {
-        const contentElement = $(component.content());
-        const inputField = contentElement.find(".mdl-units-input")[0];
-        inputField.menuItems = [];
-        Utils.setMathFieldValue(inputField, Utils.getUnitsLatex(component.option("value") ?? ""));
-        UnitsControl.scrollView = contentElement.find(".mdl-units-list-host").dxScrollView("instance");
-        UnitsControl.attachList($(UnitsControl.scrollView.content())[0], unitText => {
-            component.option("value", unitText);
-            component.close();
-        });
-        UnitsControl.scrollView.scrollTo(0);
-        UnitsControl.scrollView.update();
-        requestAnimationFrame(() => inputField.focus());
-    }
-
     static createEditor(hostElement, config) {
-        return $("<div>").appendTo(hostElement).dxDropDownBox(UnitsControl.getEditorOptions(config)).dxDropDownBox("instance");
+        return $("<div>").appendTo(hostElement).dxSelectBox(UnitsControl.getEditorOptions(config)).dxSelectBox("instance");
     }
 }
+
+if (typeof module !== "undefined" && module.exports)
+    module.exports = UnitsControl;

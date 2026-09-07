@@ -1511,6 +1511,30 @@ test.describe('component variable inputs', () => {
         expect(readRotation(result.needleTransform)).toBeCloseTo(0.125, 3);
     });
 
+    // A value may be written with an exponent: it is kept as written and read as the number it says.
+    test('accepts a typed number written with an exponent', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120');
+        await addCompass(page);
+        await typeIntoHeading(page, '-0.03e2');
+        const result = await readCompass(page);
+        expect(result.headingVariable).toBe('-0.03e2');
+        expect(readRotation(result.needleTransform)).toBeCloseTo(-3, 3);
+    });
+
+    // A comma marks nothing in a value, so what carries one is not a value: it is kept as the
+    // name it would be, and names no term.
+    test('does not read a comma decimal as a value', async ({ page }) => {
+        await setupBoard(page);
+        await addClockEquations(page, 'heading=120');
+        await addCompass(page);
+        await typeIntoHeading(page, '1,5');
+        const result = await readCompass(page);
+        expect(result.headingVariable).toBe('1,5');
+        expect(await page.evaluate(() => TermControl.isPlainValue('1,5'))).toBe(false);
+        expect(await page.evaluate(() => TermControl.isMissingTermReference(shell.calculator, '1,5'))).toBe(true);
+    });
+
     test('still accepts a term name typed into the same control', async ({ page }) => {
         await setupBoard(page);
         await addClockEquations(page, 'heading=120');

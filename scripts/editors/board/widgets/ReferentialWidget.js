@@ -468,7 +468,8 @@ class ReferentialShape extends BaseShape {
                     this.applyVisibleDomainY(domain);
             },
             isDisabled: axis => this.properties.autoScale !== false || (axis === "y" && this.properties.equalAxisScales === true),
-            editorOptions: () => this.getPrecisionNumberEditorOptions({ showSpinButtons: false })
+            typedTextKey: (axis, bound) => `domain.${axis}${bound}`,
+            editorOptions: boxOptions => this.getPrecisionNumberEditorOptions(Object.assign({ showSpinButtons: false }, boxOptions))
         });
         return this._axisRangeControl;
     }

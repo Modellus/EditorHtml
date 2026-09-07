@@ -252,8 +252,10 @@ class QuestionShape extends BaseShape {
         });
         if (this.properties.hasScoring) {
             const $scoreHost = $("<div class='mdl-question-item-score-host'>").appendTo($item);
-            $scoreHost.dxNumberBox({
+            $scoreHost.dxNumberBox(Utils.getNumericEditorOptions({
                 value: data.score ?? 0,
+                typedTextKey: `answers.${index}.score`,
+                typedTextHost: this.properties,
                 width: 56,
                 min: 0,
                 stylingMode: "filled",
@@ -262,7 +264,7 @@ class QuestionShape extends BaseShape {
                     if (e.event)
                         this.updateAnswerItemField(index, "score", e.value);
                 }
-            });
+            }));
         }
         const $correctHost = $("<div class='mdl-question-item-correct-host'>").appendTo($item);
         if (this.isSingleAnswerMode()) {

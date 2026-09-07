@@ -19,7 +19,7 @@
         { "id": "fillColor", "label": "Fill colour", "valueType": "colour", "defaultValue": "token:stroke.accent", "category": "style" },
         { "id": "labelColor", "label": "Label colour", "valueType": "colour", "defaultValue": "token:text.primary", "category": "style" },
         { "id": "digits", "label": "Decimals", "valueType": "number", "defaultValue": 0, "category": "display", "minimum": 0, "maximum": 6 },
-        { "id": "unit", "label": "Unit", "valueType": "string", "defaultValue": "", "category": "display", "description": "What the reading is named in when the term it reads names nothing of its own. A term carrying a unit is read in that one, picked beside the term the way every unit on the board is, so this is what is left for a gauge standing at a plain number." },
+        { "id": "unit", "label": "Unit", "valueType": "unit", "defaultValue": "", "category": "display", "description": "What the reading is named in when the term it reads names nothing of its own. A term carrying a unit is read in that one, picked beside the term the way every unit on the board is, so this is what is left for a gauge standing at a plain number." },
         { "id": "showReadout", "label": "Show readout", "valueType": "boolean", "defaultValue": true, "category": "display" }
     ],
     "locals": [

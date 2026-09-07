@@ -58,7 +58,7 @@ class BaseValueTableShape extends BaseTableShape {
         return {
             text: this.board.translations.get("Row Step") ?? "Row Step",
             buildControl: $container => {
-                $('<div>').appendTo($container).dxNumberBox({
+                $('<div>').appendTo($container).dxNumberBox(Utils.getNumericEditorOptions({
                     value: this.properties.iterationSkip ?? 0,
                     min: 0,
                     step: 1,
@@ -69,7 +69,7 @@ class BaseValueTableShape extends BaseTableShape {
                         const value = Math.max(0, Math.floor(Number(e.value) || 0));
                         this.setPropertyCommand("iterationSkip", value);
                     }
-                });
+                }));
             }
         };
     }

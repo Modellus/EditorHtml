@@ -190,9 +190,30 @@ test.describe('Term chip features', () => {
         expect(chip.some(part => part.text === '7.50')).toBe(true);
     });
 
-    // A field that can be written in says so the moment it is focused: the chip stands down, the
-    // caret stands where the writing goes, and what is written is the size of what it is being
-    // chosen against in the list below.
+    // A value in the thousands is stored the way it was typed, without the spaces a label groups
+    // its digits with, so it still reads as the number when the shape is drawn.
+    test('a value in the thousands is stored so it reads back as a number', async ({ page }) => {
+        await setupEditor(page);
+        await addModel(page, '\\frac{dx}{dt}=v', 'v');
+        await page.evaluate(() => {
+            modellus.shape.addReferential('Referential');
+            modellus.shape.addBody('Body', 'Referential');
+        });
+        await openTermsMenu(page, 'Body');
+        await page.locator('.mdl-shape-overlay-popup .shape-term-term').first().click();
+        await expect(page.locator('.mdl-term-editor-rows:visible')).toHaveCount(1);
+        await page.keyboard.type('1.2345e4');
+        await page.keyboard.press('Enter');
+        await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Body').properties.xTerm)).toBe('12345.00');
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Body').resolveTermNumeric('12345.00'))).toBe(12345);
+        // The chip reads the value as it is stored: nothing groups its digits.
+        const chip = await readChipParts(page, '.mdl-shape-overlay-popup .mdl-dropdown-list-item:nth-child(1)');
+        expect(chip.some(part => part.text === '12345.00')).toBe(true);
+    });
+
+    // A field that can be written in says so the moment it is focused: the chip stands down and a
+    // math field takes its place, with the caret in it, and what is written is the size of what it
+    // is being chosen against in the list below.
     test('a focused field shows the caret and writes at the size of the list it drops', async ({ page }) => {
         await setupEditor(page);
         await addModel(page, '\\frac{dx}{dt}=v', 'v');
@@ -204,28 +225,26 @@ test.describe('Term chip features', () => {
         await openTermChip(page, 0);
         await page.locator('.mdl-term-editor-rows:visible .shape-term-term-row .dx-dropdowneditor').click();
         await expect(page.locator('.mdl-term-tree-view')).toBeVisible();
+        await expect.poll(() => page.evaluate(() => document.querySelector('.mdl-term-editor-rows .shape-term-term-row .mdl-term-typing-field')?.hasFocus() ?? false)).toBe(true);
         const written = await page.evaluate(() => {
             const field = document.querySelector('.mdl-term-editor-rows .shape-term-term-row .mdl-term-chip-editor');
+            const typingField = field.querySelector('.mdl-term-typing-field');
             const input = field.querySelector('input.dx-texteditor-input');
-            const inputStyle = getComputedStyle(input);
             const chip = field.querySelector('.mdl-term-chip');
             return {
-                caretColor: inputStyle.caretColor,
-                textColor: inputStyle.color,
-                opacity: inputStyle.opacity,
-                hasWidth: input.getBoundingClientRect().width > 0,
+                hasWidth: typingField.getBoundingClientRect().width > 0,
+                inputWidth: input.getBoundingClientRect().width,
                 chipDisplay: chip ? getComputedStyle(chip).display : 'none',
-                inputFontSize: inputStyle.fontSize,
+                fieldFontSize: getComputedStyle(typingField).fontSize,
                 listFontSize: getComputedStyle(document.querySelector('.mdl-term-tree-popup math-field')).fontSize
             };
         });
-        expect(written.caretColor).not.toBe('rgba(0, 0, 0, 0)');
-        expect(written.textColor).not.toBe('rgba(0, 0, 0, 0)');
-        expect(written.opacity).toBe('1');
         expect(written.hasWidth).toBe(true);
+        // The editor's own input has stood down with the chip: the math field is what is written in.
+        expect(written.inputWidth).toBe(0);
         // The chip is what the field wears at rest, and a field being written in is not at rest.
         expect(written.chipDisplay).toBe('none');
-        expect(written.inputFontSize).toBe(written.listFontSize);
+        expect(written.fieldFontSize).toBe(written.listFontSize);
     });
 
     // The list offers what the model holds. The value the row already carries is read on the field

@@ -319,10 +319,10 @@ class ComponentShape extends BaseShape {
 
     getStoredAxisRange() {
         return {
-            xMin: Number(this.properties.minimumX),
-            xMax: Number(this.properties.maximumX),
-            yMin: Number(this.properties.minimumY),
-            yMax: Number(this.properties.maximumY)
+            xMin: Utils.parseNumericText(this.properties.minimumX),
+            xMax: Utils.parseNumericText(this.properties.maximumX),
+            yMin: Utils.parseNumericText(this.properties.minimumY),
+            yMax: Utils.parseNumericText(this.properties.maximumY)
         };
     }
 
@@ -1117,7 +1117,7 @@ class ComponentShape extends BaseShape {
         const drawnFrom = Number(input.minimumValue);
         if (input.minimumValue !== null && input.minimumValue !== undefined && Number.isFinite(drawnFrom))
             return drawnFrom;
-        return Number(this.properties[input.minimumProperty]);
+        return Utils.parseNumericText(this.properties[input.minimumProperty]);
     }
 
     onAxisTickDragStart(event, input) {
@@ -1853,7 +1853,7 @@ class ComponentShape extends BaseShape {
         const property = this.getBehaviourProperty({ property: propertyInput });
         if (property === null || this.board.calculator.isTerm(String(variableInput ?? "")))
             return this.readDragHalf(variableInput);
-        const value = Number(this.properties[property]);
+        const value = Utils.parseNumericText(this.properties[property]);
         return Number.isFinite(value) ? value : 0;
     }
 

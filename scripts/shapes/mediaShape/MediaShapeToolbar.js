@@ -133,7 +133,7 @@ var MediaShapeToolbarMixin = {
             {
                 text: "Iterations/Frame",
                 buildControl: $container => {
-                    $('<div>').appendTo($container).dxNumberBox({
+                    $('<div>').appendTo($container).dxNumberBox(Utils.getNumericEditorOptions({
                         value: this.properties.videoStepsPerFrame,
                         showSpinButtons: true,
                         min: 1,
@@ -141,7 +141,7 @@ var MediaShapeToolbarMixin = {
                         stylingMode: "filled",
                         onInitialized: e => { this._videoStepsBoxInstance = e.component; },
                         onValueChanged: e => this.setPropertyCommand("videoStepsPerFrame", e.value)
-                    });
+                    }));
                 }
             }
         ];

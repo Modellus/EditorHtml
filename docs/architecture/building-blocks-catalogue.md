@@ -717,7 +717,7 @@ Capabilities: `radial`, `angular`, `reads-model`
 | `fillColor` | colour | "token:stroke.accent" |  |
 | `labelColor` | colour | "token:text.primary" |  |
 | `digits` | number | 0 | min 0, max 6 |
-| `unit` | string | "" |  |
+| `unit` | unit | "" |  |
 | `showReadout` | boolean | true |  |
 
 ### `clock` — Clock
@@ -1180,7 +1180,7 @@ Capabilities: `radial`, `angular`, `scale`, `interaction`
 | `startValue` | number | 0 |  |
 | `endValue` | number | 180 |  |
 | `numbers` | string | "decimal" | decimal \| pi |
-| `unit` | string | "º" |  |
+| `unit` | unit | "º" |  |
 | `digits` | number | 0 | min 0, max 6 |
 | `faceColor` | colour | "token:surface.default" |  |
 | `borderColor` | colour | "token:stroke.default" |  |
@@ -1222,7 +1222,7 @@ Capabilities: `linear`, `scale`, `interaction`
 | `maximumX` | number | 10 |  |
 | `scaleType` | string | "linear" | linear \| logarithmic |
 | `majorTicks` | number | 10 | min 1, max 60 |
-| `unit` | string | "" |  |
+| `unit` | unit | "" |  |
 | `digits` | number | 2 | min 0, max 6 |
 | `backgroundColor` | colour | "token:surface.default" |  |
 | `borderColor` | colour | "token:stroke.default" |  |
@@ -1270,7 +1270,7 @@ Capabilities: `radial`, `angular`, `reads-model`, `scale`, `audible`
 | `majorTicks` | number | 9 | min 2, max 60 |
 | `minorPerMajor` | number | 4 | min 0, max 20 |
 | `digits` | number | 0 | min 0, max 6 |
-| `unit` | string | "" |  |
+| `unit` | unit | "" |  |
 | `showReadout` | boolean | true |  |
 | `faceColor` | colour | "token:surface.emphasis" |  |
 | `borderColor` | colour | "token:stroke.default" |  |

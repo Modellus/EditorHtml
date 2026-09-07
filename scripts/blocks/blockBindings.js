@@ -186,8 +186,10 @@ class BlockBindings {
         return this.calculator.isTerm(name);
     }
 
+    // A value written as text is read the one way every field reads it; a value that is already
+    // a number, or a switch, is taken as the number it is.
     resolveTermValue(termName, caseNumber = 1) {
-        const numeric = Number(termName);
+        const numeric = typeof termName === "string" ? Utils.parseNumericText(termName) : Number(termName);
         if (Number.isFinite(numeric))
             return numeric;
         if (!this.calculator || !this.calculator.isTerm(termName))
@@ -645,7 +647,13 @@ class BlockBindings {
             return `${prefix}${formatAxisTickValue(numeric, style === "pi" ? "pi" : "decimal")}${suffix}`;
         const requestedDigits = Number(this.resolve(binding.digits, context, NaN));
         const digits = Number.isFinite(requestedDigits) ? Math.max(0, Math.min(10, Math.floor(requestedDigits))) : 2;
-        return `${prefix}${numeric.toFixed(digits)}${suffix}`;
+        // "scale" writes it the way a number is written along a scale: to the decimals asked for,
+        // and in scientific notation once it is too big to read at them or too small to show in
+        // them, which is what a scale running over decades needs. A plain readout only switches
+        // when the number is big.
+        if (style === "scale")
+            return `${prefix}${Utils.formatScaleDigits(numeric, digits)}${suffix}`;
+        return `${prefix}${Utils.formatFixedDigits(numeric, digits)}${suffix}`;
     }
 
     // The case a binding is read in. It is a binding like any other, so a row of a list of terms can

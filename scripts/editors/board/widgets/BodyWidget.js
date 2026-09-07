@@ -502,7 +502,7 @@ class BodyShape extends ChildShape {
         sections[0].items.push(
             {
                 text: "Frame step",
-                buildControl: $p => $('<div>').dxNumberBox({
+                buildControl: $p => $('<div>').dxNumberBox(Utils.getNumericEditorOptions({
                     value: this.properties.animationFrameStep,
                     showSpinButtons: true,
                     min: 1,
@@ -510,7 +510,7 @@ class BodyShape extends ChildShape {
                     stylingMode: "filled",
                     onInitialized: e => { this.animationFrameStepToolbarWidget = e.component; },
                     onValueChanged: e => this.setPropertyCommand("animationFrameStep", e.value)
-                }).appendTo($p)
+                })).appendTo($p)
             }
         );
     }

@@ -355,7 +355,8 @@ var FrequencyChartShapeToolbarMixin = {
                 this.board.markDirty(this);
             },
             isDisabled: () => this.properties.autoScale === true,
-            editorOptions: () => this.getPrecisionNumberEditorOptions({ showSpinButtons: false })
+            typedTextKey: (axis, bound) => `valueRange.${axis}${bound}`,
+            editorOptions: boxOptions => this.getPrecisionNumberEditorOptions(Object.assign({ showSpinButtons: false }, boxOptions))
         });
     },
     getEditedValueRange() {

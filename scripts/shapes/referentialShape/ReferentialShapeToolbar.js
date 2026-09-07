@@ -113,7 +113,9 @@ var ReferentialShapeToolbarMixin = {
                         {
                             text: "Horizontal Scale",
                             buildControl: $p => {
-                                $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                                $('<div>').dxNumberBox(this.getPrecisionNumberEditorOptions({
+                                    showSpinButtons: false,
+                                    typedTextKey: "scaleX",
                                     value: this.properties.scaleX,
                                     onInitialized: e => { this._scaleXBoxInstance = e.component; },
                                     onValueChanged: e => {
@@ -129,7 +131,9 @@ var ReferentialShapeToolbarMixin = {
                         {
                             text: "Vertical Scale",
                             buildControl: $p => {
-                                $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                                $('<div>').dxNumberBox(this.getPrecisionNumberEditorOptions({
+                                    showSpinButtons: false,
+                                    typedTextKey: "scaleY",
                                     value: this.properties.scaleY,
                                     onInitialized: e => { this._scaleYBoxInstance = e.component; },
                                     onValueChanged: e => {

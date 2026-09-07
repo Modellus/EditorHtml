@@ -102,7 +102,9 @@ var SlopeShapeToolbarMixin = {
         return {
             text: text,
             buildControl: container => {
-                $('<div>').dxNumberBox(Object.assign(this.getPrecisionNumberEditorOptions({ showSpinButtons: false }), {
+                $('<div>').dxNumberBox(this.getPrecisionNumberEditorOptions({
+                    showSpinButtons: false,
+                    typedTextKey: property,
                     value: this.properties[property],
                     onValueChanged: e => this.setPropertyCommand(property, e.value)
                 })).appendTo(container);

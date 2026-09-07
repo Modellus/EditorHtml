@@ -310,6 +310,7 @@ class ValueShape extends BaseShape {
         if (!this.valueEditor)
             return;
         this.valueEditor.focus();
+        this.valueEditor.mdlMathInput?.selectAll();
         const input = this.valueEditorContainer?.querySelector("input");
         if (input && typeof input.select === "function")
             input.select();

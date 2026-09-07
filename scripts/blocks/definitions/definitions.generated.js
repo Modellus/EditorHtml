@@ -3446,7 +3446,7 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "unit",
                 "label": "Unit",
-                "valueType": "string",
+                "valueType": "unit",
                 "defaultValue": "",
                 "category": "display",
                 "description": "What the reading is named in when the term it reads names nothing of its own. A term carrying a unit is read in that one, picked beside the term the way every unit on the board is, so this is what is left for a gauge standing at a plain number."
@@ -10697,7 +10697,7 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "unit",
                 "label": "Unit",
-                "valueType": "string",
+                "valueType": "unit",
                 "defaultValue": "º",
                 "category": "display",
                 "description": "What the angle is measured in, written after the value the pointer reads. The numbers round the band stay bare, the way an axis writes its own."
@@ -12082,7 +12082,7 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "unit",
                 "label": "Unit",
-                "valueType": "string",
+                "valueType": "unit",
                 "defaultValue": "",
                 "category": "display",
                 "description": "What the ruler measures in, written after the value the pointer reads. The numbers along the scale stay bare, the way an axis writes its own."
@@ -12095,7 +12095,7 @@ BlockDefinitionLoader.registerAll([
                 "category": "display",
                 "minimum": 0,
                 "maximum": 6,
-                "description": "Decimals the value under the pointer is read to. The numbers along the scale follow it only when the divisions need them: a ruler cut into whole units is numbered in whole units however finely it reads. A logarithmic ruler reads to the decimals a scale running over decades needs rather than to this."
+                "description": "Decimals the value under the pointer is read to, on either scale. The numbers along the scale follow it only when they need decimals at all: a ruler cut into whole units is numbered in whole units however finely it reads, and a logarithmic one is numbered in whole decades unless it runs below 1. A number too big to read at those decimals, or too small to show in them, is written in scientific notation instead - 1.00e6, 1.00e-3 - so a scale running over decades still reads."
             },
             {
                 "id": "backgroundColor",
@@ -12485,6 +12485,18 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\max\\left(1,\\min\\left(41,lastDecade-firstDecade+1\\right)\\right)"
             },
             {
+                "id": "logTickDigits",
+                "value": {
+                    "choose": {
+                        "formula": "\\min\\left(0,firstDecade\\right)"
+                    },
+                    "then": {
+                        "parameter": "digits"
+                    },
+                    "otherwise": 0
+                }
+            },
+            {
                 "id": "decadeStart",
                 "formula": "left+\\left(firstDecade-logMinRaw\\right)\\cdot pxPerDecade"
             },
@@ -12581,42 +12593,20 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
-                "id": "readingDecimalText",
+                "id": "readingText",
                 "value": {
                     "format": {
                         "parameter": "readingValue"
                     },
                     "digits": {
                         "parameter": "digits"
-                    }
-                }
-            },
-            {
-                "id": "readingAxisText",
-                "value": {
-                    "format": {
-                        "parameter": "readingValue"
                     },
-                    "style": "axis"
-                }
-            },
-            {
-                "id": "readingText",
-                "value": {
-                    "choose": {
-                        "parameter": "isLog"
-                    },
-                    "then": {
-                        "parameter": "readingAxisText"
-                    },
-                    "otherwise": {
-                        "parameter": "readingDecimalText"
-                    }
+                    "style": "scale"
                 }
             },
             {
                 "id": "badgeWidth",
-                "formula": "tickFont\\cdot badgeChar\\cdot\\left(5+digits\\right)+badgePadX\\cdot2"
+                "formula": "tickFont\\cdot badgeChar\\cdot\\left(6+digits\\right)+badgePadX\\cdot2"
             },
             {
                 "id": "badgeHeight",
@@ -12961,7 +12951,8 @@ BlockDefinitionLoader.registerAll([
                                     },
                                     "digits": {
                                         "parameter": "tickDigits"
-                                    }
+                                    },
+                                    "style": "scale"
                                 },
                                 "fontSize": {
                                     "parameter": "tickFont"
@@ -13009,7 +13000,10 @@ BlockDefinitionLoader.registerAll([
                                             }
                                         }
                                     },
-                                    "style": "axis"
+                                    "digits": {
+                                        "parameter": "logTickDigits"
+                                    },
+                                    "style": "scale"
                                 },
                                 "fontSize": {
                                     "parameter": "tickFont"
@@ -13420,7 +13414,7 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "unit",
                 "label": "Unit",
-                "valueType": "string",
+                "valueType": "unit",
                 "defaultValue": "",
                 "category": "display",
                 "description": "What the reading is named in when the term it reads names nothing of its own. A term carrying a unit is read in that one, picked beside the term the way every unit on the board is, so this is what is left for a speedometer standing at a plain number."
