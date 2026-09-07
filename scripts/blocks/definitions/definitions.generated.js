@@ -12043,7 +12043,7 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "number",
                 "defaultValue": 0,
                 "category": "scale",
-                "description": "What the left end of the scale reads. It is held still while a number is pulled, so the ruler stretches from that end. A logarithmic ruler starts above zero, since nothing below it has a logarithm."
+                "description": "What the left end of the scale reads. It is held still while a number is pulled, so the ruler stretches from that end. A logarithmic ruler starts above zero, since nothing below it has a logarithm: given no positive minimum it starts at 1, or a decade under its maximum when that is nearer zero."
             },
             {
                 "id": "maximumX",
@@ -12435,12 +12435,26 @@ BlockDefinitionLoader.registerAll([
                 "formula": "grabHalf\\cdot2"
             },
             {
+                "id": "fallbackMin",
+                "formula": "\\min\\left(1,\\frac{\\max\\left(0.00000000001,maximumX\\right)}{10}\\right)"
+            },
+            {
                 "id": "safeMin",
-                "formula": "\\max\\left(0.000000000001,minimumX\\right)"
+                "value": {
+                    "choose": {
+                        "formula": "\\max\\left(0,minimumX\\right)"
+                    },
+                    "then": {
+                        "parameter": "minimumX"
+                    },
+                    "otherwise": {
+                        "parameter": "fallbackMin"
+                    }
+                }
             },
             {
                 "id": "safeMax",
-                "formula": "\\max\\left(safeMin\\cdot10,maximumX\\right)"
+                "formula": "\\max\\left(safeMin\\cdot10,\\min\\left(maximumX,safeMin\\cdot\\left(10\\right)^{40}\\right)\\right)"
             },
             {
                 "id": "logMinRaw",
@@ -12468,7 +12482,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "decadeCount",
-                "formula": "\\max\\left(1,\\min\\left(12,lastDecade-firstDecade+1\\right)\\right)"
+                "formula": "\\max\\left(1,\\min\\left(41,lastDecade-firstDecade+1\\right)\\right)"
             },
             {
                 "id": "decadeStart",
@@ -13252,6 +13266,9 @@ BlockDefinitionLoader.registerAll([
                                         }
                                     },
                                     "minimumProperty": "minimumX",
+                                    "minimumValue": {
+                                        "parameter": "safeMin"
+                                    },
                                     "maximumProperty": "maximumX",
                                     "originPixel": {
                                         "parameter": "left"

@@ -492,7 +492,10 @@ An axis drawn this way is the chart's axis, down to the arithmetic — all of it
 * **A tick is a handle.** An axis that names the properties holding its ends
   (`minimumXProperty`, `maximumXProperty`, …) gets a grab area over every numbered tick carrying the
   `drag-axis-tick` behaviour: pulling one holds the near end still and moves the far one, writing the
-  object's own maximum. It is the chart's interaction and the chart's formula — `AxisTickDrag`,
+  object's own maximum. The near end is the minimum property as it stands unless the behaviour is
+  given a `minimumValue`, which is where an object that reads its minimum another way — a logarithmic
+  ruler given no positive minimum draws itself from a decade under its maximum — says the axis is
+  drawn from. It is the chart's interaction and the chart's formula — `AxisTickDrag`,
   `newScale = |tickOffsetValue / pixelOffset|` — and the whole drag is one undo step.
 
 `plot-crosshair` answers a pointer the way the chart's crosshair answers a hovered x: both dashed

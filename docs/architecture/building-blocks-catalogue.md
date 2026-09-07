@@ -450,6 +450,7 @@ Capabilities: `interaction`
 | `axis` | string | "x" | x \| y |
 | `value` | number | 0 |  |
 | `minimumProperty` | string | "" |  |
+| `minimumValue` | number | null |  |
 | `maximumProperty` | string | "" |  |
 | `scale` | string | "linear" | linear \| logarithmic |
 | `countProperty` | string | "" |  |

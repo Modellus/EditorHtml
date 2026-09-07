@@ -1110,10 +1110,20 @@ class ComponentShape extends BaseShape {
         return numeric > 0 ? Math.log10(numeric) : NaN;
     }
 
+    // The end the axis is held at is where it is drawn from, which is the property as it stands
+    // unless the object reads it another way — a logarithmic ruler given no positive minimum draws
+    // itself from a decade under its maximum, and pulling a decade must stretch it from there.
+    getAxisTickDragMinimum(input) {
+        const drawnFrom = Number(input.minimumValue);
+        if (input.minimumValue !== null && input.minimumValue !== undefined && Number.isFinite(drawnFrom))
+            return drawnFrom;
+        return Number(this.properties[input.minimumProperty]);
+    }
+
     onAxisTickDragStart(event, input) {
         event.preventDefault();
         event.stopPropagation();
-        const minimum = Number(this.properties[input.minimumProperty]);
+        const minimum = this.getAxisTickDragMinimum(input);
         const originPlace = this.getAxisTickPlacement(input, minimum);
         const endPlace = this.getAxisTickPlacement(input, this.properties[input.maximumProperty]);
         const tickPlace = this.getAxisTickPlacement(input, input.value);

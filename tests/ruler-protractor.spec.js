@@ -149,6 +149,29 @@ test.describe('the ruler read logarithmically', () => {
         expect(properties.maximumX).toBeLessThan(125);
         await expect.poll(() => readNodes(page, 'Ruler', 'log-tick-label').then(nodes => nodes.map(node => node.text))).toEqual(['1', '10', '100']);
     });
+
+    // A ruler switched to logarithmic keeps the minimum it had, which is 0 unless it was set, and
+    // nothing below zero has a logarithm. Rather than spreading twelve decades under 1 and never
+    // reaching the top of the scale, it starts at 1 and rules itself to its far end — and is still
+    // stretched from there, since the drag reads the end the scale is drawn from.
+    test('given no positive minimum starts at 1 and still fills its width', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'ruler', 'Ruler', Object.assign({ scaleType: 'logarithmic' }, RULER_AT));
+        expect((await readNodes(page, 'Ruler', 'log-tick-label')).map(node => node.text)).toEqual(['1', '10']);
+        const minorTicks = await page.evaluate(() => Array.from(shell.board.shapes.getByName('Ruler').contentGroup.querySelectorAll('[data-source-id^="log-minor-tick"]'))
+            .map(node => Number(node.getAttribute('x1'))));
+        // The mark for 9 stands inside the last decade, close to the right end of the scale.
+        expect(Math.max(...minorTicks.filter(x => x < SCALE_LEFT + SCALE_WIDTH))).toBeGreaterThan(SCALE_LEFT + SCALE_WIDTH * 0.9);
+        await movePointerInto(page, RULER_AT, SCALE_LEFT + SCALE_WIDTH, NUMBER_BAND_Y);
+        await page.mouse.down();
+        await movePointerInto(page, RULER_AT, SCALE_LEFT + SCALE_WIDTH / 2, NUMBER_BAND_Y, { steps: 4 });
+        await page.mouse.up();
+        const properties = await readProperties(page, 'Ruler');
+        expect(properties.minimumX).toBe(0);
+        expect(properties.maximumX).toBeGreaterThan(80);
+        expect(properties.maximumX).toBeLessThan(125);
+        await expect.poll(() => readNodes(page, 'Ruler', 'log-tick-label').then(nodes => nodes.map(node => node.text))).toEqual(['1', '10', '100']);
+    });
 });
 
 test.describe('the protractor, built from blocks', () => {
