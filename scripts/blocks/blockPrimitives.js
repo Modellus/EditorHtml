@@ -7,7 +7,10 @@ var BlockPrimitiveSchemas = {
             strokeDash: { valueType: "string", defaultValue: "", label: "Dash pattern", category: "style" },
             strokeLinecap: { valueType: "string", defaultValue: "round", enumValues: ["butt", "round", "square"], label: "Line cap", category: "style" },
             opacity: { valueType: "number", defaultValue: 1, minimum: 0, maximum: 1, label: "Opacity", category: "style" },
-            visible: { valueType: "boolean", defaultValue: true, label: "Visible", category: "style" }
+            visible: { valueType: "boolean", defaultValue: true, label: "Visible", category: "style" },
+            // Ink drawn in answer to the pointer — a crosshair, a reading — must not take the pointer
+            // from whatever it is drawn over, or the pointer leaves the moment the answer appears.
+            pointerEvents: { valueType: "string", defaultValue: "", label: "Pointer events", category: "style", description: "Whether the node takes the pointer. \"none\" lets it through to whatever is underneath, which is what anything drawn in answer to the pointer needs." }
         };
     },
     withStyle(properties) {
@@ -30,6 +33,8 @@ var BlockPrimitiveRenderers = {
             attributes["stroke-linecap"] = properties.strokeLinecap;
         if (Number(properties.opacity) < 1)
             attributes.opacity = properties.opacity;
+        if (properties.pointerEvents)
+            attributes["pointer-events"] = properties.pointerEvents;
         return attributes;
     },
     isAllowedImageSource(href) {

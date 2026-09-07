@@ -219,6 +219,22 @@ test.describe('the measurement keys on the toolbar', () => {
         }
     });
 
+    // Neither instrument names a term, so neither toolbar carries the key that would read one.
+    test('give the instruments no model key, since they are bound to no term', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'ruler', 'Ruler', RULER_AT);
+        await addObject(page, 'protractor', 'Protractor', Object.assign({}, PROTRACTOR_AT, { y: 300 }));
+        for (const name of ['Ruler', 'Protractor']) {
+            await page.evaluate(name => shell.board.selection.select(shell.board.shapes.getByName(name)), name);
+            await expect(page.locator('.shape-context-toolbar.visible .mdl-component-settings-selector')).toBeVisible();
+            expect(await page.locator('.shape-context-toolbar.visible .mdl-component-model-selector').count()).toBe(0);
+        }
+        await page.evaluate(() => shell.board.selection.deselect());
+        await addObject(page, 'compass', 'Compass', { x: 400, y: 300, width: 160, height: 160 });
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Compass')));
+        await expect(page.locator('.shape-context-toolbar.visible .mdl-component-model-selector')).toBeVisible();
+    });
+
     test('arm the objects the editor ships rather than shapes of their own', async ({ page }) => {
         await setupBoard(page);
         for (const [buttonId, componentType, displayName] of [['ruler-button', 'ruler', 'Ruler'], ['protractor-button', 'protractor', 'Protractor']]) {
@@ -231,5 +247,71 @@ test.describe('the measurement keys on the toolbar', () => {
             expect(armed).toEqual({ type: 'ComponentShape', name: displayName, componentType: componentType });
             await page.click(`#${buttonId}`);
         }
+    });
+});
+
+// The ruler is read wherever the pointer rests on it, the way the hand-written one was: over the
+// marks, over the numbers, and over a number being offered for pulling, since the reading is not
+// ink that takes the pointer and the numbers are grabs inside the area that answers it.
+test.describe('the ruler answers the pointer over its whole body', () => {
+    test('reads over the numbers as well as the marks, and keeps reading across a number', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'ruler', 'Ruler', Object.assign({ minimumX: 0, maximumX: 10, majorTicks: 10 }, RULER_AT));
+        await movePointerInto(page, RULER_AT, SCALE_LEFT + SCALE_WIDTH / 2, NUMBER_BAND_Y);
+        await expect.poll(() => readNodes(page, 'Ruler', 'crosshair')).toHaveLength(1);
+        expect(await readTexts(page, 'Ruler')).toContain('5.00');
+        // On to the number 2 itself, which is a grab of its own, in small steps so the pointer
+        // crosses on to it rather than jumping.
+        await movePointerInto(page, RULER_AT, SCALE_LEFT + SCALE_WIDTH * 0.2, NUMBER_BAND_Y, { steps: 12 });
+        await expect.poll(() => readTexts(page, 'Ruler')).toContain('2.00');
+        expect(await readNodes(page, 'Ruler', 'crosshair')).toHaveLength(1);
+        await movePointerAway(page);
+        await expect.poll(() => readNodes(page, 'Ruler', 'crosshair')).toHaveLength(0);
+    });
+
+    // A selected shape is covered by its move handle, which passes the pointer through to the
+    // drawing underneath; the pointer leaving the handle must reach the drawing as a leave too, or
+    // the reading is left standing at the edge the pointer went out over.
+    test('stops reading when the pointer leaves a selected ruler over its handle', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'ruler', 'Ruler', Object.assign({ minimumX: 0, maximumX: 10, majorTicks: 10 }, RULER_AT));
+        await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Ruler')));
+        await movePointerInto(page, RULER_AT, SCALE_LEFT + SCALE_WIDTH / 2, TICK_BAND_Y, { steps: 10 });
+        await expect.poll(() => readNodes(page, 'Ruler', 'crosshair')).toHaveLength(1);
+        const outside = await svgClientPoint(page, RULER_AT.x - 30, RULER_AT.y + TICK_BAND_Y);
+        await page.mouse.move(outside.x, outside.y, { steps: 10 });
+        await expect.poll(() => readNodes(page, 'Ruler', 'crosshair')).toHaveLength(0);
+        await expect.poll(() => readNodes(page, 'Ruler', 'reading')).toHaveLength(0);
+    });
+
+    // A ruler measures rather than reads the model, so it goes on answering the pointer while the
+    // model runs.
+    test('goes on reading while the model is running', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'ruler', 'Ruler', Object.assign({ minimumX: 0, maximumX: 10, majorTicks: 10 }, RULER_AT));
+        await page.evaluate(() => shell.board.calculator.play());
+        await expect.poll(() => page.evaluate(() => shell.board.calculator.isPlaying())).toBe(true);
+        await movePointerInto(page, RULER_AT, SCALE_LEFT + SCALE_WIDTH / 2, TICK_BAND_Y, { steps: 5 });
+        await expect.poll(() => readNodes(page, 'Ruler', 'crosshair')).toHaveLength(1);
+        expect(await readTexts(page, 'Ruler')).toContain('5.00');
+        await page.evaluate(() => shell.board.calculator.stop());
+    });
+});
+
+// The numbers stand in a window the width of the body, so a long one at either end is cut off at
+// the edge of the ruler instead of written past it.
+test.describe('the ruler keeps its numbers inside its body', () => {
+    test('writes the numbers inside a window that stops at the edges of the body', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'ruler', 'Ruler', Object.assign({ minimumX: -123456, maximumX: 10, majorTicks: 10 }, RULER_AT));
+        const windows = await readNodes(page, 'Ruler', 'numbers', 'svg');
+        expect(windows).toHaveLength(1);
+        // Inset by spacing.medium, then by the body's own stroke.
+        expect(windows[0].x).toBe(9);
+        expect(windows[0].width).toBe(RULER_AT.width - 18);
+        const inside = await page.evaluate(() => shell.board.shapes.getByName('Ruler').contentGroup.querySelectorAll('svg[data-source-id="numbers"] text[data-source-id^="tick-label"]').length);
+        expect(inside).toBe(11);
+        const marks = await page.evaluate(() => shell.board.shapes.getByName('Ruler').contentGroup.querySelectorAll('svg[data-source-id="scale"] line').length);
+        expect(marks).toBeGreaterThan(0);
     });
 });

@@ -40,9 +40,9 @@ var ComponentShapeToolbarMixin = {
             {
                 location: "center",
                 template: () => {
-                    const container = $('<div></div>');
-                    this.createComponentModelDropDownButton(container);
-                    return container;
+                    this._componentModelItemElement = $('<div class="mdl-component-model-item"></div>');
+                    this.refreshComponentModelDropDownButton();
+                    return this._componentModelItemElement;
                 }
             },
             {
@@ -271,6 +271,25 @@ var ComponentShapeToolbarMixin = {
         if (source !== "$independent")
             return source;
         return String(this.board.calculator?.properties?.independent?.name ?? "");
+    },
+    // An object bound to no term — the ruler, the protractor, which measure rather than read the
+    // model — has nothing for the key to read, so it has no key. Like the mode keys, the key is
+    // put in its place once the shape knows which object it draws, and taken out again should the
+    // object change to one that names nothing.
+    hasComponentModelMenu() {
+        return this.getParametersByCategory(["model", "orbits"]).length > 0;
+    },
+    refreshComponentModelDropDownButton() {
+        if (!this._componentModelItemElement)
+            return;
+        const wanted = this.hasComponentModelMenu();
+        if (wanted && !this._componentModelDropdownElement)
+            this.createComponentModelDropDownButton(this._componentModelItemElement);
+        if (!wanted && this._componentModelDropdownElement) {
+            this._componentModelDropdownElement.remove();
+            this._componentModelDropdownElement = null;
+            this._componentModelContentElement = null;
+        }
     },
     createComponentModelDropDownButton(itemElement) {
         this._componentModelDropdownElement = $('<div class="mdl-component-model-selector">');
@@ -640,10 +659,9 @@ var ComponentShapeToolbarMixin = {
         });
     },
     refreshComponentToolbarControls() {
-        if (!this._componentModelDropdownElement)
-            return;
         this.refreshComponentModeDropDownButtons();
-        const buttonContentElement = this._componentModelDropdownElement.find(".dx-button-content")[0];
+        this.refreshComponentModelDropDownButton();
+        const buttonContentElement = this._componentModelDropdownElement?.find(".dx-button-content")[0];
         if (buttonContentElement)
             this.renderComponentModelButtonTemplate(buttonContentElement);
         for (const controls of Object.values(this._componentTermControls ?? {}))

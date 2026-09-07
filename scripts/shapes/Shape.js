@@ -335,6 +335,7 @@ class BaseShape {
             this.handleElements.push(handle);
             handle.addEventListener("pointerdown", e => this.onHandlePointerDown(e, handle));
             handle.addEventListener("pointermove", e => this.onHandlePointerMove(e, handle));
+            handle.addEventListener("pointerleave", e => this.onHandlePointerLeave(e, handle));
             handle.addEventListener("wheel", e => this.onHandleWheel(e), { passive: false });
             handle.addEventListener("contextmenu", e => this.onHandleContextMenu(e));
             handle.update = h => {
@@ -381,10 +382,7 @@ class BaseShape {
     }
 
     removeHandles() {
-        if (this._lastUnderlyingMoveElement) {
-            this._lastUnderlyingMoveElement.dispatchEvent(new PointerEvent("pointerleave"));
-            this._lastUnderlyingMoveElement = null;
-        }
+        this.leaveUnderlyingMoveElement(null, null);
         if (!this.handleElements)
             return;
         this.handleElements.forEach(handle => handle.remove());
@@ -875,13 +873,39 @@ class BaseShape {
         }
         const underlying = this.getElementUnderMoveHandle(handle, event);
         handle.style.cursor = BaseShape.getDeclaredCursor(underlying);
-        if (underlying !== this._lastUnderlyingMoveElement) {
-            if (this._lastUnderlyingMoveElement)
-                this._lastUnderlyingMoveElement.dispatchEvent(new PointerEvent("pointerleave", event));
-            this._lastUnderlyingMoveElement = underlying;
-        }
+        if (underlying !== this._lastUnderlyingMoveElement)
+            this.leaveUnderlyingMoveElement(underlying, event);
         if (underlying)
             underlying.dispatchEvent(new PointerEvent("pointermove", event));
+    }
+
+    // The pointer leaving the move handle has left whatever the handle was passing it through to,
+    // which never hears so itself: the handle is what the browser sees it leave.
+    onHandlePointerLeave = (event, handle) => {
+        if (this.draggedHandle || !handle.classList.contains("move"))
+            return;
+        this.leaveUnderlyingMoveElement(null, event);
+    }
+
+    // What the pointer was passed through to is told it has gone the way the browser would tell it:
+    // a leave on that element and on each of its ancestors the pointer is no longer over, up to the
+    // shape's own element, each addressed to itself. A part that listens on a group it belongs to
+    // then hears the leave on the group, and only when the pointer has left the whole group rather
+    // than crossed from one of its parts to another.
+    leaveUnderlyingMoveElement(nextUnderlying, event) {
+        const left = this._lastUnderlyingMoveElement;
+        this._lastUnderlyingMoveElement = nextUnderlying;
+        if (!left)
+            return;
+        const init = event ? { clientX: event.clientX, clientY: event.clientY, pointerId: event.pointerId, pointerType: event.pointerType } : {};
+        for (let element = left; element; element = element.parentNode) {
+            if (element.nodeType !== 1)
+                break;
+            if (!nextUnderlying || !element.contains(nextUnderlying))
+                element.dispatchEvent(new PointerEvent("pointerleave", init));
+            if (element === this.element)
+                break;
+        }
     }
 
     onHandlePointerDown = (event, handle) => {

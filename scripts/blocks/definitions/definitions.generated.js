@@ -11022,16 +11022,6 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\max\\left(1.5,outerR\\cdot0.02\\right)"
             },
             {
-                "id": "playing",
-                "value": {
-                    "parameter": "$playing"
-                }
-            },
-            {
-                "id": "hoveringNow",
-                "formula": "hovering\\cdot\\left(1-playing\\right)"
-            },
-            {
                 "id": "bearing",
                 "fallback": 0,
                 "value": {
@@ -11426,7 +11416,7 @@ BlockDefinitionLoader.registerAll([
                     "id": "crosshair",
                     "type": "line",
                     "when": {
-                        "parameter": "hoveringNow"
+                        "parameter": "hovering"
                     },
                     "bindings": {
                         "x1": {
@@ -11454,6 +11444,9 @@ BlockDefinitionLoader.registerAll([
                             "parameter": "crosshairOpacity"
                         }
                     },
+                    "properties": {
+                        "pointerEvents": "none"
+                    },
                     "modifiers": [
                         {
                             "type": "rotate",
@@ -11473,7 +11466,7 @@ BlockDefinitionLoader.registerAll([
                     "id": "reading-plate",
                     "type": "rect",
                     "when": {
-                        "parameter": "hoveringNow"
+                        "parameter": "hovering"
                     },
                     "bindings": {
                         "x": {
@@ -11499,14 +11492,15 @@ BlockDefinitionLoader.registerAll([
                         }
                     },
                     "properties": {
-                        "stroke": "none"
+                        "stroke": "none",
+                        "pointerEvents": "none"
                     }
                 },
                 {
                     "id": "reading",
                     "type": "text",
                     "when": {
-                        "parameter": "hoveringNow"
+                        "parameter": "hovering"
                     },
                     "bindings": {
                         "x": {
@@ -11531,7 +11525,8 @@ BlockDefinitionLoader.registerAll([
                     "properties": {
                         "stroke": "none",
                         "textAnchor": "middle",
-                        "baseline": "central"
+                        "baseline": "central",
+                        "pointerEvents": "none"
                     }
                 },
                 {
@@ -11564,7 +11559,8 @@ BlockDefinitionLoader.registerAll([
                                 "parameter": "cy"
                             },
                             "scaleX": 1,
-                            "scaleY": -1
+                            "scaleY": -1,
+                            "whilePlaying": true
                         }
                     ]
                 }
@@ -12326,6 +12322,14 @@ BlockDefinitionLoader.registerAll([
                 "formula": "scaleBottom+tickFont\\cdot1.05"
             },
             {
+                "id": "numbersLeft",
+                "formula": "pad+1"
+            },
+            {
+                "id": "numbersWidth",
+                "formula": "\\max\\left(1,bodyW-2\\right)"
+            },
+            {
                 "id": "grabTop",
                 "formula": "scaleBottom"
             },
@@ -12485,16 +12489,6 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "logGrabWidth",
                 "formula": "logGrabHalf\\cdot2"
-            },
-            {
-                "id": "playing",
-                "value": {
-                    "parameter": "$playing"
-                }
-            },
-            {
-                "id": "hoveringNow",
-                "formula": "hovering\\cdot\\left(1-playing\\right)"
             },
             {
                 "id": "originPixel",
@@ -12912,100 +12906,120 @@ BlockDefinitionLoader.registerAll([
                     ]
                 },
                 {
-                    "id": "tick-label",
-                    "type": "text",
-                    "when": {
-                        "parameter": "notLog"
-                    },
+                    "id": "numbers",
+                    "type": "clip-box",
                     "bindings": {
                         "x": {
-                            "parameter": "left"
+                            "parameter": "numbersLeft"
                         },
                         "y": {
-                            "parameter": "labelBaseline"
+                            "parameter": "pad"
                         },
-                        "text": {
-                            "format": {
-                                "formula": "minimumX+linearStep\\cdot i",
-                                "inputs": {
-                                    "i": {
-                                        "parameter": "$index"
+                        "width": {
+                            "parameter": "numbersWidth"
+                        },
+                        "height": {
+                            "parameter": "bodyH"
+                        }
+                    },
+                    "children": [
+                        {
+                            "id": "tick-label",
+                            "type": "text",
+                            "when": {
+                                "parameter": "notLog"
+                            },
+                            "bindings": {
+                                "x": {
+                                    "parameter": "left"
+                                },
+                                "y": {
+                                    "parameter": "labelBaseline"
+                                },
+                                "text": {
+                                    "format": {
+                                        "formula": "minimumX+linearStep\\cdot i",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "digits": {
+                                        "parameter": "tickDigits"
                                     }
+                                },
+                                "fontSize": {
+                                    "parameter": "tickFont"
+                                },
+                                "fill": {
+                                    "parameter": "scaleLabelColor"
                                 }
                             },
-                            "digits": {
-                                "parameter": "tickDigits"
-                            }
-                        },
-                        "fontSize": {
-                            "parameter": "tickFont"
-                        },
-                        "fill": {
-                            "parameter": "scaleLabelColor"
-                        }
-                    },
-                    "properties": {
-                        "stroke": "none",
-                        "textAnchor": "middle",
-                        "baseline": "auto"
-                    },
-                    "modifiers": [
-                        {
-                            "type": "repeat",
-                            "count": {
-                                "parameter": "linearMajorCount"
+                            "properties": {
+                                "stroke": "none",
+                                "textAnchor": "middle",
+                                "baseline": "auto"
                             },
-                            "dx": {
-                                "parameter": "linearSpacing"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "id": "log-tick-label",
-                    "type": "text",
-                    "when": {
-                        "parameter": "isLog"
-                    },
-                    "bindings": {
-                        "x": {
-                            "parameter": "decadeStart"
-                        },
-                        "y": {
-                            "parameter": "labelBaseline"
-                        },
-                        "text": {
-                            "format": {
-                                "formula": "\\left(10\\right)^{\\left(firstDecade+i\\right)}",
-                                "inputs": {
-                                    "i": {
-                                        "parameter": "$index"
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "linearMajorCount"
+                                    },
+                                    "dx": {
+                                        "parameter": "linearSpacing"
                                     }
                                 }
-                            },
-                            "style": "axis"
+                            ]
                         },
-                        "fontSize": {
-                            "parameter": "tickFont"
-                        },
-                        "fill": {
-                            "parameter": "scaleLabelColor"
-                        }
-                    },
-                    "properties": {
-                        "stroke": "none",
-                        "textAnchor": "middle",
-                        "baseline": "auto"
-                    },
-                    "modifiers": [
                         {
-                            "type": "repeat",
-                            "count": {
-                                "parameter": "decadeCount"
+                            "id": "log-tick-label",
+                            "type": "text",
+                            "when": {
+                                "parameter": "isLog"
                             },
-                            "dx": {
-                                "parameter": "pxPerDecade"
-                            }
+                            "bindings": {
+                                "x": {
+                                    "parameter": "decadeStart"
+                                },
+                                "y": {
+                                    "parameter": "labelBaseline"
+                                },
+                                "text": {
+                                    "format": {
+                                        "formula": "\\left(10\\right)^{\\left(firstDecade+i\\right)}",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "style": "axis"
+                                },
+                                "fontSize": {
+                                    "parameter": "tickFont"
+                                },
+                                "fill": {
+                                    "parameter": "scaleLabelColor"
+                                }
+                            },
+                            "properties": {
+                                "stroke": "none",
+                                "textAnchor": "middle",
+                                "baseline": "auto"
+                            },
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "decadeCount"
+                                    },
+                                    "dx": {
+                                        "parameter": "pxPerDecade"
+                                    }
+                                }
+                            ]
                         }
                     ]
                 },
@@ -13013,7 +13027,7 @@ BlockDefinitionLoader.registerAll([
                     "id": "crosshair",
                     "type": "line",
                     "when": {
-                        "parameter": "hoveringNow"
+                        "parameter": "hovering"
                     },
                     "bindings": {
                         "x1": {
@@ -13040,13 +13054,16 @@ BlockDefinitionLoader.registerAll([
                         "opacity": {
                             "parameter": "crosshairOpacity"
                         }
+                    },
+                    "properties": {
+                        "pointerEvents": "none"
                     }
                 },
                 {
                     "id": "reading-plate",
                     "type": "rect",
                     "when": {
-                        "parameter": "hoveringNow"
+                        "parameter": "hovering"
                     },
                     "bindings": {
                         "x": {
@@ -13072,14 +13089,15 @@ BlockDefinitionLoader.registerAll([
                         }
                     },
                     "properties": {
-                        "stroke": "none"
+                        "stroke": "none",
+                        "pointerEvents": "none"
                     }
                 },
                 {
                     "id": "reading",
                     "type": "text",
                     "when": {
-                        "parameter": "hoveringNow"
+                        "parameter": "hovering"
                     },
                     "bindings": {
                         "x": {
@@ -13104,151 +13122,158 @@ BlockDefinitionLoader.registerAll([
                     "properties": {
                         "stroke": "none",
                         "textAnchor": "middle",
-                        "baseline": "central"
+                        "baseline": "central",
+                        "pointerEvents": "none"
                     }
                 },
                 {
-                    "id": "tick-grab",
-                    "type": "rect",
-                    "when": {
-                        "parameter": "notLog"
-                    },
-                    "bindings": {
-                        "x": {
-                            "parameter": "grabLeft"
-                        },
-                        "y": {
-                            "parameter": "grabTop"
-                        },
-                        "width": {
-                            "parameter": "grabWidth"
-                        },
-                        "height": {
-                            "parameter": "grabHeight"
-                        }
-                    },
-                    "properties": {
-                        "fill": "none",
-                        "stroke": "none"
-                    },
-                    "behaviours": [
-                        {
-                            "type": "drag-axis-tick",
-                            "axis": "x",
-                            "value": {
-                                "formula": "minimumX+linearStep\\cdot i",
-                                "inputs": {
-                                    "i": {
-                                        "parameter": "$index"
-                                    }
-                                }
-                            },
-                            "minimumProperty": "minimumX",
-                            "maximumProperty": "maximumX",
-                            "countProperty": "majorTicks",
-                            "stepValue": {
-                                "parameter": "linearStep"
-                            },
-                            "originPixel": {
-                                "parameter": "left"
-                            },
-                            "lengthPixels": {
-                                "parameter": "usable"
-                            }
-                        }
-                    ],
-                    "modifiers": [
-                        {
-                            "type": "repeat",
-                            "count": {
-                                "parameter": "linearMajorCount"
-                            },
-                            "dx": {
-                                "parameter": "linearSpacing"
-                            }
-                        }
-                    ]
-                },
-                {
-                    "id": "log-tick-grab",
-                    "type": "rect",
-                    "when": {
-                        "parameter": "isLog"
-                    },
-                    "bindings": {
-                        "x": {
-                            "parameter": "logGrabLeft"
-                        },
-                        "y": {
-                            "parameter": "grabTop"
-                        },
-                        "width": {
-                            "parameter": "logGrabWidth"
-                        },
-                        "height": {
-                            "parameter": "grabHeight"
-                        }
-                    },
-                    "properties": {
-                        "fill": "none",
-                        "stroke": "none"
-                    },
-                    "behaviours": [
-                        {
-                            "type": "drag-axis-tick",
-                            "axis": "x",
-                            "scale": "logarithmic",
-                            "value": {
-                                "formula": "\\left(10\\right)^{\\left(firstDecade+i\\right)}",
-                                "inputs": {
-                                    "i": {
-                                        "parameter": "$index"
-                                    }
-                                }
-                            },
-                            "minimumProperty": "minimumX",
-                            "maximumProperty": "maximumX",
-                            "originPixel": {
-                                "parameter": "left"
-                            },
-                            "lengthPixels": {
-                                "parameter": "usable"
-                            }
-                        }
-                    ],
-                    "modifiers": [
-                        {
-                            "type": "repeat",
-                            "count": {
-                                "parameter": "decadeCount"
-                            },
-                            "dx": {
-                                "parameter": "pxPerDecade"
-                            }
-                        }
-                    ]
-                },
-                {
                     "id": "scale-grab",
-                    "type": "rect",
-                    "bindings": {
-                        "x": {
-                            "parameter": "pad"
+                    "type": "group",
+                    "children": [
+                        {
+                            "id": "hover-grab",
+                            "type": "rect",
+                            "bindings": {
+                                "x": {
+                                    "parameter": "pad"
+                                },
+                                "y": {
+                                    "parameter": "pad"
+                                },
+                                "width": {
+                                    "parameter": "bodyW"
+                                },
+                                "height": {
+                                    "parameter": "bodyH"
+                                }
+                            },
+                            "properties": {
+                                "fill": "none",
+                                "stroke": "none"
+                            }
                         },
-                        "y": {
-                            "parameter": "tickTop"
+                        {
+                            "id": "tick-grab",
+                            "type": "rect",
+                            "when": {
+                                "parameter": "notLog"
+                            },
+                            "bindings": {
+                                "x": {
+                                    "parameter": "grabLeft"
+                                },
+                                "y": {
+                                    "parameter": "grabTop"
+                                },
+                                "width": {
+                                    "parameter": "grabWidth"
+                                },
+                                "height": {
+                                    "parameter": "grabHeight"
+                                }
+                            },
+                            "properties": {
+                                "fill": "none",
+                                "stroke": "none"
+                            },
+                            "behaviours": [
+                                {
+                                    "type": "drag-axis-tick",
+                                    "axis": "x",
+                                    "value": {
+                                        "formula": "minimumX+linearStep\\cdot i",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "minimumProperty": "minimumX",
+                                    "maximumProperty": "maximumX",
+                                    "countProperty": "majorTicks",
+                                    "stepValue": {
+                                        "parameter": "linearStep"
+                                    },
+                                    "originPixel": {
+                                        "parameter": "left"
+                                    },
+                                    "lengthPixels": {
+                                        "parameter": "usable"
+                                    }
+                                }
+                            ],
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "linearMajorCount"
+                                    },
+                                    "dx": {
+                                        "parameter": "linearSpacing"
+                                    }
+                                }
+                            ]
                         },
-                        "width": {
-                            "parameter": "bodyW"
-                        },
-                        "height": {
-                            "formula": "scaleBottom-tickTop"
+                        {
+                            "id": "log-tick-grab",
+                            "type": "rect",
+                            "when": {
+                                "parameter": "isLog"
+                            },
+                            "bindings": {
+                                "x": {
+                                    "parameter": "logGrabLeft"
+                                },
+                                "y": {
+                                    "parameter": "grabTop"
+                                },
+                                "width": {
+                                    "parameter": "logGrabWidth"
+                                },
+                                "height": {
+                                    "parameter": "grabHeight"
+                                }
+                            },
+                            "properties": {
+                                "fill": "none",
+                                "stroke": "none"
+                            },
+                            "behaviours": [
+                                {
+                                    "type": "drag-axis-tick",
+                                    "axis": "x",
+                                    "scale": "logarithmic",
+                                    "value": {
+                                        "formula": "\\left(10\\right)^{\\left(firstDecade+i\\right)}",
+                                        "inputs": {
+                                            "i": {
+                                                "parameter": "$index"
+                                            }
+                                        }
+                                    },
+                                    "minimumProperty": "minimumX",
+                                    "maximumProperty": "maximumX",
+                                    "originPixel": {
+                                        "parameter": "left"
+                                    },
+                                    "lengthPixels": {
+                                        "parameter": "usable"
+                                    }
+                                }
+                            ],
+                            "modifiers": [
+                                {
+                                    "type": "repeat",
+                                    "count": {
+                                        "parameter": "decadeCount"
+                                    },
+                                    "dx": {
+                                        "parameter": "pxPerDecade"
+                                    }
+                                }
+                            ]
                         }
-                    },
-                    "properties": {
-                        "fill": "none",
-                        "stroke": "none"
-                    },
+                    ],
                     "behaviours": [
                         {
                             "type": "follow-pointer",
@@ -13270,7 +13295,8 @@ BlockDefinitionLoader.registerAll([
                             },
                             "maximumX": {
                                 "parameter": "hoverMaximum"
-                            }
+                            },
+                            "whilePlaying": true
                         }
                     ]
                 }

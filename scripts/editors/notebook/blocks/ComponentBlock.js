@@ -17,6 +17,9 @@ if (typeof BlocksRegistry !== "undefined" && typeof ComponentShape !== "undefine
             this.blockElement = hostElement?.closest?.(".notebook-block") ?? null;
             this.board.shape = this;
             this.applyNotebookBlockProperties();
+            // The toolbar was built by the notebook shape before the block told it which object it
+            // draws, so the keys that depend on the object are put in their places now.
+            this.refreshComponentToolbarControls?.();
             this.draw();
             this.update();
             this._calculatorIterateHandler = () => this.onCalculatorIterate();
@@ -199,6 +202,7 @@ if (typeof BlocksRegistry !== "undefined" && typeof ComponentShape !== "undefine
             this.properties.x = 0;
             this.properties.y = 0;
             this.properties.rotation = 0;
+            this.refreshComponentToolbarControls?.();
             this.draw();
             this.update();
             this.markChanged();

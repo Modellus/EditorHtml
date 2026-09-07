@@ -310,7 +310,8 @@ var BlockBehaviours = {
                 minimumX: { valueType: "number", defaultValue: null, label: "Minimum X" },
                 maximumX: { valueType: "number", defaultValue: null, label: "Maximum X" },
                 minimumY: { valueType: "number", defaultValue: null, label: "Minimum Y" },
-                maximumY: { valueType: "number", defaultValue: null, label: "Maximum Y" }
+                maximumY: { valueType: "number", defaultValue: null, label: "Maximum Y" },
+                whilePlaying: { valueType: "boolean", defaultValue: false, bindable: false, label: "Reads while the model runs", description: "Whether the pointer is still answered while the model is running. Left off, the reading goes the moment the model starts, since what the pointer stood over is then being redrawn; an instrument that measures rather than reads the model, a ruler laid over a drawing, answers the pointer whatever the model is doing." }
             }
         }
     });

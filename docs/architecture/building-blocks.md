@@ -628,7 +628,19 @@ hands those values to the next compilation rather than writing them to the shape
 no edit, no undo entry and no changed file. It answers only while the model stands still: `$playing`
 is a reserved parameter beside `$iteration`, and a drawing that follows the pointer stops doing so
 the moment the player starts, because what it shows then is the iteration everything else is showing.
-The mouse tracker's crosshair and marker work exactly this way.
+The mouse tracker's crosshair and marker work exactly this way. An instrument that measures rather
+than reads the model — the ruler laid over a drawing, the protractor — sets `whilePlaying` on the
+behaviour and goes on answering the pointer whatever the player is doing.
+
+**What the pointer draws must not take the pointer.** A crosshair, a plate and a reading appear
+under the pointer the moment it is answered, and they are painted ink: were they to take pointer
+events, the node answering the pointer would hear it leave the instant it answered, and the reading
+would flicker in and out. Every node drawn in answer to the pointer therefore carries
+`pointerEvents: "none"` in its properties, which is the one style property that is not a colour or
+a width. Once it does, the node carrying `follow-pointer` may be a `group` holding other grabs — the
+ruler's numbers are pulled from inside the area that reads the scale — since a move over any of
+them is a move over the group, and the host takes only a leave addressed to the group itself as the
+pointer having gone.
 
 **What a shape can be taken back to lives under the bin.** `getRemoveMenuItems()` on the base toolbar
 offers remove and reset; an object holding a memory adds clear, which empties it and takes it out of

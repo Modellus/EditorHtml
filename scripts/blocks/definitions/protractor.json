@@ -68,8 +68,6 @@
         { "id": "startTurn", "formula": "0-startAngle" },
         { "id": "endTurn", "formula": "0-endAngle" },
         { "id": "centerDot", "formula": "\\max\\left(1.5,outerR\\cdot0.02\\right)" },
-        { "id": "playing", "value": { "parameter": "$playing" } },
-        { "id": "hoveringNow", "formula": "hovering\\cdot\\left(1-playing\\right)" },
         { "id": "bearing", "fallback": 0, "value": { "direction": { "x": { "parameter": "hoverX" }, "y": { "parameter": "hoverY" } } } },
         { "id": "mathAngle", "formula": "90-bearing" },
         { "id": "rawRelative", "formula": "\\mod\\left(mathAngle-startAngle+720,360\\right)" },
@@ -211,7 +209,7 @@
             {
                 "id": "crosshair",
                 "type": "line",
-                "when": { "parameter": "hoveringNow" },
+                "when": { "parameter": "hovering" },
                 "bindings": {
                     "x1": { "parameter": "cx" },
                     "y1": { "parameter": "cy" },
@@ -222,6 +220,7 @@
                     "strokeDash": { "parameter": "crosshairDash" },
                     "opacity": { "parameter": "crosshairOpacity" }
                 },
+                "properties": { "pointerEvents": "none" },
                 "modifiers": [
                     { "type": "rotate", "angle": { "parameter": "pointerTurn" }, "centerX": { "parameter": "cx" }, "centerY": { "parameter": "cy" } }
                 ]
@@ -229,7 +228,7 @@
             {
                 "id": "reading-plate",
                 "type": "rect",
-                "when": { "parameter": "hoveringNow" },
+                "when": { "parameter": "hovering" },
                 "bindings": {
                     "x": { "parameter": "badgeLeft" },
                     "y": { "parameter": "badgeTop" },
@@ -239,12 +238,12 @@
                     "fill": { "parameter": "readingColor" },
                     "opacity": { "parameter": "badgeOpacity" }
                 },
-                "properties": { "stroke": "none" }
+                "properties": { "stroke": "none", "pointerEvents": "none" }
             },
             {
                 "id": "reading",
                 "type": "text",
-                "when": { "parameter": "hoveringNow" },
+                "when": { "parameter": "hovering" },
                 "bindings": {
                     "x": { "parameter": "badgeCenterX" },
                     "y": { "parameter": "badgeCenterY" },
@@ -253,7 +252,7 @@
                     "fontSize": { "parameter": "tickFont" },
                     "fill": { "parameter": "badgeTextColor" }
                 },
-                "properties": { "stroke": "none", "textAnchor": "middle", "baseline": "central" }
+                "properties": { "stroke": "none", "textAnchor": "middle", "baseline": "central", "pointerEvents": "none" }
             },
             {
                 "id": "scale-grab",
@@ -272,7 +271,8 @@
                         "originX": { "parameter": "cx" },
                         "originY": { "parameter": "cy" },
                         "scaleX": 1,
-                        "scaleY": -1
+                        "scaleY": -1,
+                        "whilePlaying": true
                     }
                 ]
             }

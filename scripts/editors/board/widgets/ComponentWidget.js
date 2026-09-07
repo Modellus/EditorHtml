@@ -1053,16 +1053,23 @@ class ComponentShape extends BaseShape {
     // standing still: once it is playing, what the object shows is the iteration on screen, and the
     // pointer has nothing to say about it. Nothing is written to the shape — the values are handed
     // to the next compilation and forgotten — so hovering leaves no edit, no undo and no dirty file.
+    // The node may be a group holding other grabs — a ruler's numbers can be pulled while the
+    // scale under them is being read — so a move over any of them is a move over the node, and
+    // only a leave addressed to the node itself, not one bubbling up from a part inside it, means
+    // the pointer has gone.
     attachFollowPointerBehaviour(element, input) {
         if (!this.isInteractable())
             return;
         element.setAttribute("pointer-events", "all");
         element.addEventListener("pointermove", event => this.onFollowPointerMove(event, input));
-        element.addEventListener("pointerleave", () => this.onFollowPointerLeave());
+        element.addEventListener("pointerleave", event => {
+            if (event.target === element)
+                this.onFollowPointerLeave();
+        });
     }
 
     onFollowPointerMove(event, input) {
-        if (this.board.calculator.isPlaying())
+        if (this.board.calculator.isPlaying() && !input.whilePlaying)
             return;
         const sample = this.getTrackedSample(input, this.getComponentLocalPoint(event));
         this._pointerValues = {

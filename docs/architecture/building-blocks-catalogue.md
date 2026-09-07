@@ -21,6 +21,7 @@ Capabilities: `fillable`, `strokable`, `radial`, `angular`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `centerX` | number | 0 |  |
 | `centerY` | number | 0 |  |
 | `radius` | number | 40 | min 0 |
@@ -43,6 +44,7 @@ Capabilities: `fillable`, `strokable`, `radial`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `centerX` | number | 0 |  |
 | `centerY` | number | 0 |  |
 | `radius` | number | 40 | min 0 |
@@ -62,6 +64,7 @@ Capabilities: `container`, `sizable`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `x` | number | 0 |  |
 | `y` | number | 0 |  |
 | `width` | number | 100 | min 0 |
@@ -84,6 +87,7 @@ Capabilities: `fillable`, `strokable`, `radial`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `centerX` | number | 0 |  |
 | `centerY` | number | 0 |  |
 | `radiusX` | number | 50 | min 0 |
@@ -104,6 +108,7 @@ Capabilities: `container`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 
 Accepts children.
 
@@ -122,6 +127,7 @@ Capabilities: `sizable`, `media`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `x` | number | 0 |  |
 | `y` | number | 0 |  |
 | `width` | number | 60 | min 0 |
@@ -144,6 +150,7 @@ Capabilities: `strokable`, `linear`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `x1` | number | 0 |  |
 | `y1` | number | 0 |  |
 | `x2` | number | 100 |  |
@@ -164,6 +171,7 @@ Capabilities: `fillable`, `strokable`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `d` | string | "" |  |
 
 ### `polygon` — Polygon
@@ -181,6 +189,7 @@ Capabilities: `fillable`, `strokable`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `points` | points | [] |  |
 
 ### `polyline` — Polyline
@@ -198,6 +207,7 @@ Capabilities: `strokable`, `linear`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `points` | points | [] |  |
 
 ### `rect` — Rectangle
@@ -215,6 +225,7 @@ Capabilities: `fillable`, `strokable`, `sizable`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `x` | number | 0 |  |
 | `y` | number | 0 |  |
 | `width` | number | 100 | min 0 |
@@ -236,6 +247,7 @@ Capabilities: `fillable`, `strokable`, `radial`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `centerX` | number | 0 |  |
 | `centerY` | number | 0 |  |
 | `innerRadius` | number | 30 | min 0 |
@@ -256,6 +268,7 @@ Capabilities: `fillable`, `textual`
 | `strokeLinecap` | string | "round" | butt \| round \| square |
 | `opacity` | number | 1 | min 0, max 1 |
 | `visible` | boolean | true |  |
+| `pointerEvents` | string | "" |  |
 | `x` | number | 0 |  |
 | `y` | number | 0 |  |
 | `text` | string | "" |  |
@@ -490,6 +503,7 @@ Capabilities: `interaction`
 | `maximumX` | number | null |  |
 | `minimumY` | number | null |  |
 | `maximumY` | number | null |  |
+| `whilePlaying` | boolean | false |  |
 
 ### `forget` — Forget
 
