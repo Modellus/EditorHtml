@@ -29,6 +29,20 @@ function setNotation(page, name, notation) {
     return page.evaluate(input => shell.board.shapes.getByName(input.name).setPropertyCommand('notation', input.notation), { name, notation });
 }
 
+// The pills show their tenth as maths in a read-only math-field, so a pill is read by the notation
+// it is marked with and the maths it shows is read from its field.
+function readPillNotations(row) {
+    return row.locator('.dx-button').evaluateAll(buttons => buttons.map(button => button.dataset.notation));
+}
+
+function readPillLatex(row) {
+    return row.locator('.dx-button math-field').evaluateAll(fields => fields.map(field => field.value));
+}
+
+function pill(row, notation) {
+    return row.locator(`.dx-button[data-notation="${notation}"]`);
+}
+
 function readTexts(page, name) {
     return page.evaluate(name => Array.from(shell.board.shapes.getByName(name).element.querySelectorAll('text')).map(node => node.textContent), name);
 }
@@ -78,9 +92,10 @@ test.describe('the notation a shape writes its numbers in', () => {
         await page.locator('.shape-context-toolbar.visible .mdl-shape-color-selector').click();
         const row = page.locator('.mdl-dropdown-list-item', { hasText: 'Notation' });
         await expect(row).toBeVisible();
-        await expect(row.locator('.dx-button')).toHaveText(['0.1', '1×10⁻¹', '1e-1']);
-        await expect(row.locator('.dx-item-selected')).toHaveText('0.1');
-        await row.locator('.dx-button', { hasText: '1e-1' }).click();
+        await expect.poll(() => readPillNotations(row)).toEqual(['decimal', 'scientific', 'e']);
+        await expect.poll(() => readPillLatex(row)).toEqual(['0.1', '1\\times10^{-1}', '1\\mathrm{e}\\text{-}1']);
+        await expect(row.locator('.dx-item-selected')).toHaveAttribute('data-notation', 'decimal');
+        await pill(row, 'e').click();
         await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Value1').properties.notation)).toBe('e');
         await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Value1').valueText.textContent)).toContain('1.00e-1');
         await page.evaluate(() => shell.board.invoker.undo());
@@ -109,16 +124,16 @@ test.describe('the notation a shape writes its numbers in', () => {
         const rows = page.locator('.mdl-shape-overlay-popup .mdl-dropdown-list-item:visible');
         await expect(rows.last()).toContainText('Notation');
         const row = rows.last();
-        await expect(row.locator('.dx-button')).toHaveText(['0.1', '1×10⁻¹', '1e-1']);
+        await expect.poll(() => readPillNotations(row)).toEqual(['decimal', 'scientific', 'e']);
         const selected = row.locator('.dx-item-selected');
-        await expect(selected).toHaveText('0.1');
+        await expect(selected).toHaveAttribute('data-notation', 'decimal');
         // The grey button is what is under the pointer at its middle: the pill has not covered it.
         expect(await selected.evaluate(button => {
             const box = button.getBoundingClientRect();
             return button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2));
         })).toBe(true);
         expect(await selected.evaluate(button => getComputedStyle(button).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
-        await row.locator('.dx-button', { hasText: '1e-1' }).click();
+        await pill(row, 'e').click();
         await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Ruler').properties.notation)).toBe('e');
     });
 

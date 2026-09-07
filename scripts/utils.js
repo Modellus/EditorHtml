@@ -1149,10 +1149,12 @@ class Utils {
     // number as an exponent; "scientific" writes every number as 1×10⁻¹; "e" writes every number
     // as 1e-1. Zero is zero in any notation.
     static notations = ["decimal", "scientific", "e"];
+    // Each notation is shown on its pill as a tenth typeset the way it writes numbers, so the power
+    // of ten stands as a real exponent and the e notation reads as the text a readout writes.
     static notationItems = [
-        { key: "decimal", text: "0.1" },
-        { key: "scientific", text: "1\u00d710\u207b\u00b9" },
-        { key: "e", text: "1e-1" }
+        { key: "decimal", latex: "0.1" },
+        { key: "scientific", latex: "1\\times10^{-1}" },
+        { key: "e", latex: "1\\mathrm{e}\\text{-}1" }
     ];
 
     static normalizeNotation(value) {
@@ -1165,14 +1167,22 @@ class Utils {
     }
 
     // The row of a shape's menu that chooses its notation: three pills, each showing a tenth written
-    // its way.
+    // its way in a read-only math-field. Each button is marked with its notation, since the maths it
+    // shows is no text to find it by.
     static createNotationButtonGroup(notation, onChanged) {
         return $('<div>').dxButtonGroup({
-            items: Utils.notationItems,
+            items: Utils.notationItems.map(item => ({ ...item, elementAttr: { "data-notation": item.key } })),
             keyExpr: "key",
             selectedItemKeys: [Utils.normalizeNotation(notation)],
             stylingMode: "outlined",
             elementAttr: { class: "mdl-pill-group mdl-notation-group" },
+            buttonTemplate: (item, buttonContainer) => {
+                const field = document.createElement("math-field");
+                field.setAttribute("read-only", "");
+                field.className = "form-math-field mdl-notation-field";
+                field.textContent = item.latex;
+                buttonContainer[0].replaceChildren(field);
+            },
             onContentReady: e => Utils.initPillButtonGroup(e.element[0]),
             onSelectionChanged: e => {
                 if (e.addedItems.length === 0)

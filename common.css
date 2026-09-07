@@ -159,6 +159,30 @@ input,
     font-weight: 300;
 }
 
+/* A notation pill shows its tenth as maths, sized as the pill's text would be and letting the
+   click through to the button. */
+.mdl-notation-group .mdl-notation-field {
+    display: inline-block;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: none;
+    font-size: 13px;
+    line-height: 1;
+    pointer-events: none;
+    vertical-align: middle;
+}
+
+.mdl-notation-group .mdl-notation-field::part(container) {
+    padding: 0;
+    min-height: 0;
+}
+
+.mdl-notation-group .mdl-notation-field::part(menu-toggle) {
+    display: none;
+}
+
 .mdl-pill-group .dx-item-selected .dx-icon,
 .mdl-display-group .dx-item-selected .dx-icon,
 .mdl-display-group.dx-button-mode-outlined .dx-icon {
