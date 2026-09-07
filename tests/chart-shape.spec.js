@@ -141,6 +141,85 @@ test.describe('Chart shape interactions', () => {
         expect(areaState.labelY).toBeLessThan(areaState.plotBottom);
     });
 
+    test('tangent triangle writes its slope beside the right angle with the ruler-triangle mark', async ({ page }) => {
+        await setupEditor(page);
+        await setupChart(page);
+
+        const slopeState = await page.evaluate(() => {
+            const chartShape = shell.board.shapes.getByName('Chart1');
+            const readSlopeLabel = () => chartShape.element.querySelector('.chart-tangent-slope-label');
+            const readTriangleCorners = () => (chartShape.element.querySelector('.chart-focus-layer polygon')?.getAttribute('points') ?? '')
+                .split(' ').map(pair => pair.split(',').map(Number));
+            shell.reset();
+            for (let iterationIndex = 0; iterationIndex < 50; iterationIndex++)
+                shell.calculator.engine.iterate();
+            chartShape.update();
+            chartShape.draw();
+            const hiddenLabelText = readSlopeLabel()?.textContent ?? null;
+            chartShape.properties.tangentColor = '#ff0000';
+            chartShape.update();
+            chartShape.draw();
+            // At the last iteration the triangle reaches past the right edge of the plot, so the
+            // slope has to step over the vertical leg to stay on the chart.
+            const edgeCorners = readTriangleCorners();
+            const edgeLabelX = Number(readSlopeLabel()?.getAttribute('x'));
+            shell.calculator.setIteration(25);
+            chartShape.updateFocus();
+            chartShape.draw();
+            const labelElement = readSlopeLabel();
+            const backgroundElement = chartShape.element.querySelector('.chart-tangent-slope-label-bg');
+            const iconElement = labelElement?.querySelector('tspan');
+            const attributeIconWidth = iconElement?.getComputedTextLength();
+            if (iconElement) {
+                iconElement.style.fontFamily = "'Font Awesome 7 Pro'";
+                iconElement.style.fontWeight = '900';
+            }
+            const corners = readTriangleCorners();
+            const layout = chartShape.chart.renderState.layout;
+            return {
+                hiddenLabelText: hiddenLabelText,
+                edgeRightAngleX: edgeCorners[1]?.[0],
+                edgeLabelX: edgeLabelX,
+                labelText: labelElement?.textContent ?? null,
+                iconFontFamily: iconElement?.getAttribute('font-family') ?? null,
+                attributeIconWidth: attributeIconWidth,
+                styledIconWidth: iconElement?.getComputedTextLength(),
+                labelFill: labelElement?.getAttribute('fill') ?? null,
+                backgroundFill: backgroundElement?.getAttribute('fill') ?? null,
+                labelX: Number(labelElement?.getAttribute('x')),
+                labelY: Number(labelElement?.getAttribute('y')),
+                rightAngleX: corners[1]?.[0],
+                rightAngleY: corners[1]?.[1],
+                hypotenuseEndY: corners[2]?.[1],
+                plotLeft: layout.plotLeft,
+                plotRight: layout.plotRight,
+                plotTop: layout.plotTop,
+                plotBottom: layout.plotBottom
+            };
+        });
+
+        expect(slopeState.hiddenLabelText).toBeNull();
+        expect(slopeState.labelText).toBe('\uf61c 2.00');
+        expect(slopeState.iconFontFamily).toBe("'Font Awesome 7 Pro'");
+        expect(slopeState.attributeIconWidth).toBeCloseTo(slopeState.styledIconWidth, 3);
+        expect(slopeState.backgroundFill).toBe('#ff0000');
+        expect(slopeState.labelFill).toBe('#ffffff');
+        // The line rises, so the triangle sits above its horizontal leg and the slope goes below it,
+        // to the right of the vertical leg: close to the right angle but outside the triangle.
+        expect(slopeState.hypotenuseEndY).toBeLessThan(slopeState.rightAngleY);
+        expect(slopeState.labelX).toBeGreaterThan(slopeState.rightAngleX);
+        expect(slopeState.labelX - slopeState.rightAngleX).toBeLessThan(40);
+        expect(slopeState.labelY).toBeGreaterThan(slopeState.rightAngleY);
+        expect(slopeState.labelY - slopeState.rightAngleY).toBeLessThan(15);
+        expect(slopeState.labelX).toBeGreaterThan(slopeState.plotLeft);
+        expect(slopeState.labelX).toBeLessThan(slopeState.plotRight);
+        expect(slopeState.labelY).toBeGreaterThan(slopeState.plotTop);
+        expect(slopeState.labelY).toBeLessThan(slopeState.plotBottom);
+        expect(slopeState.edgeRightAngleX).toBeGreaterThan(slopeState.plotRight - 40);
+        expect(slopeState.edgeLabelX).toBeLessThan(slopeState.edgeRightAngleX);
+        expect(slopeState.edgeLabelX).toBeLessThan(slopeState.plotRight);
+    });
+
     test('area follows a value changed on the iteration being replayed', async ({ page }) => {
         await setupEditor(page);
         await page.evaluate(() => modellus.shape.addExpression('Expr1'));

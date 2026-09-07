@@ -1,7 +1,10 @@
 class ChartControl {
     // fa-solid fa-chart-area
     static areaIconGlyph = "\uf1fe";
+    // fa-solid fa-ruler-triangle
+    static slopeIconGlyph = "\uf61c";
     static areaIconFontFamily = "Font Awesome 7 Pro";
+    static iconValueLabelFontSize = 11;
 
     constructor(hostElement, options) {
         this.hostElement = hostElement;
@@ -854,27 +857,37 @@ class ChartControl {
         const position = this.getAreaLabelPosition(points, baseY, layout);
         if (!position)
             return;
-        const fontSize = 11;
         const valueText = this.formatCrosshairValue(areaValue);
-        const labelWidth = fontSize + this.estimateTextWidth(` ${valueText}`, fontSize) + 8;
+        const labelWidth = this.estimateIconValueLabelWidth(valueText);
         const labelX = this.clampToPlotBounds(position.x, layout.plotLeft + labelWidth / 2, layout.plotRight - labelWidth / 2);
+        this.renderIconValueLabel(this.seriesLayer, "chart-area-value-label", ChartControl.areaIconGlyph, valueText, labelX, position.y, color);
+    }
+
+    estimateIconValueLabelWidth(valueText) {
+        const fontSize = ChartControl.iconValueLabelFontSize;
+        return fontSize + this.estimateTextWidth(` ${valueText}`, fontSize) + 8;
+    }
+
+    // A solid icon followed by a value, on a plate of the given color: the area of a filled series
+    // and the slope of a tangent triangle are both written this way.
+    renderIconValueLabel(targetLayer, className, iconGlyph, valueText, labelX, labelY, color) {
         const labelGroup = this.createSvgElement("g");
         const backgroundRect = this.createSvgElement("rect");
-        backgroundRect.setAttribute("class", "chart-area-value-label-bg");
+        backgroundRect.setAttribute("class", `${className}-bg`);
         backgroundRect.setAttribute("rx", "3");
         backgroundRect.setAttribute("fill-opacity", "0.85");
         labelGroup.appendChild(backgroundRect);
         const labelText = this.createSvgElement("text");
-        labelText.setAttribute("class", "chart-area-value-label");
+        labelText.setAttribute("class", className);
         labelText.setAttribute("x", `${labelX}`);
-        labelText.setAttribute("y", `${position.y}`);
+        labelText.setAttribute("y", `${labelY}`);
         labelText.setAttribute("text-anchor", "middle");
         labelText.setAttribute("dominant-baseline", "central");
-        labelText.setAttribute("font-size", `${fontSize}`);
+        labelText.setAttribute("font-size", `${ChartControl.iconValueLabelFontSize}`);
         labelText.setAttribute("fill", Utils.getContrastColor(color));
         labelGroup.appendChild(labelText);
-        this.seriesLayer.appendChild(labelGroup);
-        Utils.setIconValueTextContent(labelText, ChartControl.areaIconGlyph, ChartControl.areaIconFontFamily, valueText);
+        targetLayer.appendChild(labelGroup);
+        Utils.setIconValueTextContent(labelText, iconGlyph, ChartControl.areaIconFontFamily, valueText);
         Utils.ensureIconFontLoaded(ChartControl.areaIconFontFamily, () => this.render());
         Utils.applyTermLabelBackground(backgroundRect, labelText, color, "middle");
     }
@@ -1209,6 +1222,7 @@ class ChartControl {
             return;
         const domain = this.renderState.domain;
         const deltaX = (domain.xMax - domain.xMin) * 0.12;
+        const tangents = [];
         let tangentMarkup = "";
         for (let seriesIndex = 0; seriesIndex < this.renderState.series.length; seriesIndex++) {
             const series = this.renderState.series[seriesIndex];
@@ -1216,8 +1230,6 @@ class ChartControl {
             if (!tangent)
                 continue;
             const deltaY = tangent.slope * deltaX;
-            const pointX = xScale(tangent.xValue);
-            const pointY = yScale(tangent.yValue);
             const startX = xScale(tangent.xValue - deltaX);
             const startY = yScale(tangent.yValue - deltaY);
             const endX = xScale(tangent.xValue + deltaX);
@@ -1228,8 +1240,36 @@ class ChartControl {
                 <line x1="${startX}" y1="${startY}" x2="${endX}" y2="${startY}" stroke="${tangentColor}" stroke-width="1.2" stroke-dasharray="4 3" />
                 <line x1="${endX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="${tangentColor}" stroke-width="1.2" stroke-dasharray="4 3" />
             `;
+            tangents.push({ slope: tangent.slope, cornerX: endX, cornerY: startY, endY: endY });
         }
         this.appendSvgMarkup(this.focusLayer, tangentMarkup);
+        for (let tangentIndex = 0; tangentIndex < tangents.length; tangentIndex++)
+            this.renderTangentSlopeLabel(tangents[tangentIndex], tangentColor);
+    }
+
+    // The slope sits just outside the right angle of its triangle, on the side the triangle does not
+    // cover, so it never lies across the legs or the hypotenuse and the curve runs away from it. When
+    // the corner is too close to an edge of the plot for that, the mark steps over the leg to the
+    // inside, where it stays readable rather than being cut by the plot.
+    renderTangentSlopeLabel(tangent, tangentColor) {
+        const layout = this.renderState.layout;
+        const fontSize = ChartControl.iconValueLabelFontSize;
+        const valueText = this.formatCrosshairValue(tangent.slope);
+        const labelWidth = this.estimateIconValueLabelWidth(valueText);
+        const labelHeight = fontSize + 4;
+        const gap = 3;
+        const horizontalOffset = gap + labelWidth / 2;
+        const verticalOffset = gap + labelHeight / 2;
+        const outsideDirection = tangent.endY <= tangent.cornerY ? 1 : -1;
+        let labelX = tangent.cornerX + horizontalOffset;
+        if (labelX + labelWidth / 2 > layout.plotRight)
+            labelX = tangent.cornerX - horizontalOffset;
+        let labelY = tangent.cornerY + outsideDirection * verticalOffset;
+        if (labelY - labelHeight / 2 < layout.plotTop || labelY + labelHeight / 2 > layout.plotBottom)
+            labelY = tangent.cornerY - outsideDirection * verticalOffset;
+        labelX = this.clampToPlotBounds(labelX, layout.plotLeft + labelWidth / 2, layout.plotRight - labelWidth / 2);
+        labelY = this.clampToPlotBounds(labelY, layout.plotTop + labelHeight / 2, layout.plotBottom - labelHeight / 2);
+        this.renderIconValueLabel(this.focusLayer, "chart-tangent-slope-label", ChartControl.slopeIconGlyph, valueText, labelX, labelY, tangentColor);
     }
 
     // Rotation of the host shape, if any; notebook charts are never rotated.
