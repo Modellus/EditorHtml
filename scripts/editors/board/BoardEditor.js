@@ -57,6 +57,10 @@ class BoardEditor extends Workspace {
         this.commands.registerShapeAlias("ExpressionShape", ExpressionWidget);
         this.commands.registerShapeAlias("ValueShape", ValueWidget);
         this.commands.registerShapeAlias("ChartShape", ChartWidget);
+        // A chart saved while the block chart was a shape of its own (August 2026) is the chart it was
+        // modelled on: same properties, and the drawing it was made for is the one every chart has now.
+        this.commands.registerShapeAlias("BlockChartWidget", ChartWidget);
+        this.commands.registerShapeAlias("BlockChartShape", ChartWidget);
         this.commands.registerShapeAlias("FrequencyChartShape", FrequencyChartWidget);
         this.commands.registerShapeAlias("TableShape", TableWidget);
         this.commands.registerShapeAlias("DataTableShape", DataTableWidget);

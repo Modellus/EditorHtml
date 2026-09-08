@@ -354,4 +354,41 @@ test.describe('the chart, drawn from blocks', () => {
         expect(restored.yTerms[0].term).toBe('y');
         expect(restored.usesBlockControl).toBe(true);
     });
+
+    // Between 2026-08-05 and 2026-08-26 the block chart was a shape of its own, and models saved
+    // then carry it under that name. It reads as the chart it was modelled on, and is saved as one.
+    test('a chart saved as the legacy BlockChartWidget loads as the chart', async ({ page }) => {
+        await setupEditor(page);
+        await addModel(page);
+
+        const restored = await page.evaluate(() => {
+            const legacy = {
+                type: 'BlockChartWidget',
+                id: 'b02e5e3c-d6ae-4748-ad1c-9ec8992adaa5',
+                properties: {
+                    name: 'LegacyChart', x: 100, y: 100, width: 400, height: 200,
+                    xTerm: 't', xTermCase: 1,
+                    yTerms: [{ term: 'y', case: 1, color: '', chartTypes: ['line'] }],
+                    autoScale: true, xAxisType: 'decimal', yAxisType: 'decimal'
+                }
+            };
+            const board = shell.board;
+            board.deserialize([legacy, Object.assign({}, legacy, { type: 'BlockChartShape', id: 'legacy-2', properties: Object.assign({}, legacy.properties, { name: 'LegacyChart2' }) })]);
+            const shape = board.shapes.getByName('LegacyChart');
+            return {
+                unloaded: board.unloadedShapes.length,
+                loaded: board.shapes.shapes.map(entry => entry.constructor.name),
+                isChart: shape instanceof ChartShape,
+                xTerm: shape.properties.xTerm,
+                yTerm: shape.properties.yTerms[0].term,
+                savedType: shape.serialize().type
+            };
+        });
+        expect(restored.unloaded).toBe(0);
+        expect(restored.loaded).toEqual(['ChartWidget', 'ChartWidget']);
+        expect(restored.isChart).toBe(true);
+        expect(restored.xTerm).toBe('t');
+        expect(restored.yTerm).toBe('y');
+        expect(restored.savedType).toBe('ChartWidget');
+    });
 });
