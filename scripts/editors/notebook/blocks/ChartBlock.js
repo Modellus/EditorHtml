@@ -154,6 +154,11 @@ if (typeof BlocksRegistry !== "undefined" && typeof ChartShape !== "undefined") 
             this.notebookEditor.setBlockPropertyCommand(this.id, name, value);
         }
 
+        setPropertiesCommand(properties) {
+            for (const [name, value] of Object.entries(properties))
+                this.setPropertyCommand(name, value);
+        }
+
         applyProperty(name, value) {
             Utils.setProperty(name, value, this.properties);
             if (name === "backgroundColor")

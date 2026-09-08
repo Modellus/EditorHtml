@@ -152,6 +152,28 @@ test.describe('the chart, drawn from blocks', () => {
         expect(blockDigest).toEqual(drawnDigest);
     });
 
+    // Read logarithmically, both charts place a value by its logarithm and leave out the values
+    // that have none, so the picture stays the same picture.
+    test('draws the same geometry on logarithmic axes', async ({ page }) => {
+        await setupEditor(page);
+        await addModel(page);
+        await registerDrawnChart(page);
+        const logarithmicAxes = { xScaleType: 'logarithmic', yScaleType: 'logarithmic' };
+        await addChart(page, 'DrawnChartWidget', 'Chart1', logarithmicAxes);
+        await addChart(page, 'ChartShape', 'BlockChart1', logarithmicAxes);
+
+        const drawnDigest = await getChartDigest(page, 'Chart1', ['backgroundLayer', 'gridLayer', 'seriesLayer', 'axisLayer']);
+        const blockDigest = await getChartDigest(page, 'BlockChart1', ['blockLayer', 'axisLayer']);
+
+        expect(drawnDigest.length).toBeGreaterThan(10);
+        expect(drawnDigest.some(entry => entry.startsWith('path|M'))).toBe(true);
+        expect(drawnDigest.some(entry => entry.includes('NaN'))).toBe(false);
+        expect(blockDigest).toEqual(drawnDigest);
+        const domain = await page.evaluate(() => shell.board.shapes.getByName('BlockChart1').chart.renderState.domain);
+        expect(domain.xMin).toBeGreaterThan(0);
+        expect(domain.yMin).toBeGreaterThan(0);
+    });
+
     test('an area series still shows the area it encloses', async ({ page }) => {
         await setupEditor(page);
         await addModel(page);

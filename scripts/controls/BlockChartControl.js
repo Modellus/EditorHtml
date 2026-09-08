@@ -56,6 +56,8 @@ class BlockChartControl extends ChartControl {
                     yTicks: plan.yTicks.map(value => ({ value: value, label: this.formatAxisValue(value, this.options.yAxisType) })),
                     xMinorTicks: plan.xMinorTicks,
                     yMinorTicks: plan.yMinorTicks,
+                    xScaleType: this.getAxisScaleType("x"),
+                    yScaleType: this.getAxisScaleType("y"),
                     backgroundColor: this.options.backgroundColor,
                     dataAreaColor: this.options.dataAreaColor,
                     borderColor: this.options.borderColor,
@@ -101,7 +103,7 @@ class BlockChartControl extends ChartControl {
     // background. The band itself is a block; the readout is not, so it is written here over
     // the series the blocks have already drawn.
     renderAreaValueLabels(plan) {
-        const areaBaseY = Math.min(Math.max(plan.yScale(0), plan.layout.plotTop), plan.layout.plotBottom);
+        const areaBaseY = BlockChartGeometry.getBaselineY(plan.yScale, plan.layout.plotTop, plan.layout.plotBottom);
         for (const series of this.options.series) {
             const chartTypes = series.chartTypes ?? ["line"];
             if (!chartTypes.includes("area") || series.showLabel !== true)
@@ -124,7 +126,9 @@ class BlockChartControl extends ChartControl {
         if (seriesIndex >= barSeriesList.length)
             return null;
         const barWidth = this.getBarWidth(barSeriesList.length, this.renderState.layout, this.renderState.xScale);
-        const geometry = BlockChartGeometry.getBarGeometry(this.dataRows, this.options.argumentField, barSeriesList[seriesIndex], seriesIndex, barSeriesList.length, barWidth, this.renderState.xScale, this.renderState.yScale);
+        const layout = this.renderState.layout;
+        const baselineY = BlockChartGeometry.getBaselineY(this.renderState.yScale, layout.plotTop, layout.plotBottom);
+        const geometry = BlockChartGeometry.getBarGeometry(this.dataRows, this.options.argumentField, barSeriesList[seriesIndex], seriesIndex, barSeriesList.length, barWidth, this.renderState.xScale, this.renderState.yScale, baselineY);
         const nearestBarIndex = this.getNearestBarIndex(geometry.bars);
         if (nearestBarIndex < 0)
             return null;

@@ -163,6 +163,112 @@ function buildNiceTickValues(minValue, maxValue, targetCount = 5, { axisType = "
     return ticks;
 }
 
+function decadeTickValue(exponent, mantissa = 1) {
+    return Number(`${mantissa}e${Math.round(exponent)}`);
+}
+
+function countTickValuesInside(ticks, minValue, maxValue) {
+    return ticks.filter(value => value >= minValue && value <= maxValue).length;
+}
+
+function buildMantissaTickValues(mantissas, minValue, maxValue) {
+    const candidates = [];
+    for (let exponent = Math.floor(Math.log10(minValue)); exponent <= Math.ceil(Math.log10(maxValue)); exponent++) {
+        for (const mantissa of mantissas)
+            candidates.push(decadeTickValue(exponent, mantissa));
+    }
+    let firstIndex = 0;
+    for (let index = 0; index < candidates.length; index++) {
+        if (candidates[index] <= minValue)
+            firstIndex = index;
+    }
+    return candidates.slice(firstIndex).filter(value => value <= maxValue * (1 + 1e-9));
+}
+
+function buildLogarithmicTickValues(minValue, maxValue, targetCount = 5) {
+    if (!Number.isFinite(minValue) || !Number.isFinite(maxValue) || !(minValue > 0) || maxValue <= minValue)
+        return [];
+    const lowExponent = Math.log10(minValue);
+    const highExponent = Math.log10(maxValue);
+    const decadeStep = Math.max(1, Math.round(niceTickStep((highExponent - lowExponent) / Math.max(1, targetCount - 1))));
+    const decades = [];
+    for (let exponent = Math.floor(lowExponent / decadeStep) * decadeStep; exponent <= highExponent + 1e-9; exponent += decadeStep)
+        decades.push(decadeTickValue(exponent));
+    if (decadeStep > 1 || countTickValuesInside(decades, minValue, maxValue) >= 2)
+        return decades;
+    const mantissaTicks = buildMantissaTickValues([1, 2, 5], minValue, maxValue);
+    if (countTickValuesInside(mantissaTicks, minValue, maxValue) >= 2)
+        return mantissaTicks;
+    return buildNiceTickValues(minValue, maxValue, targetCount, { anchor: "outside" }).filter(value => value > 0);
+}
+
+function tickMantissa(value) {
+    return Math.round(value / decadeTickValue(Math.floor(Math.log10(value) + 1e-9)) * 1e6) / 1e6;
+}
+
+function buildLogarithmicMinorTickValues(majorTicks, minValue, maxValue, lengthPixels) {
+    const ticks = [];
+    if (!Array.isArray(majorTicks) || majorTicks.length < 2 || !(minValue > 0) || !(maxValue > minValue))
+        return ticks;
+    const decadeSpan = Math.log10(maxValue) - Math.log10(minValue);
+    const decadePixels = lengthPixels / decadeSpan;
+    const inside = value => value > minValue && value < maxValue;
+    const mantissas = majorTicks.map(tickMantissa);
+    if (mantissas.every(mantissa => mantissa === 1)) {
+        const decadeStep = Math.round(Math.log10(majorTicks[1]) - Math.log10(majorTicks[0]));
+        const firstExponent = Math.round(Math.log10(majorTicks[0])) - decadeStep;
+        const lastExponent = Math.round(Math.log10(majorTicks[majorTicks.length - 1]));
+        if (decadeStep > 1) {
+            if (decadePixels < 5)
+                return ticks;
+            for (let exponent = firstExponent; exponent <= lastExponent; exponent += decadeStep) {
+                for (let offset = 1; offset < decadeStep; offset++) {
+                    const value = decadeTickValue(exponent + offset);
+                    if (inside(value))
+                        ticks.push(value);
+                }
+            }
+            return ticks;
+        }
+        const divisions = minorTickDivisions(decadePixels);
+        const minorMantissas = divisions === 10 ? [2, 3, 4, 5, 6, 7, 8, 9] : (divisions === 2 ? [2, 5] : []);
+        for (let exponent = firstExponent; exponent <= lastExponent; exponent++) {
+            for (const mantissa of minorMantissas) {
+                const value = decadeTickValue(exponent, mantissa);
+                if (inside(value))
+                    ticks.push(value);
+            }
+        }
+        return ticks;
+    }
+    if (mantissas.every(mantissa => mantissa === 1 || mantissa === 2 || mantissa === 5)) {
+        if (decadePixels / 10 < 5)
+            return ticks;
+        const firstExponent = Math.floor(Math.log10(majorTicks[0]) + 1e-9);
+        const lastExponent = Math.ceil(Math.log10(majorTicks[majorTicks.length - 1]));
+        for (let exponent = firstExponent; exponent <= lastExponent; exponent++) {
+            for (const mantissa of [3, 4, 6, 7, 8, 9]) {
+                const value = decadeTickValue(exponent, mantissa);
+                if (inside(value))
+                    ticks.push(value);
+            }
+        }
+        return ticks;
+    }
+    const step = majorTicks[1] - majorTicks[0];
+    const lastMajor = majorTicks[majorTicks.length - 1];
+    const tightestSpacing = (Math.log10(lastMajor) - Math.log10(majorTicks[majorTicks.length - 2])) * decadePixels;
+    const divisions = minorTickDivisions(tightestSpacing);
+    for (let majorStart = majorTicks[0] - step; majorStart <= lastMajor + step * 0.001; majorStart += step) {
+        forEachMinorTick(Math.round(majorStart * 1e10) / 1e10, step, divisions, minorValue => {
+            const value = Math.round(minorValue * 1e10) / 1e10;
+            if (inside(value))
+                ticks.push(value);
+        });
+    }
+    return ticks;
+}
+
 // Picks a "nice" major-tick step for an axis of the given length, aiming to keep
 // consecutive major ticks at least minimumSpacingPixels apart.
 function niceAxisTickStep(range, lengthPixels, minimumSpacingPixels = 24, axisType = "decimal") {

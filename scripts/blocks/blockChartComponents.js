@@ -427,6 +427,8 @@
             chartParameter("yTicks", "Y ticks", "object", []),
             chartParameter("xMinorTicks", "Minor x ticks", "object", []),
             chartParameter("yMinorTicks", "Minor y ticks", "object", []),
+            chartParameter("xScaleType", "X scale", "string", "linear"),
+            chartParameter("yScaleType", "Y scale", "string", "linear"),
             chartParameter("backgroundColor", "Background", "colour", "#ffffff"),
             chartParameter("dataAreaColor", "Data area", "colour", ""),
             chartParameter("borderColor", "Border", "colour", "#666666"),
@@ -460,7 +462,7 @@
             }];
             if (!plot || !domain)
                 return { id: "chart", type: "group", children: children };
-            const scales = BlockChartGeometry.createScales(plot, domain);
+            const scales = BlockChartGeometry.createScales(plot, domain, { xScaleType: parameters.xScaleType, yScaleType: parameters.yScaleType });
             const toPixels = (values, scale) => (values ?? []).map(value => scale(value));
             const toTicks = (ticks, scale) => (ticks ?? []).map(tick => ({ position: scale(tick.value), label: tick.label }));
             children.push(clipped({
@@ -478,6 +480,7 @@
             const rows = parameters.rows ?? [];
             const series = parameters.series ?? [];
             const barSeries = series.filter(entry => (entry.chartTypes ?? ["line"]).includes("bar"));
+            const areaBaseY = BlockChartGeometry.getBaselineY(scales.yScale, plot.plotTop, plot.plotBottom);
             if (barSeries.length > 0) {
                 const barWidth = BlockChartGeometry.getBarWidth(rows, parameters.argumentField, barSeries.length, scales.xScale, plot.plotWidth, parameters.maxBarWidth);
                 children.push(clipped({
@@ -486,12 +489,11 @@
                     parameters: {
                         series: barSeries.map((entry, index) => Object.assign(
                             { color: entry.color },
-                            BlockChartGeometry.getBarGeometry(rows, parameters.argumentField, entry, index, barSeries.length, barWidth, scales.xScale, scales.yScale)
+                            BlockChartGeometry.getBarGeometry(rows, parameters.argumentField, entry, index, barSeries.length, barWidth, scales.xScale, scales.yScale, areaBaseY)
                         ))
                     }
                 }, parameters.plotClipId));
             }
-            const areaBaseY = Math.min(Math.max(scales.yScale(0), plot.plotTop), plot.plotBottom);
             for (let index = 0; index < series.length; index++) {
                 const entry = series[index];
                 const points = BlockChartGeometry.getSeriesPoints(rows, parameters.argumentField, entry, scales.xScale, scales.yScale);

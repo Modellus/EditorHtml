@@ -50,6 +50,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         this.properties.axisColor = "";
         this.properties.xAxisType = "decimal";
         this.properties.yAxisType = "decimal";
+        this.properties.xScaleType = "linear";
+        this.properties.yScaleType = "linear";
         this.properties.originX = 0;
         this.properties.originY = 0;
         this.properties.xTerm = this.board.calculator.properties.independent.name;
@@ -91,6 +93,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             ...(this.properties.axisColor ? { axisColor: this.properties.axisColor } : {}),
             xAxisType: this.properties.xAxisType || "decimal",
             yAxisType: this.properties.yAxisType || "decimal",
+            xScaleType: this.getAxisScaleType("x"),
+            yScaleType: this.getAxisScaleType("y"),
             equalScales: this.properties.equalScales === true,
             tangentColor: this.properties.tangentColor ?? "",
             getCalculator: () => this.board.calculator,
@@ -114,6 +118,29 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         this.board.markDirty(this);
     }
 
+    getAxisScaleType(axis) {
+        return this.properties[`${axis}ScaleType`] || "linear";
+    }
+
+    isAxisLogarithmic(axis) {
+        return BlockChartGeometry.isLogarithmicScale(this.getAxisScaleType(axis));
+    }
+
+    setAxisScaleTypeCommand(axis, scaleType) {
+        const updates = { [`${axis}ScaleType`]: scaleType };
+        const domainOverride = this.properties.domainOverride;
+        if (scaleType === "logarithmic" && this.properties.autoScale !== true && domainOverride) {
+            const range = BlockChartGeometry.toPositiveRange(Number(domainOverride[`${axis}Min`]), Number(domainOverride[`${axis}Max`]));
+            if (range.minimum !== domainOverride[`${axis}Min`] || range.maximum !== domainOverride[`${axis}Max`])
+                updates.domainOverride = { ...domainOverride, [`${axis}Min`]: range.minimum, [`${axis}Max`]: range.maximum };
+        }
+        this.setPropertiesCommand(updates);
+    }
+
+    recentreAxisBound(axis, bound, clickedValue) {
+        return this.isAxisLogarithmic(axis) ? bound / clickedValue : bound - clickedValue;
+    }
+
     onDataAreaDoubleClick(clickedX, clickedY) {
         const currentDomain = this.chart.renderState?.domain;
         const xMin = currentDomain ? currentDomain.xMin : -1;
@@ -121,10 +148,10 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
         const yMin = currentDomain ? currentDomain.yMin : -1;
         const yMax = currentDomain ? currentDomain.yMax : 1;
         const newDomain = {
-            xMin: xMin - clickedX,
-            xMax: xMax - clickedX,
-            yMin: yMin - clickedY,
-            yMax: yMax - clickedY
+            xMin: this.recentreAxisBound("x", xMin, clickedX),
+            xMax: this.recentreAxisBound("x", xMax, clickedX),
+            yMin: this.recentreAxisBound("y", yMin, clickedY),
+            yMax: this.recentreAxisBound("y", yMax, clickedY)
         };
         this.properties.domainOverride = newDomain;
         this.properties.autoScale = false;
@@ -430,6 +457,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
             axisColor: this.properties.axisColor || undefined,
             xAxisType: this.properties.xAxisType || "decimal",
             yAxisType: this.properties.yAxisType || "decimal",
+            xScaleType: this.getAxisScaleType("x"),
+            yScaleType: this.getAxisScaleType("y"),
             notation: this.getNotation(),
             border: this.getBorderColor(),
             categories: categories ? categories.labels : [],
@@ -456,6 +485,8 @@ if (typeof BaseShape !== "undefined") ChartShape = class ChartShape extends Base
                 axisColor: config.axisColor,
                 xAxisType: config.xAxisType,
                 yAxisType: config.yAxisType,
+                xScaleType: config.xScaleType,
+                yScaleType: config.yScaleType,
                 notation: config.notation,
                 borderColor: config.border,
                 argumentTitle: config.argTitle

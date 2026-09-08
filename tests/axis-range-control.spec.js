@@ -88,7 +88,7 @@ test.describe('one control for how far an axis runs', () => {
                 boxWidths: Array.from(content.querySelectorAll('.dx-numberbox')).map(box => box.getBoundingClientRect().width)
             };
         });
-        expect(layout.controlRights).toHaveLength(6);
+        expect(layout.controlRights).toHaveLength(7);
         for (const controlRight of layout.controlRights)
             expect(controlRight).toBeLessThanOrEqual(layout.menuRight);
         // The two boxes of a row share its width rather than growing with what they hold.

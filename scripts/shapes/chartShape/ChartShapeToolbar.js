@@ -267,6 +267,7 @@ var ChartShapeToolbarMixin = {
         this._axisRangeControl = this.createAxisRangeControl();
         listItems.push({ text: "Horizontal", buildControl: $container => this._axisRangeControl.createRow("x").appendTo($container) });
         listItems.push({ text: "Vertical", buildControl: $container => this._axisRangeControl.createRow("y").appendTo($container) });
+        listItems.push({ text: "Scale", buildControl: $container => this.createAxisScaleTypeButtonGroup("y").appendTo($container) });
         listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 400, scrollContent => {
             const grid = $('<div class="mdl-dropdown-grid">');
@@ -323,6 +324,29 @@ var ChartShapeToolbarMixin = {
                 this.moveAxisTypePill(e.component.element()[0]);
                 e.component.repaint();
                 this.board.markDirty(this);
+            }
+        });
+        return container;
+    },
+    createAxisScaleTypeButtonGroup(axis) {
+        const translate = key => this.board.translations.get(key);
+        const container = $('<div>');
+        container.dxButtonGroup({
+            items: [
+                { key: "linear", text: translate("Scale Linear") },
+                { key: "logarithmic", text: translate("Scale Log") }
+            ],
+            keyExpr: "key",
+            selectedItemKeys: [this.getAxisScaleType(axis)],
+            stylingMode: "outlined",
+            elementAttr: { class: "mdl-pill-group mdl-axis-scale-group", "data-axis": axis },
+            onContentReady: e => Utils.initPillButtonGroup(e.element[0]),
+            onSelectionChanged: e => {
+                if (e.addedItems.length === 0)
+                    return;
+                this.setAxisScaleTypeCommand(axis, e.addedItems[0].key);
+                Utils.movePillButtonGroup(e.component.element()[0]);
+                e.component.repaint();
             }
         });
         return container;

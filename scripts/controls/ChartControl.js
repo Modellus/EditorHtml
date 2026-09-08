@@ -43,6 +43,8 @@ class ChartControl {
             fontFamily: "Katex_Main",
             xAxisType: "decimal",
             yAxisType: "decimal",
+            xScaleType: "linear",
+            yScaleType: "linear",
             termFontFamily: "Katex_Math",
             termFontStyle: "italic",
             termFontWeight: 400,
@@ -311,6 +313,20 @@ class ChartControl {
         return this.isCategoryMode() ? "category" : (this.options.xAxisType || "decimal");
     }
 
+    getAxisScaleType(axis) {
+        if (this.isCategoryMode())
+            return "linear";
+        return this.options[`${axis}ScaleType`] || "linear";
+    }
+
+    isLogarithmicAxis(axis) {
+        return BlockChartGeometry.isLogarithmicScale(this.getAxisScaleType(axis));
+    }
+
+    getScaleTypes() {
+        return { xScaleType: this.getAxisScaleType("x"), yScaleType: this.getAxisScaleType("y") };
+    }
+
     getCategoryLabel(value) {
         const categoryIndex = Math.round(Number(value));
         const categories = this.options.categories;
@@ -334,17 +350,19 @@ class ChartControl {
     getDomain(argumentField, series) {
         if (this.isCategoryMode())
             return this.getCategoryDomain(series);
+        const xLogarithmic = this.isLogarithmicAxis("x");
+        const yLogarithmic = this.isLogarithmicAxis("y");
         const xValues = [];
         const yValues = [];
         for (let rowIndex = 0; rowIndex < this.dataRows.length; rowIndex++) {
             const row = this.dataRows[rowIndex];
             const xValue = this.getNumericValue(row, argumentField);
-            if (xValue == null)
+            if (xValue == null || (xLogarithmic && !(xValue > 0)))
                 continue;
             xValues.push(xValue);
             for (let seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
                 const seriesValue = this.getNumericValue(row, series[seriesIndex].valueField);
-                if (seriesValue == null)
+                if (seriesValue == null || (yLogarithmic && !(seriesValue > 0)))
                     continue;
                 yValues.push(seriesValue);
             }
@@ -353,15 +371,17 @@ class ChartControl {
             const types = s.chartTypes ?? ["line"];
             return types.includes("bar") || types.includes("area");
         });
-        if (hasBaselineType)
+        if (hasBaselineType && !yLogarithmic)
             yValues.push(0);
-        xValues.push(0);
-        yValues.push(0);
+        if (!xLogarithmic)
+            xValues.push(0);
+        if (!yLogarithmic)
+            yValues.push(0);
         if (xValues.length === 0)
-            xValues.push(0, 1);
+            xValues.push(...(xLogarithmic ? [1, 10] : [0, 1]));
         if (yValues.length === 0)
-            yValues.push(0, 1);
-        const domain = BlockChartGeometry.padDomain(Math.min(...xValues), Math.max(...xValues), Math.min(...yValues), Math.max(...yValues));
+            yValues.push(...(yLogarithmic ? [1, 10] : [0, 1]));
+        const domain = BlockChartGeometry.padDomain(Math.min(...xValues), Math.max(...xValues), Math.min(...yValues), Math.max(...yValues), xLogarithmic, yLogarithmic);
         if (this.domainOverride.xMin != null)
             domain.xMin = this.domainOverride.xMin;
         if (this.domainOverride.xMax != null)
@@ -370,15 +390,40 @@ class ChartControl {
             domain.yMin = this.domainOverride.yMin;
         if (this.domainOverride.yMax != null)
             domain.yMax = this.domainOverride.yMax;
-        if (domain.xMin >= domain.xMax)
-            domain.xMax = domain.xMin + 1;
-        if (domain.yMin >= domain.yMax)
-            domain.yMax = domain.yMin + 1;
+        this.guardAxisRange(domain, "x", xLogarithmic);
+        this.guardAxisRange(domain, "y", yLogarithmic);
         return domain;
+    }
+
+    guardAxisRange(domain, axis, logarithmic) {
+        const minimumKey = `${axis}Min`;
+        const maximumKey = `${axis}Max`;
+        if (logarithmic) {
+            const range = BlockChartGeometry.toPositiveRange(domain[minimumKey], domain[maximumKey]);
+            domain[minimumKey] = range.minimum;
+            domain[maximumKey] = range.maximum;
+            return;
+        }
+        if (domain[minimumKey] >= domain[maximumKey])
+            domain[maximumKey] = domain[minimumKey] + 1;
     }
 
     buildTicks(minValue, maxValue, targetCount = 5, axisType = "decimal") {
         return buildNiceTickValues(minValue, maxValue, targetCount, { axisType: axisType, anchor: "outside" });
+    }
+
+    buildMajorTicks(axis, minValue, maxValue) {
+        if (this.isLogarithmicAxis(axis))
+            return buildLogarithmicTickValues(minValue, maxValue, 5);
+        return this.buildTicks(minValue, maxValue, 5, axis === "x" ? this.getXAxisType() : this.options.yAxisType);
+    }
+
+    buildAxisMinorTicks(axis, majorTicks, minValue, maxValue, lengthPixels) {
+        if (this.isLogarithmicAxis(axis))
+            return buildLogarithmicMinorTickValues(majorTicks, minValue, maxValue, lengthPixels);
+        const majorStep = majorTicks.length > 1 ? majorTicks[1] - majorTicks[0] : 0;
+        const subdivisions = minorTickDivisions(lengthPixels * majorStep / (maxValue - minValue));
+        return this.buildMinorTicks(majorTicks, minValue, maxValue, subdivisions);
     }
 
     injectPinnedTick(ticks, pinnedValue, domainMin, domainMax) {
@@ -515,11 +560,11 @@ class ChartControl {
     }
 
     getScales(layout, domain) {
-        return BlockChartGeometry.createScales(layout, domain);
+        return BlockChartGeometry.createScales(layout, domain, this.getScaleTypes());
     }
 
     equalizeDomain(domain, plotWidth, plotHeight) {
-        return BlockChartGeometry.equalizeDomain(domain, plotWidth, plotHeight);
+        return BlockChartGeometry.equalizeDomain(domain, plotWidth, plotHeight, this.getScaleTypes());
     }
 
     clearRenderLayers() {
@@ -550,6 +595,8 @@ class ChartControl {
             domain: plan.domain,
             xScale: plan.xScale,
             yScale: plan.yScale,
+            xValueAt: plan.xValueAt,
+            yValueAt: plan.yValueAt,
             xTicks: plan.xTicks,
             yTicks: plan.yTicks,
             series: this.options.series,
@@ -567,23 +614,19 @@ class ChartControl {
         if (this.isCategoryMode())
             return this.buildCategoryRenderPlan(width, height);
         const rawDomain = this.getDomain(this.options.argumentField, this.options.series);
-        const preliminaryXTicks = this.buildTicks(rawDomain.xMin, rawDomain.xMax, 5, this.getXAxisType());
-        const preliminaryYTicks = this.buildTicks(rawDomain.yMin, rawDomain.yMax, 5, this.options.yAxisType);
+        const preliminaryXTicks = this.buildMajorTicks("x", rawDomain.xMin, rawDomain.xMax);
+        const preliminaryYTicks = this.buildMajorTicks("y", rawDomain.yMin, rawDomain.yMax);
         const preliminaryLayout = this.getLayout(width, height, preliminaryXTicks, preliminaryYTicks);
         const domain = this.options.equalScales
             ? this.equalizeDomain(rawDomain, preliminaryLayout.plotWidth, preliminaryLayout.plotHeight)
             : rawDomain;
-        const xMajorTicks = this.buildTicks(domain.xMin, domain.xMax, 5, this.getXAxisType());
-        const yMajorTicks = this.buildTicks(domain.yMin, domain.yMax, 5, this.options.yAxisType);
+        const xMajorTicks = this.buildMajorTicks("x", domain.xMin, domain.xMax);
+        const yMajorTicks = this.buildMajorTicks("y", domain.yMin, domain.yMax);
         const xTicks = this.injectPinnedTick(xMajorTicks, this._pinnedTickValues.x, domain.xMin, domain.xMax);
         const yTicks = this.injectPinnedTick(yMajorTicks, this._pinnedTickValues.y, domain.yMin, domain.yMax);
         const layout = this.getLayout(width, height, xTicks, yTicks);
-        const xMajorStep = xMajorTicks.length > 1 ? xMajorTicks[1] - xMajorTicks[0] : 0;
-        const yMajorStep = yMajorTicks.length > 1 ? yMajorTicks[1] - yMajorTicks[0] : 0;
-        const xSubdivisions = minorTickDivisions(layout.plotWidth * xMajorStep / (domain.xMax - domain.xMin));
-        const ySubdivisions = minorTickDivisions(layout.plotHeight * yMajorStep / (domain.yMax - domain.yMin));
-        const xMinorTicks = this.buildMinorTicks(xMajorTicks, domain.xMin, domain.xMax, xSubdivisions);
-        const yMinorTicks = this.buildMinorTicks(yMajorTicks, domain.yMin, domain.yMax, ySubdivisions);
+        const xMinorTicks = this.buildAxisMinorTicks("x", xMajorTicks, domain.xMin, domain.xMax, layout.plotWidth);
+        const yMinorTicks = this.buildAxisMinorTicks("y", yMajorTicks, domain.yMin, domain.yMax, layout.plotHeight);
         const scales = this.getScales(layout, domain);
         return {
             width: width,
@@ -592,6 +635,8 @@ class ChartControl {
             domain: domain,
             xScale: scales.xScale,
             yScale: scales.yScale,
+            xValueAt: scales.xValueAt,
+            yValueAt: scales.yValueAt,
             xTicks: xTicks,
             yTicks: yTicks,
             xMinorTicks: xMinorTicks,
@@ -612,6 +657,8 @@ class ChartControl {
             domain: domain,
             xScale: scales.xScale,
             yScale: scales.yScale,
+            xValueAt: scales.xValueAt,
+            yValueAt: scales.yValueAt,
             xTicks: xTicks,
             yTicks: yTicks,
             xMinorTicks: [],
@@ -799,10 +846,10 @@ class ChartControl {
     }
 
     renderSeries(layout, xScale, yScale) {
-        const areaBaseY = Math.min(Math.max(yScale(0), layout.plotTop), layout.plotBottom);
+        const areaBaseY = BlockChartGeometry.getBaselineY(yScale, layout.plotTop, layout.plotBottom);
         const barSeriesList = this.options.series.filter(series => (series.chartTypes ?? ["line"]).includes("bar"));
         if (barSeriesList.length > 0)
-            this.renderBarSeries(layout, xScale, yScale, barSeriesList);
+            this.renderBarSeries(layout, xScale, yScale, barSeriesList, areaBaseY);
         for (let seriesIndex = 0; seriesIndex < this.options.series.length; seriesIndex++) {
             const series = this.options.series[seriesIndex];
             const seriesChartTypes = series.chartTypes ?? ["line"];
@@ -959,7 +1006,7 @@ class ChartControl {
         return BlockChartGeometry.getBarWidth(this.dataRows, this.options.argumentField, barSeriesCount, xScale, layout.plotWidth, this.getMaximumBarWidth());
     }
 
-    renderBarSeries(layout, xScale, yScale, barSeriesList) {
+    renderBarSeries(layout, xScale, yScale, barSeriesList, baselineY) {
         if (barSeriesList.length === 0)
             return;
         const barWidth = this.getBarWidth(barSeriesList.length, layout, xScale);
@@ -967,7 +1014,7 @@ class ChartControl {
         const outlierPointsBySeries = [];
         for (let seriesIndex = 0; seriesIndex < barSeriesList.length; seriesIndex++) {
             const series = barSeriesList[seriesIndex];
-            const geometry = BlockChartGeometry.getBarGeometry(this.dataRows, this.options.argumentField, series, seriesIndex, barSeriesList.length, barWidth, xScale, yScale);
+            const geometry = BlockChartGeometry.getBarGeometry(this.dataRows, this.options.argumentField, series, seriesIndex, barSeriesList.length, barWidth, xScale, yScale, baselineY);
             for (const bar of geometry.bars) {
                 barsMarkup += `
                     <rect class="chart-bar" data-series-index="${seriesIndex}" data-argument="${bar.xValue}" x="${bar.x}" y="${bar.y}" width="${bar.width}" height="${bar.height}" fill="${series.color}" fill-opacity="0.8" />
@@ -1221,7 +1268,8 @@ class ChartControl {
         if (!tangentColor || tangentColor === "" || tangentColor === "transparent" || tangentColor === "#00000000")
             return;
         const domain = this.renderState.domain;
-        const deltaX = (domain.xMax - domain.xMin) * 0.12;
+        const xLogarithmic = this.isLogarithmicAxis("x");
+        const deltaPlace = (BlockChartGeometry.toAxisPlace(domain.xMax, xLogarithmic) - BlockChartGeometry.toAxisPlace(domain.xMin, xLogarithmic)) * 0.12;
         const tangents = [];
         let tangentMarkup = "";
         for (let seriesIndex = 0; seriesIndex < this.renderState.series.length; seriesIndex++) {
@@ -1229,11 +1277,15 @@ class ChartControl {
             const tangent = this.getTangentAtFocusPoint(series);
             if (!tangent)
                 continue;
-            const deltaY = tangent.slope * deltaX;
-            const startX = xScale(tangent.xValue - deltaX);
-            const startY = yScale(tangent.yValue - deltaY);
-            const endX = xScale(tangent.xValue + deltaX);
-            const endY = yScale(tangent.yValue + deltaY);
+            const tangentPlace = BlockChartGeometry.toAxisPlace(tangent.xValue, xLogarithmic);
+            const startXValue = BlockChartGeometry.fromAxisPlace(tangentPlace - deltaPlace, xLogarithmic);
+            const endXValue = BlockChartGeometry.fromAxisPlace(tangentPlace + deltaPlace, xLogarithmic);
+            const startX = xScale(startXValue);
+            const startY = yScale(tangent.yValue + tangent.slope * (startXValue - tangent.xValue));
+            const endX = xScale(endXValue);
+            const endY = yScale(tangent.yValue + tangent.slope * (endXValue - tangent.xValue));
+            if (![startX, startY, endX, endY].every(Number.isFinite))
+                continue;
             tangentMarkup += `
                 <polygon points="${startX},${startY} ${endX},${startY} ${endX},${endY}" fill="${tangentColor}" fill-opacity="0.25" stroke="none" />
                 <line x1="${startX}" y1="${startY}" x2="${endX}" y2="${endY}" stroke="${tangentColor}" stroke-width="1.5" />
@@ -1335,9 +1387,11 @@ class ChartControl {
         const startPixel = scale(tickValue);
         const layout = state.layout;
         const domain = state.domain;
+        const logarithmic = this.isLogarithmicAxis(axis);
         const axisStartPixel = axis === "x" ? layout.plotLeft : layout.plotBottom;
         const baseValue = axis === "x" ? domain.xMin : domain.yMin;
-        const tickOffsetValue = tickValue - baseValue;
+        const basePlace = BlockChartGeometry.toAxisPlace(baseValue, logarithmic);
+        const tickOffsetValue = BlockChartGeometry.toAxisPlace(tickValue, logarithmic) - basePlace;
         const tickOffsetPixel = axis === "x" ? startPixel - axisStartPixel : axisStartPixel - startPixel;
         const axisLength = axis === "x" ? layout.plotWidth : layout.plotHeight;
         const started = this._axisTickDrag.start(event, {
@@ -1352,12 +1406,13 @@ class ChartControl {
                 return axis === "x" ? point.x - axisStartPixel : axisStartPixel - point.y;
             },
             onMove: newScale => {
+                const newMaximum = BlockChartGeometry.fromAxisPlace(basePlace + newScale * axisLength, logarithmic);
                 if (axis === "x") {
                     this.domainOverride.xMin = baseValue;
-                    this.domainOverride.xMax = baseValue + newScale * axisLength;
+                    this.domainOverride.xMax = newMaximum;
                 } else {
                     this.domainOverride.yMin = baseValue;
-                    this.domainOverride.yMax = baseValue + newScale * axisLength;
+                    this.domainOverride.yMax = newMaximum;
                 }
                 this.render();
             },
@@ -1435,6 +1490,8 @@ class ChartControl {
             pointerId: event.pointerId,
             layout: layout,
             domain: state.domain,
+            xValueAt: state.xValueAt,
+            yValueAt: state.yValueAt,
             startX: startX,
             startY: startY,
             currentX: startX,
@@ -1496,14 +1553,10 @@ class ChartControl {
         const bottom = Math.max(zoomDragState.startY, zoomDragState.currentY);
         if (right - left < 8 || bottom - top < 8)
             return;
-        const domain = zoomDragState.domain;
-        const layout = zoomDragState.layout;
-        const horizontalRange = domain.xMax - domain.xMin;
-        const verticalRange = domain.yMax - domain.yMin;
-        const xMin = domain.xMin + (left - layout.plotLeft) / layout.plotWidth * horizontalRange;
-        const xMax = domain.xMin + (right - layout.plotLeft) / layout.plotWidth * horizontalRange;
-        const yMin = domain.yMin + (layout.plotBottom - bottom) / layout.plotHeight * verticalRange;
-        const yMax = domain.yMin + (layout.plotBottom - top) / layout.plotHeight * verticalRange;
+        const xMin = zoomDragState.xValueAt(left);
+        const xMax = zoomDragState.xValueAt(right);
+        const yMin = zoomDragState.yValueAt(bottom);
+        const yMax = zoomDragState.yValueAt(top);
         if (!Number.isFinite(xMin) || !Number.isFinite(xMax) || !Number.isFinite(yMin) || !Number.isFinite(yMax))
             return;
         this.domainOverride.xMin = Math.min(xMin, xMax);
@@ -1528,9 +1581,8 @@ class ChartControl {
         const layout = state.layout;
         if (plotX < layout.plotLeft || plotX > layout.plotRight || plotY < layout.plotTop || plotY > layout.plotBottom)
             return null;
-        const domain = state.domain;
-        const dataX = domain.xMin + (plotX - layout.plotLeft) / layout.plotWidth * (domain.xMax - domain.xMin);
-        const dataY = domain.yMin + (layout.plotBottom - plotY) / layout.plotHeight * (domain.yMax - domain.yMin);
+        const dataX = state.xValueAt(plotX);
+        const dataY = state.yValueAt(plotY);
         if (!Number.isFinite(dataX) || !Number.isFinite(dataY))
             return null;
         return { x: dataX, y: dataY };
@@ -1585,11 +1637,7 @@ class ChartControl {
             this.clearCrosshair();
             return;
         }
-        const domain = state.domain;
-        const layout = state.layout;
-        const dataX = domain.xMin + (mouseX - layout.plotLeft) / layout.plotWidth * (domain.xMax - domain.xMin);
-        const dataY = domain.yMax - (mouseY - layout.plotTop) / layout.plotHeight * (domain.yMax - domain.yMin);
-        this.renderCrosshair(dataX, dataY, mouseY);
+        this.renderCrosshair(state.xValueAt(mouseX), state.yValueAt(mouseY), mouseY);
     }
 
     clearCrosshair() {
