@@ -740,3 +740,72 @@ test.describe('Function shortcut requires parenthesis', () => {
         expect(value).toContain('\\sin');
     });
 });
+
+test.describe('Deletion across aligned rows', () => {
+    async function presentExpression(page, name, latex, position) {
+        await page.evaluate(({ n, latex, position }) => {
+            const shape = shell.board.shapes.getByName(n);
+            shape.expressionControl.setValue(latex);
+            shape.mathfield.focus();
+            shape.mathfield.position = position ?? shape.mathfield.lastOffset;
+        }, { n: name, latex, position });
+        await page.waitForTimeout(300);
+    }
+
+    async function pressRepeatedly(page, key, count) {
+        for (let pressIndex = 0; pressIndex < count; pressIndex++) {
+            await page.keyboard.press(key);
+            await page.waitForTimeout(100);
+        }
+    }
+
+    async function getCanonicalValue(page, name) {
+        return page.evaluate(n => shell.board.shapes.getByName(n).expressionControl.getCanonicalValue(), name);
+    }
+
+    test('backspace deletes the last row character by character past its relation', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await presentExpression(page, 'Expr1', '\\displaylines{x\\\\y=10\\\\z_{n}=z_{n-1}}');
+        await pressRepeatedly(page, 'Backspace', 7);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x\\\\y=10\\\\z_{n}}');
+        await pressRepeatedly(page, 'Backspace', 4);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x\\\\y=10\\\\}');
+    });
+
+    test('backspace on the emptied row takes the row away and carries on with the row above', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await presentExpression(page, 'Expr1', '\\displaylines{x\\\\y=10\\\\z_{n}=z_{n-1}}');
+        await pressRepeatedly(page, 'Backspace', 12);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x\\\\y=10}');
+        await pressRepeatedly(page, 'Backspace', 3);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x\\\\y}');
+    });
+
+    test('backspace before the relation deletes the character before it', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await presentExpression(page, 'Expr1', '\\displaylines{x=1\\\\y=10}', 7);
+        await pressRepeatedly(page, 'Backspace', 1);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x=1\\\\=10}');
+    });
+
+    test('delete after the left side removes the relation', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await presentExpression(page, 'Expr1', '\\displaylines{x=1\\\\y=10}', 6);
+        await pressRepeatedly(page, 'Delete', 1);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x=1\\\\y10}');
+    });
+
+    test('delete at the end of a row takes an empty row below away', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await presentExpression(page, 'Expr1', '\\displaylines{x=1\\\\\\\\y=10}', 4);
+        await pressRepeatedly(page, 'Delete', 1);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x=1\\\\y=10}');
+        await pressRepeatedly(page, 'Delete', 1);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x=1\\\\y=10}');
+    });
+});

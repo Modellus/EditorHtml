@@ -56,11 +56,108 @@ class MathliveController {
         return this.mathfield.getValue([startPosition, endPosition], "latex-unstyled");
     }
 
+    // An aligned row is an array of cells, and Mathlive writes nothing where one cell ends and the next
+    // begins, so a caret standing at the start of a later cell reads as standing right after the last
+    // character of the cell before it. Mathlive's own backspace does nothing there, and neither does
+    // its forward delete at the end of the cell before, so both are carried over the cell boundary to
+    // the character the user sees next to the caret. Mathlive also takes an emptied row away when a
+    // deletion key reaches it in a one-column block but leaves it standing once the rows are aligned
+    // into two cells, so the aligned rows get the same courtesy.
     handleBackspaceKeydown(keydownEvent) {
+        if (!this.isPlainDeletionKey(keydownEvent, "Backspace"))
+            return false;
+        const caretOffset = this.mathfield.position;
+        const caretAtom = this.getModelAtom(caretOffset);
+        if (this.isLaterCellStartAtom(caretAtom)) {
+            this.consumeKeydown(keydownEvent);
+            this.mathfield.executeCommand("moveToPreviousChar");
+            this.mathfield.executeCommand("deleteBackward");
+            return true;
+        }
+        if (this.isEmptyLaterRowStart(caretAtom, caretOffset)) {
+            this.consumeKeydown(keydownEvent);
+            this.removeRowStartingAt(caretOffset);
+            return true;
+        }
         return false;
     }
 
     handleDeleteKeydown(keydownEvent) {
+        if (!this.isPlainDeletionKey(keydownEvent, "Delete"))
+            return false;
+        const nextOffset = this.mathfield.position + 1;
+        const nextAtom = this.getModelAtom(nextOffset);
+        if (this.isLaterCellStartAtom(nextAtom)) {
+            this.consumeKeydown(keydownEvent);
+            this.mathfield.executeCommand("moveToNextChar");
+            this.mathfield.executeCommand("deleteForward");
+            return true;
+        }
+        if (this.isEmptyLaterRowStart(nextAtom, nextOffset)) {
+            this.consumeKeydown(keydownEvent);
+            this.removeRowStartingAt(nextOffset);
+            return true;
+        }
+        return false;
+    }
+
+    isPlainDeletionKey(keydownEvent, keyName) {
+        if (keydownEvent?.key !== keyName)
+            return false;
+        if (keydownEvent.altKey || keydownEvent.ctrlKey || keydownEvent.metaKey || keydownEvent.shiftKey)
+            return false;
+        return this.hasCollapsedSelection();
+    }
+
+    consumeKeydown(keydownEvent) {
+        keydownEvent.preventDefault();
+        keydownEvent.stopImmediatePropagation();
+    }
+
+    // The atoms are only reachable through the mathfield Mathlive keeps to itself, so a build that
+    // hides them leaves the deletion keys to Mathlive.
+    getModelAtom(offset) {
+        const model = this.mathfield._mathfield?.model;
+        if (!model || typeof model.at !== "function" || offset < 0 || offset > this.mathfield.lastOffset)
+            return null;
+        return model.at(offset) ?? null;
+    }
+
+    // Every cell opens with a "first" atom whose branch names the row and the column of the cell.
+    isCellStartAtom(atom) {
+        if (!atom || atom.type !== "first" || atom.parent?.type !== "array")
+            return false;
+        return Array.isArray(atom.parentBranch);
+    }
+
+    isLaterCellStartAtom(atom) {
+        return this.isCellStartAtom(atom) && atom.parentBranch[1] > 0;
+    }
+
+    isEmptyLaterRowStart(atom, rowStartOffset) {
+        if (!this.isCellStartAtom(atom) || atom.parentBranch[0] === 0 || atom.parentBranch[1] !== 0)
+            return false;
+        return this.isEmptyRow(atom.parent, atom.parentBranch[0], rowStartOffset);
+    }
+
+    // The atoms of a row follow the atom opening its first cell, so the row is empty while every atom
+    // the array holds for it opens a cell.
+    isEmptyRow(arrayAtom, rowIndex, rowStartOffset) {
+        for (let offset = rowStartOffset; offset <= this.mathfield.lastOffset; offset++) {
+            const atom = this.getModelAtom(offset);
+            if (!atom || atom.parent !== arrayAtom || atom.parentBranch?.[0] !== rowIndex)
+                return true;
+            if (atom.type !== "first")
+                return false;
+        }
+        return true;
+    }
+
+    // The row is taken away from inside it, and the caret is left where the row before it ends.
+    removeRowStartingAt(rowStartOffset) {
+        this.mathfield.position = rowStartOffset;
+        this.mathfield.executeCommand("removeRow");
+        this.mathfield.position = Math.max(0, rowStartOffset - 1);
     }
 
     replaceTextRange(startPosition, endPosition, replacementLatex) {
