@@ -139,6 +139,10 @@ class NumericMathInput {
         // left to write into.
         if (!this.field || !this.field.isConnected || this.component._disposed === true)
             return;
+        // A digit typed a moment ago has the field waiting to respell an e-notation number as a power
+        // of ten. What is taken is what was typed, so a respelling still pending is called off rather
+        // than left to rewrite a field that has already been read.
+        clearTimeout(this.field._mathfield?.scientificNotationTimer);
         const text = this.readText();
         const currentValue = this.component.option("value");
         if (text === "") {

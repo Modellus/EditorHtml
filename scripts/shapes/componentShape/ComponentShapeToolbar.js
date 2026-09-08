@@ -358,7 +358,8 @@ var ComponentShapeToolbarMixin = {
         // alone, and gets that row alone.
         for (const axis of this.getAxisRangeAxes()) {
             const control = this.getAxisRangeControl();
-            items.push({ text: axis === "x" ? "Horizontal" : "Vertical", buildControl: $container => control.createRow(axis).appendTo($container) });
+            rangeParameters.push(...this.getAxisChoiceParameters(axis).map(parameter => parameter.id));
+            items.push({ text: axis === "x" ? "Horizontal" : "Vertical", buildControl: $container => control.createChip(axis).appendTo($container) });
         }
         for (const parameter of this.getParametersByCategory(["display", "scale", "interaction", "sound", "general"])) {
             if (rangeParameters.includes(parameter.id))
@@ -384,16 +385,50 @@ var ComponentShapeToolbarMixin = {
     getAxisRangeProperty(axis, bound) {
         return `${bound === "Min" ? "minimum" : "maximum"}${axis.toUpperCase()}`;
     },
+    // An object says how an axis is read the way the chart does — a scaleType, an axisType — and
+    // names the axis in the parameter when it has more than one: xScaleType, yAxisType. An object
+    // with one axis leaves the name off.
+    getAxisChoiceParameter(axis, suffix) {
+        const editable = this.getEditableParameters();
+        const named = editable.find(parameter => parameter.id === `${axis}${suffix}`);
+        if (named)
+            return named;
+        if (this.getAxisRangeAxes().length === 1)
+            return editable.find(parameter => parameter.id === suffix.charAt(0).toLowerCase() + suffix.slice(1)) ?? null;
+        return null;
+    },
+    getAxisChoiceParameters(axis) {
+        return ["ScaleType", "AxisType"].map(suffix => this.getAxisChoiceParameter(axis, suffix)).filter(parameter => parameter !== null);
+    },
+    createAxisChoicePart(suffix) {
+        return {
+            show: axis => this.getAxisChoiceParameter(axis, suffix) !== null,
+            getValue: axis => this.properties[this.getAxisChoiceParameter(axis, suffix).id],
+            onValueChanged: (axis, value) => {
+                const parameter = this.getAxisChoiceParameter(axis, suffix);
+                this.setPropertyCommand(parameter.id, value);
+                this.board.markDirty(this);
+                if (this.getComponentParametersGovernedBy(parameter.id).length === 0)
+                    return;
+                this.refreshComponentToolbarControls();
+                this.refreshComponentModelMenu();
+                queueMicrotask(() => this.refreshComponentSettingsMenu());
+            }
+        };
+    },
     // An end the object is working out for itself is shown but not editable, which is how the chart
     // says the same thing.
     getAxisRangeControl() {
         this._axisRangeControl ??= new AxisRangeControl({
+            shape: this,
             read: (axis, bound) => this.getEffectiveAxisRange()[`${axis}${bound}`],
             // A parameter is read by parsing, so what was typed is stored as it was typed.
             write: (axis, bound, value, event) => this.setPropertyCommand(this.getAxisRangeProperty(axis, bound), event?.typedText ?? value),
             isDisabled: axis => this.properties.autoScale === true || (axis === "y" && this.properties.equalScales === true),
             typedTextKey: (axis, bound) => this.getAxisRangeProperty(axis, bound),
-            editorOptions: boxOptions => this.getPrecisionNumberEditorOptions(Object.assign({ showSpinButtons: false, storesTypedValue: true }, boxOptions))
+            editorOptions: boxOptions => this.getPrecisionNumberEditorOptions(Object.assign({ showSpinButtons: false, storesTypedValue: true }, boxOptions)),
+            numbers: this.createAxisChoicePart("AxisType"),
+            scale: this.createAxisChoicePart("ScaleType")
         });
         return this._axisRangeControl;
     },

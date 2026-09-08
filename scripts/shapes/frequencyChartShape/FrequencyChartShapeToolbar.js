@@ -311,7 +311,7 @@ var FrequencyChartShapeToolbarMixin = {
         });
         this._valueRangeControl = this.createValueRangeControl();
         for (const axisItem of this.getSeriesAxisItems())
-            listItems.push({ text: axisItem.text, buildControl: $container => this._valueRangeControl.createRow(axisItem.key).appendTo($container) });
+            listItems.push({ text: axisItem.text, buildControl: $container => this._valueRangeControl.createChip(axisItem.key).appendTo($container) });
         listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 400, scrollContent => {
             const grid = $('<div class="mdl-dropdown-grid">');
@@ -352,6 +352,7 @@ var FrequencyChartShapeToolbarMixin = {
     createValueRangeControl() {
         return new AxisRangeControl({
             axes: ["primary", "secondary"],
+            shape: this,
             read: (axis, bound) => this.getEditedValueRange()[`${axis}${bound}`] ?? null,
             write: (axis, bound, value) => {
                 this.properties.valueRange = { ...this.properties.valueRange, [`${axis}${bound}`]: value };

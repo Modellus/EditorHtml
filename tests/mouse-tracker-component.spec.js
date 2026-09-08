@@ -632,10 +632,15 @@ test('the settings menu edits both ends of an axis on one row, the way the chart
     // The two the plain sheet is drawn without are switched back on from here, and so is the one that
     // hands the recording over to the player.
     expect(rows).toEqual(expect.arrayContaining(['Show grid', 'Show ticks', 'Per step']));
+    // The two ends stand inside the axis chip on that row.
     await page.evaluate(() => {
         const row = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item')).find(item => item.querySelector('.mdl-dropdown-list-label').textContent === 'Horizontal');
-        const box = DevExpress.ui.dxNumberBox.getInstance(row.querySelectorAll('.dx-numberbox')[1]);
-        box.option('value', 20);
+        $(row.querySelector('.mdl-axis-chip-editor')).dxDropDownBox('instance').open();
+    });
+    await expect(page.locator('.mdl-axis-chip-popup .mdl-axis-chip-rows:visible')).toHaveCount(1);
+    await page.evaluate(() => {
+        const rows = Array.from(document.querySelectorAll('.mdl-axis-chip-rows')).find(element => element.offsetParent !== null);
+        DevExpress.ui.dxNumberBox.getInstance(rows.querySelectorAll('.dx-numberbox')[1]).option('value', 20);
     });
     await page.waitForTimeout(300);
     expect(await page.evaluate(() => shell.board.shapes.getByName('Tracker').properties.maximumX)).toBe(20);

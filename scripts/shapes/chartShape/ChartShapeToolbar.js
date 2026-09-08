@@ -265,9 +265,8 @@ var ChartShapeToolbarMixin = {
             buildControl: $container => $container.append(this._tangentColorPicker)
         });
         this._axisRangeControl = this.createAxisRangeControl();
-        listItems.push({ text: "Horizontal", buildControl: $container => this._axisRangeControl.createRow("x").appendTo($container) });
-        listItems.push({ text: "Vertical", buildControl: $container => this._axisRangeControl.createRow("y").appendTo($container) });
-        listItems.push({ text: "Scale", buildControl: $container => this.createAxisScaleTypeButtonGroup("y").appendTo($container) });
+        listItems.push({ text: "Horizontal", buildControl: $container => this._axisRangeControl.createChip("x").appendTo($container) });
+        listItems.push({ text: "Vertical", buildControl: $container => this._axisRangeControl.createChip("y").appendTo($container) });
         listItems.push(this.createNotationMenuItem());
         Utils.renderDropdownMenuScroll(contentElement, 400, scrollContent => {
             const grid = $('<div class="mdl-dropdown-grid">');
@@ -281,9 +280,11 @@ var ChartShapeToolbarMixin = {
         });
     },
     // The chart's ends live in its domain override, and are only its own to set while it is not
-    // scaling itself; the axis type sits on the same row.
+    // scaling itself. Either axis writes its numbers as decimals or as multiples of π, and either
+    // is read linearly or logarithmically.
     createAxisRangeControl() {
         return new AxisRangeControl({
+            shape: this,
             read: (axis, bound) => this.getEditedDomain()?.[`${axis}${bound}`] ?? null,
             write: (axis, bound, value) => {
                 if (!this.properties.domainOverride)
@@ -295,78 +296,25 @@ var ChartShapeToolbarMixin = {
             isDisabled: axis => this.properties.autoScale === true || (axis === "y" && this.properties.equalScales === true),
             typedTextKey: (axis, bound) => `domainOverride.${axis}${bound}`,
             editorOptions: boxOptions => this.getPrecisionNumberEditorOptions(Object.assign({ showSpinButtons: false }, boxOptions)),
-            trailing: axis => this.createAxisTypeButtonGroup(`${axis}AxisType`)
+            numbers: {
+                getValue: axis => this.properties[`${axis}AxisType`] || "decimal",
+                onValueChanged: (axis, value) => this.setAxisTypeCommand(axis, value)
+            },
+            scale: {
+                getValue: axis => this.getAxisScaleType(axis),
+                onValueChanged: (axis, value) => this.setAxisScaleTypeCommand(axis, value)
+            }
         });
+    },
+    setAxisTypeCommand(axis, axisType) {
+        this.properties[`${axis}AxisType`] = axisType;
+        this.chart.setOptions({ [`${axis}AxisType`]: axisType });
+        this.board.markDirty(this);
     },
     // While the chart is scaling itself the boxes show what it worked out; once it is not, they show
     // what they have been set to.
     getEditedDomain() {
         return this.properties.autoScale === true ? this.chart?.renderState?.domain : this.properties.domainOverride;
-    },
-    createAxisTypeButtonGroup(axisProperty) {
-        const currentType = this.properties[axisProperty] || "decimal";
-        const container = $('<div>');
-        container.dxButtonGroup({
-            items: [
-                { key: "decimal", text: "0" },
-                { key: "pi", text: "π" }
-            ],
-            keyExpr: "key",
-            selectedItemKeys: [currentType],
-            stylingMode: "outlined",
-            elementAttr: { class: "mdl-pill-group" },
-            onContentReady: e => this.initAxisTypePill(e.element[0]),
-            onSelectionChanged: e => {
-                if (e.addedItems.length === 0)
-                    return;
-                this.properties[axisProperty] = e.addedItems[0].key;
-                this.chart.setOptions({ [axisProperty]: e.addedItems[0].key });
-                this.moveAxisTypePill(e.component.element()[0]);
-                e.component.repaint();
-                this.board.markDirty(this);
-            }
-        });
-        return container;
-    },
-    createAxisScaleTypeButtonGroup(axis) {
-        const translate = key => this.board.translations.get(key);
-        const container = $('<div>');
-        container.dxButtonGroup({
-            items: [
-                { key: "linear", text: translate("Scale Linear") },
-                { key: "logarithmic", text: translate("Scale Log") }
-            ],
-            keyExpr: "key",
-            selectedItemKeys: [this.getAxisScaleType(axis)],
-            stylingMode: "outlined",
-            elementAttr: { class: "mdl-pill-group mdl-axis-scale-group", "data-axis": axis },
-            onContentReady: e => Utils.initPillButtonGroup(e.element[0]),
-            onSelectionChanged: e => {
-                if (e.addedItems.length === 0)
-                    return;
-                this.setAxisScaleTypeCommand(axis, e.addedItems[0].key);
-                Utils.movePillButtonGroup(e.component.element()[0]);
-                e.component.repaint();
-            }
-        });
-        return container;
-    },
-    initAxisTypePill(element) {
-        const pill = document.createElement("div");
-        pill.className = "mdl-pill";
-        element.style.position = "relative";
-        element.appendChild(pill);
-        this.moveAxisTypePill(element);
-    },
-    moveAxisTypePill(element) {
-        const pill = element.querySelector(".mdl-pill");
-        if (!pill)
-            return;
-        const selected = element.querySelector(".dx-item-selected .dx-button");
-        if (!selected)
-            return;
-        pill.style.left = selected.offsetLeft + "px";
-        pill.style.width = selected.offsetWidth + "px";
     },
     populateTermsMenuSections(listItems) {
         listItems.push(

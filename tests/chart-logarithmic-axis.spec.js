@@ -63,10 +63,13 @@ async function plotClientPoint(page, xFraction, yFraction) {
     }, { xFraction, yFraction });
 }
 
+// The scale is one of the vertical axis's choices, offered inside the axis chip once it is opened.
 async function openChartSettings(page) {
     await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Chart1')));
     await page.locator('.shape-context-toolbar.visible .mdl-chart-type-selector').click();
-    await expect(page.locator('.mdl-shape-overlay-popup .mdl-axis-scale-group')).toHaveCount(1);
+    await expect(page.locator('.mdl-shape-overlay-popup .mdl-axis-chip-editor[data-axis="y"]')).toHaveCount(1);
+    await page.evaluate(() => $(document.querySelector('.mdl-shape-overlay-popup .mdl-axis-chip-editor[data-axis="y"]')).dxDropDownBox('instance').open());
+    await expect(page.locator('.mdl-axis-chip-popup .mdl-axis-scale-group')).toHaveCount(1);
 }
 
 test.describe('the chart read logarithmically', () => {
@@ -132,26 +135,33 @@ test.describe('the chart read logarithmically', () => {
         expect(path.startsWith('M')).toBe(true);
     });
 
-    // The switch stands on the chart's own menu, for the vertical axis alone. A bound at zero is
-    // lifted to 1 when the axis is read logarithmically, since the axis has to run between two
-    // positive ends, and taking the choice back takes the bound back with it.
+    // The switch stands inside each axis's chip on the chart's own menu. A bound at zero is lifted
+    // to 1 when the axis is read logarithmically, since the axis has to run between two positive
+    // ends, and taking the choice back takes the bound back with it.
     test('is switched from its own row, lifting a bound at zero to 1', async ({ page }) => {
         await setupEditor(page);
         await setupChart(page, { autoScale: false, domainOverride: { xMin: 0, xMax: 10, yMin: 0, yMax: 10 } });
         await openChartSettings(page);
-        const verticalScale = page.locator('.mdl-shape-overlay-popup .mdl-axis-scale-group[data-axis="y"] .dx-button');
+        const verticalScale = page.locator('.mdl-axis-chip-popup .mdl-axis-scale-group[data-axis="y"] .dx-button');
         await expect(verticalScale).toHaveText(['Linear', 'Log']);
         await verticalScale.nth(1).click();
         await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Chart1').properties.yScaleType)).toBe('logarithmic');
         let state = await readChartState(page);
         expect(state.properties.xScaleType).toBe('linear');
-        expect(await page.locator('.mdl-shape-overlay-popup .mdl-axis-scale-group[data-axis="x"]').count()).toBe(0);
         expect(state.properties.domainOverride).toEqual({ xMin: 0, xMax: 10, yMin: 1, yMax: 10 });
         expect(state.yTicks).toEqual([1, 10]);
         await page.evaluate(() => shell.board.invoker.undo());
         await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Chart1').properties.yScaleType)).toBe('linear');
         state = await readChartState(page);
         expect(state.properties.domainOverride).toEqual({ xMin: 0, xMax: 10, yMin: 0, yMax: 10 });
+        // The horizontal axis has the same switch inside its own chip.
+        await page.evaluate(() => $(document.querySelector('.mdl-shape-overlay-popup .mdl-axis-chip-editor[data-axis="x"]')).dxDropDownBox('instance').open());
+        const horizontalScale = page.locator('.mdl-axis-chip-popup .mdl-axis-scale-group[data-axis="x"] .dx-button');
+        await expect(horizontalScale).toHaveText(['Linear', 'Log']);
+        await horizontalScale.nth(1).click();
+        await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Chart1').properties.xScaleType)).toBe('logarithmic');
+        state = await readChartState(page);
+        expect(state.properties.domainOverride).toEqual({ xMin: 1, xMax: 10, yMin: 0, yMax: 10 });
     });
 
     // Recentring on a logarithmic axis brings the point under the pointer to 1 rather than to 0,

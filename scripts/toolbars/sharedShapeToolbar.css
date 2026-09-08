@@ -296,6 +296,52 @@ math-field {
     width: 100%;
 }
 
+/* An axis is a chip the width of its cell: its two ends typeset as maths with the toolbar's × between
+   them, in the colour it has there, and after them a mark for each of the other choices its drop down
+   offers, written the way the chosen pill is. Inside, each end has a box the width of the row, and
+   the choices stand on rows of their own under the ends. */
+.mdl-axis-chip-host,
+.mdl-axis-chip-editor {
+    width: 100%;
+    min-width: 0;
+}
+
+.mdl-axis-chip .mdl-axis-chip__bound {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+}
+
+.mdl-axis-chip__x {
+    flex: none;
+    font-size: 6px;
+    line-height: 1;
+    margin: 0 2px;
+    color: #253047;
+}
+
+.mdl-axis-chip__mark .mdl-axis-chip__mark-field {
+    font-size: 12px;
+}
+
+.mdl-axis-chip__mark {
+    font-size: 12px;
+}
+
+.mdl-axis-chip-rows {
+    min-width: 200px;
+}
+
+.mdl-term-editor-row-control.mdl-axis-chip-bound-row,
+.mdl-term-editor-row-control.mdl-axis-chip-bound-row .mdl-axis-range-box {
+    width: 100%;
+}
+
+.mdl-term-editor-row-control.mdl-axis-chip-part-row {
+    justify-content: flex-start;
+}
+
 .mdl-gauge-ranges-editor {
     width: 100%;
 }

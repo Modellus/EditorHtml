@@ -166,11 +166,11 @@ var ReferentialShapeToolbarMixin = {
                         },
                         {
                             text: "Horizontal",
-                            buildControl: $p => this.getAxisRangeControl().createRow("x").appendTo($p)
+                            buildControl: $p => this.getAxisRangeControl().createChip("x").appendTo($p)
                         },
                         {
                             text: "Vertical",
-                            buildControl: $p => this.getAxisRangeControl().createRow("y").appendTo($p)
+                            buildControl: $p => this.getAxisRangeControl().createChip("y").appendTo($p)
                         },
                         {
                             text: "Snap to Ticks",

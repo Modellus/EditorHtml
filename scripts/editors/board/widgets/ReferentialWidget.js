@@ -516,6 +516,7 @@ class ReferentialShape extends BaseShape {
     // scale put them, so a bound that is written is turned back into an origin and a scale.
     getAxisRangeControl() {
         this._axisRangeControl ??= new AxisRangeControl({
+            shape: this,
             read: (axis, bound) => this.getVisibleDomain()[`${axis}${bound}`],
             write: (axis, bound, value) => {
                 const domain = this.getVisibleDomain();

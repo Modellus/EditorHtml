@@ -25,8 +25,8 @@ async function addRuler(page) {
     await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Ruler')?.contentGroup?.children.length ?? 0)).toBeGreaterThan(0);
 }
 
-// The ruler's ends are edited on the Horizontal row of its settings menu, the way a chart's are.
-// Each box is written into through the math field laid over it.
+// The ruler's ends are edited inside the axis chip on the Horizontal row of its settings menu, the
+// way a chart's are. Each box is written into through the math field laid over it.
 async function openRulerEnds(page) {
     await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Ruler')));
     await page.waitForTimeout(300);
@@ -34,7 +34,10 @@ async function openRulerEnds(page) {
     await page.waitForTimeout(400);
     const row = page.locator('.mdl-shape-overlay-popup .mdl-dropdown-list-item').filter({ hasText: 'Horizontal' });
     await expect(row).toBeVisible();
-    return row.locator('math-field.mdl-numeric-math-field');
+    await row.locator('.mdl-axis-chip-editor').evaluate(element => $(element).dxDropDownBox('instance').open());
+    const rows = page.locator('.mdl-axis-chip-popup .mdl-axis-chip-rows:visible');
+    await expect(rows).toHaveCount(1);
+    return rows.locator('math-field.mdl-numeric-math-field');
 }
 
 // The menu is closed off the button that opened it, and the next opening waits for it to be
@@ -190,8 +193,8 @@ test.describe('a value typed into a number field', () => {
         const fields = await openRulerEnds(page);
         await typeInto(page, fields.first(), '0.7');
         await page.evaluate(() => {
-            const row = Array.from(document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item')).find(item => item.querySelector('.mdl-dropdown-list-label').textContent === 'Horizontal');
-            DevExpress.ui.dxNumberBox.getInstance(row.querySelectorAll('.dx-numberbox')[0]).option('value', 0.7 + 0.1);
+            const rows = Array.from(document.querySelectorAll('.mdl-axis-chip-rows')).find(element => element.offsetParent !== null);
+            DevExpress.ui.dxNumberBox.getInstance(rows.querySelectorAll('.dx-numberbox')[0]).option('value', 0.7 + 0.1);
         });
         await page.waitForTimeout(200);
         expect(await readField(fields.first())).toBe('0.8');
