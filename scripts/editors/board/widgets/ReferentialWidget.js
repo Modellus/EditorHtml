@@ -67,19 +67,55 @@ class ReferentialShape extends BaseShape {
     }
 
     offsetDescendantTrajectories(deltaX, deltaY) {
+        this.forEachDescendantTrajectoryPoint(point => {
+            point.x += deltaX;
+            point.y += deltaY;
+            if (point.startX !== undefined)
+                point.startX += deltaX;
+            if (point.startY !== undefined)
+                point.startY += deltaY;
+        });
+    }
+
+    // Bodies, points and vectors keep their trails as points on the board, laid down at the turn
+    // the referential had then. When the referential is turned, the trails are turned with it
+    // about the same centre, so a trail stays on the path its shape drew in the referential.
+    // (A line or an arc keeps its trail in the referential's own numbers, and places it afresh.)
+    turnDescendantTrajectoriesWithFrame() {
+        const rotation = this.getAbsoluteRotation();
+        const previousRotation = this._trajectoryFrameRotation;
+        this._trajectoryFrameRotation = rotation;
+        if (previousRotation === undefined || Math.abs(rotation - previousRotation) < 0.00001)
+            return;
+        const center = this.getRotationCenterForShape(this);
+        if (!center)
+            return;
+        const deltaRotation = rotation - previousRotation;
+        const turn = (x, y) => this.rotatePointAroundCenter(x, y, center.x, center.y, deltaRotation);
+        this.forEachDescendantTrajectoryPoint(point => {
+            const turned = turn(point.x, point.y);
+            point.x = turned.x;
+            point.y = turned.y;
+            if (point.startX !== undefined && point.startY !== undefined) {
+                const turnedStart = turn(point.startX, point.startY);
+                point.startX = turnedStart.x;
+                point.startY = turnedStart.y;
+            }
+        }, child => child.tickStroboscopy?.());
+    }
+
+    forEachDescendantTrajectoryPoint(visitPoint, visitChild = null) {
         const stack = [...this.children];
         while (stack.length > 0) {
             const child = stack.pop();
             if (child.trajectory?.values) {
                 for (const point of child.trajectory.values) {
-                    point.x += deltaX;
-                    point.y += deltaY;
-                    if (point.startX !== undefined)
-                        point.startX += deltaX;
-                    if (point.startY !== undefined)
-                        point.startY += deltaY;
+                    if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y))
+                        continue;
+                    visitPoint(point);
                 }
                 child.trajectory.pointsString = child.trajectory.values.map(v => `${v.x},${v.y}`).join(" ");
+                visitChild?.(child);
             }
             if (child.children)
                 stack.push(...child.children);
@@ -179,15 +215,15 @@ class ReferentialShape extends BaseShape {
         this.horizontalAxis = this.board.createSvgElement("line");
         this.horizontalAxis.setAttribute("stroke-width", 1);
         this.horizontalAxis.setAttribute("class", "referential-axis-line");
-        this.horizontalAxis.setAttribute("clip-path", `url(#${this.getClipId()})`);
+        this.horizontalAxis.setAttribute("clip-path", `url(#${this.getFrameClipId()})`);
         g.appendChild(this.horizontalAxis);
         this.verticalAxis = this.board.createSvgElement("line");
         this.verticalAxis.setAttribute("stroke-width", 1);
         this.verticalAxis.setAttribute("class", "referential-axis-line");
-        this.verticalAxis.setAttribute("clip-path", `url(#${this.getClipId()})`);
+        this.verticalAxis.setAttribute("clip-path", `url(#${this.getFrameClipId()})`);
         g.appendChild(this.verticalAxis);
         this.ticksLayer = this.board.createSvgElement("g");
-        this.ticksLayer.setAttribute("clip-path", `url(#${this.getClipId()})`);
+        this.ticksLayer.setAttribute("clip-path", `url(#${this.getFrameClipId()})`);
         g.appendChild(this.ticksLayer);
         this.gridGroups = {
             horizontal: this.board.createSvgElement("g"),
@@ -221,8 +257,8 @@ class ReferentialShape extends BaseShape {
         };
         this.tickLabels.horizontal.setAttribute("class", "referential-horizontal-labels");
         this.tickLabels.vertical.setAttribute("class", "referential-vertical-labels");
-        this.tickLabels.horizontal.setAttribute("clip-path", `url(#${this.getClipId()})`);
-        this.tickLabels.vertical.setAttribute("clip-path", `url(#${this.getClipId()})`);
+        this.tickLabels.horizontal.setAttribute("clip-path", `url(#${this.getFrameClipId()})`);
+        this.tickLabels.vertical.setAttribute("clip-path", `url(#${this.getFrameClipId()})`);
         this.ticksLayer.appendChild(this.tickLabels.horizontal);
         this.ticksLayer.appendChild(this.tickLabels.vertical);
         this.tickInteractionLayer = this.board.createSvgElement("g");
@@ -236,6 +272,16 @@ class ReferentialShape extends BaseShape {
         defs.appendChild(clipPath);
         this.containerClip = this.board.createSvgElement("rect");
         clipPath.appendChild(this.containerClip);
+        // The axes, grid and ticks are drawn in the referential's own frame and turned as a
+        // whole, so a clip on them is read in that turned frame: it is the plain rectangle,
+        // turned by their own transform. The children are drawn straight onto the board, so
+        // their clip carries the turn itself.
+        const frameClipPath = this.board.createSvgElement("clipPath");
+        frameClipPath.setAttribute("id", this.getFrameClipId());
+        frameClipPath.setAttribute("clipPathUnits", "userSpaceOnUse");
+        defs.appendChild(frameClipPath);
+        this.frameClip = this.board.createSvgElement("rect");
+        frameClipPath.appendChild(this.frameClip);
         return g;
     }    
 
@@ -243,7 +289,15 @@ class ReferentialShape extends BaseShape {
         super.update();
     }
 
+    // The trails are turned before the children record or draw anything at the new turn, so
+    // a point laid down just now is never turned a second time.
+    tick() {
+        this.turnDescendantTrajectoriesWithFrame();
+        super.tick();
+    }
+
     draw() {
+        this.turnDescendantTrajectoriesWithFrame();
         super.draw();
         this.drawAxis();
         this.drawTicks();
@@ -263,6 +317,10 @@ class ReferentialShape extends BaseShape {
         this.containerClip.setAttribute("width", this.properties.width);
         this.containerClip.setAttribute("height", this.properties.height);
         this.containerClip.setAttribute("transform", rotationTransform);
+        this.frameClip.setAttribute("x", position.x);
+        this.frameClip.setAttribute("y", position.y);
+        this.frameClip.setAttribute("width", this.properties.width);
+        this.frameClip.setAttribute("height", this.properties.height);
         this.container.setAttribute("fill", this.properties.backgroundColor);
         this.applyBorderStroke(this.container, 1);
         const backgroundImageUrl = this.properties.backgroundImageUrl ?? "";
@@ -874,6 +932,10 @@ class ReferentialShape extends BaseShape {
 
     getClipId() {
         return `clip-${this.id}`;
+    }
+
+    getFrameClipId() {
+        return `clip-${this.id}-frame`;
     }
 
     collectSvgElements() {

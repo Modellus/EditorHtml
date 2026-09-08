@@ -501,6 +501,9 @@ class Selection {
     }
 
     getOutlineRotationDegrees(shape) {
+        const outlineRotation = Number(shape?.getSelectionOutlineRotationDegrees?.());
+        if (Number.isFinite(outlineRotation))
+            return outlineRotation;
         const bounds = shape?.getBounds?.();
         const boundsRotation = Number(bounds?.rotation);
         if (Number.isFinite(boundsRotation))

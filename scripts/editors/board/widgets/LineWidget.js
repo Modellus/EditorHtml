@@ -55,20 +55,20 @@ class LineShape extends ChildShape {
 
     isPointerNearShape(point) {
         const origin = this.getBoardPosition();
-        const angleRad = this.getAngleRadians();
-        const dirX = Math.cos(angleRad);
-        const dirY = -Math.sin(angleRad);
+        const dir = this.getBoardDirectionFromLocalAngle(this.getAngleRadians());
+        const dirX = dir.x;
+        const dirY = dir.y;
         const perpendicular = Math.abs((point.x - origin.x) * dirY - (point.y - origin.y) * dirX);
         return perpendicular <= this.getReferencePointProximityThreshold();
     }
 
     getSelectionOutlinePrimitives() {
         const position = this.getBoardPosition();
-        const angleRad = this.getAngleRadians();
+        const dir = this.getBoardDirectionFromLocalAngle(this.getAngleRadians());
         const lineLength = this.getLineLength();
         const lineWidth = this.properties.lineWidth ?? 1;
-        const halfX = Math.cos(angleRad) * lineLength;
-        const halfY = -Math.sin(angleRad) * lineLength;
+        const halfX = dir.x * lineLength;
+        const halfY = dir.y * lineLength;
         return [{
             tag: "line",
             mode: "stroke",
@@ -141,8 +141,7 @@ class LineShape extends ChildShape {
     // does not change the line's data.
     getGripPositions() {
         const origin = this.getBoardPosition();
-        const angleRad = this.getAngleRadians();
-        const dir = { x: Math.cos(angleRad), y: -Math.sin(angleRad) };
+        const dir = this.getBoardDirectionFromLocalAngle(this.getAngleRadians());
         const desired = this.getAngleHandleDistance();
         const pointOnLine = t => ({ x: origin.x + dir.x * t, y: origin.y + dir.y * t });
         const rect = this.getReferentialRect();
@@ -376,14 +375,7 @@ class LineShape extends ChildShape {
         const scaleY = scale.y ?? 1;
         const localX = scaleX !== 0 ? logicalX / scaleX : 0;
         const localY = scaleY !== 0 ? -logicalY / scaleY : 0;
-        const parent = this.parent;
-        if (!parent)
-            return { x: localX, y: localY };
-        const parentPosition = parent.getBoardPosition?.() ?? { x: 0, y: 0 };
-        return {
-            x: localX + parentPosition.x + (parent.properties?.originX ?? 0),
-            y: localY + parentPosition.y + (parent.properties?.originY ?? 0)
-        };
+        return this.getBoardPositionFromLocalPosition({ x: localX, y: localY });
     }
 
     tickTrajectory() {
@@ -417,15 +409,15 @@ class LineShape extends ChildShape {
     draw() {
         super.draw();
         const position = this.getBoardPosition();
-        const angleRad = this.getAngleRadians();
         const lineLength = this.getLineLength();
         const lineWidth = this.properties.lineWidth ?? 1;
         const color = this.properties.foregroundColor;
-        // Direction of the line in screen space. +angle points up, matching the
-        // angle point and the drag handle, so the line always passes through the
-        // angle point (origin -> angle point define the same ray).
-        const dirX = Math.cos(angleRad);
-        const dirY = -Math.sin(angleRad);
+        // Direction of the line in screen space. +angle points up in the referential,
+        // matching the angle point and the drag handle, so the line always passes through
+        // the angle point (origin -> angle point define the same ray).
+        const dir = this.getBoardDirectionFromLocalAngle(this.getAngleRadians());
+        const dirX = dir.x;
+        const dirY = dir.y;
         const halfX = dirX * lineLength;
         const halfY = dirY * lineLength;
         this.mainLine.setAttribute("x1", position.x - halfX);
@@ -462,9 +454,9 @@ class LineShape extends ChildShape {
         for (let i = 0; i < desiredLength; i++) {
             const logical = positions[i];
             const pos = this.logicalToBoardPosition(logical.logicalX, logical.logicalY);
-            const angleRad = (logical.angle ?? 0) * Math.PI / 180;
-            const halfX = Math.cos(angleRad) * lineLength;
-            const halfY = -Math.sin(angleRad) * lineLength;
+            const dir = this.getBoardDirectionFromLocalAngle((logical.angle ?? 0) * Math.PI / 180);
+            const halfX = dir.x * lineLength;
+            const halfY = dir.y * lineLength;
             html += `<line x1="${pos.x - halfX}" y1="${pos.y - halfY}" x2="${pos.x + halfX}" y2="${pos.y + halfY}" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"/>`;
         }
         this.stroboscopy.innerHTML = html;

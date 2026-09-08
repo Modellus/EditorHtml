@@ -56,6 +56,52 @@ class ChildShape extends BaseShape {
         return "crosshair";
     }
 
+    // A referential child is drawn straight onto the board, at the turned positions its terms
+    // give it, so its handles are laid where they are asked for and never turned a second time.
+    applyHandleRotation(handle) {
+        handle?.removeAttribute("transform");
+    }
+
+    // A child turns about the point its terms place it at. The pointer is read back into the
+    // parent's frame around that point, so an angle or a size measured from the pointer comes
+    // out in the frame the terms are written in.
+    getHandleRotationCenter() {
+        return this.getBoardPosition();
+    }
+
+    getResizeDragPoint(point) {
+        return this.getDragPointInParentFrame(point);
+    }
+
+    // Pointer movements arrive on the board; x, y, width and height are kept in the parent's
+    // frame, so a movement is turned back before it is read as a change of them.
+    getDragPointInParentFrame(point) {
+        const framePoint = this.getLocalPointFromBoardPoint(point);
+        const frameDelta = this.getLocalOffsetFromBoardOffset(point.dx ?? 0, point.dy ?? 0);
+        return Object.assign({}, point, { x: framePoint.x, y: framePoint.y, dx: frameDelta.x, dy: frameDelta.y });
+    }
+
+    // A direction measured in the referential - an angle anticlockwise from its x axis - as it
+    // lies on the board once the referential is turned; and the angle itself as the board
+    // measures it, for what is drawn from angles.
+    getBoardDirectionFromLocalAngle(angleRadians) {
+        return this.getBoardOffsetFromLocalOffset(Math.cos(angleRadians), -Math.sin(angleRadians));
+    }
+
+    getBoardAngleFromLocalAngle(angleRadians) {
+        return angleRadians - this.getParentRotationDegrees() * Math.PI / 180;
+    }
+
+    // The outline traces geometry the child already laid on the board, turned and all.
+    getSelectionOutlineRotationDegrees() {
+        return 0;
+    }
+
+    // The labels of a child are turned with the referential, so they read along its axes.
+    getTermLabelRotationDegrees() {
+        return this.getParentRotationDegrees();
+    }
+
     // The referential's visible rectangle in board coordinates, or null when it
     // cannot be resolved (or is rotated, where an axis-aligned clamp would be
     // wrong - callers then fall back to unclamped positions). Shared by shapes
@@ -208,21 +254,25 @@ class ChildShape extends BaseShape {
     }
 
     snapDragPoint(point) {
+        const framePoint = this.getDragPointInParentFrame(point);
         const referential = this.getReferential();
         if (!referential?.properties?.snapToTicks)
-            return point;
+            return framePoint;
         const spacing = referential.getTickPixelSpacing();
         if (!spacing.x || !spacing.y)
-            return point;
+            return framePoint;
+        // The ticks lie on a grid in the referential's own frame, so the pointer and the shape
+        // are both read there before the nearest tick is looked for.
+        const pointerInFrame = referential.getLocalPointFromBoardPoint(point);
         if (!this._snapGrabOffset) {
-            const boardPosition = this.getBoardPosition();
-            this._snapGrabOffset = { x: point.x - boardPosition.x, y: point.y - boardPosition.y };
+            const positionInFrame = referential.getLocalPointFromBoardPoint(this.getBoardPosition());
+            this._snapGrabOffset = { x: pointerInFrame.x - positionInFrame.x, y: pointerInFrame.y - positionInFrame.y };
         }
         const refPosition = referential.getBoardPosition();
         const originX = referential.properties.originX ?? referential.properties.width / 2;
         const originY = referential.properties.originY ?? referential.properties.height / 2;
-        const desiredLocalX = point.x - this._snapGrabOffset.x - refPosition.x - originX;
-        const desiredLocalY = point.y - this._snapGrabOffset.y - refPosition.y - originY;
+        const desiredLocalX = pointerInFrame.x - this._snapGrabOffset.x - refPosition.x - originX;
+        const desiredLocalY = pointerInFrame.y - this._snapGrabOffset.y - refPosition.y - originY;
         const snappedX = Math.round(desiredLocalX / spacing.x) * spacing.x;
         const snappedY = Math.round(desiredLocalY / spacing.y) * spacing.y;
         return { x: point.x, y: point.y, dx: snappedX - this.properties.x, dy: snappedY - this.properties.y };
@@ -308,13 +358,14 @@ class ChildShape extends BaseShape {
 
     getStroboscopyFallbackLabelPosition(position, entry, index) {
         const offset = this.getStroboscopyPositionOffset(position);
-        const entryPosition = this.getTermEntryLabelPosition(entry, index);
+        const entryPosition = this.termDisplay.turnLabelPointAboutShape(this.getTermEntryLabelPosition(entry, index));
         if (entryPosition)
             return { x: entryPosition.x + offset.x, y: entryPosition.y + offset.y, anchor: entryPosition.anchor ?? "middle" };
         const labelAnchor = this.getTermLabelAnchor();
         if (!labelAnchor)
             return null;
-        return { x: labelAnchor.x + offset.x, y: labelAnchor.y + offset.y + index * 12, anchor: labelAnchor.anchor ?? "middle" };
+        const stackedAnchor = this.termDisplay.turnLabelPointAboutShape({ x: labelAnchor.x, y: labelAnchor.y + index * 12 });
+        return { x: stackedAnchor.x + offset.x, y: stackedAnchor.y + offset.y, anchor: labelAnchor.anchor ?? "middle" };
     }
 
     // Ghosts often project onto the same spot of an axis (a body passing twice
@@ -415,7 +466,9 @@ class ChildShape extends BaseShape {
                 if (axisValueKey)
                     drawnAxisValues.add(axisValueKey);
                 const textHtml = Utils.buildTermValueTextHtml(labelEntry.termText, valueText, this.getTermUnitText(labelEntry.termName, labelEntry.entry?.term ?? ""));
-                html += `<g opacity="${opacity}"><rect class="shape-term-label-bg" rx="3" fill-opacity="0.85" fill="${color}"></rect>`;
+                const labelRotation = this.getTermLabelRotationDegrees();
+                const rotationAttribute = Math.abs(labelRotation) >= 0.00001 ? ` transform="rotate(${labelRotation} ${labelPosition.x} ${labelPosition.y})"` : "";
+                html += `<g opacity="${opacity}"${rotationAttribute}><rect class="shape-term-label-bg" rx="3" fill-opacity="0.85" fill="${color}"></rect>`;
                 html += `<text class="shape-term-label" x="${labelPosition.x}" y="${labelPosition.y}" text-anchor="${labelPosition.anchor}" dominant-baseline="central" fill="${textColor}">${textHtml}</text></g>`;
             }
         }

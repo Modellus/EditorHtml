@@ -51,7 +51,7 @@ class VectorShape extends ChildShape {
     // relative delta, so clamping the display never changes the vector's data.
     getGripPositions() {
         const origin = this.getBoardPosition();
-        const tip = { x: origin.x + this.properties.width, y: origin.y + this.properties.height };
+        const tip = this.getTipBoardPosition(origin);
         const rect = this.getReferentialRect();
         if (!rect)
             return { origin: origin, tip: tip };
@@ -83,18 +83,26 @@ class VectorShape extends ChildShape {
 
     hideSelectionOutline = true;
 
+    // The tip lies a width across and a height up from the origin, measured in the
+    // referential's frame, so it is turned with the referential on the board.
+    getTipBoardPosition(origin = this.getBoardPosition()) {
+        const offset = this.getBoardOffsetFromLocalOffset(this.properties.width, this.properties.height);
+        return { x: origin.x + offset.x, y: origin.y + offset.y };
+    }
+
     getReferencePointMarkers() {
         return [this.originPointMarker, this.tipPointMarker];
     }
 
     isPointerNearShape(point) {
         const origin = this.getBoardPosition();
-        const tip = { x: origin.x + this.properties.width, y: origin.y + this.properties.height };
+        const tip = this.getTipBoardPosition(origin);
         return this.distanceToSegment(point, origin, tip) <= this.getReferencePointProximityThreshold();
     }
 
     getSelectionOutlinePrimitives() {
         const position = this.getBoardPosition();
+        const tip = this.getTipBoardPosition(position);
         const lineWidth = this.properties.lineWidth ?? 1;
         return [{
             tag: "line",
@@ -103,8 +111,8 @@ class VectorShape extends ChildShape {
             attributes: {
                 x1: position.x,
                 y1: position.y,
-                x2: position.x + this.properties.width,
-                y2: position.y + this.properties.height
+                x2: tip.x,
+                y2: tip.y
             }
         }];
     }
@@ -574,10 +582,11 @@ class VectorShape extends ChildShape {
         super.draw();
         const lineWidth = this.properties.lineWidth ?? 1;
         const position = this.getBoardPosition();
+        const tip = this.getTipBoardPosition(position);
         const startX = position.x;
         const startY = position.y;
-        const tipX = this.properties.width + startX;
-        const tipY = this.properties.height + startY;
+        const tipX = tip.x;
+        const tipY = tip.y;
         const color = this.properties.foregroundColor;
         const borderColor = this.getBorderColor();
         this.defs.innerHTML = this.buildMarker();
@@ -611,26 +620,32 @@ class VectorShape extends ChildShape {
         this.updateReferencePointMarker(this.originPointMarker, grips.origin, color);
         this.updateReferencePointMarker(this.tipPointMarker, grips.tip, color);
         this.applyReferencePointVisibility();
-        this.drawComponents(startX, startY, tipX, tipY, color, lineWidth);
+        this.drawComponents(position, color, lineWidth);
         this.drawTrajectory();
         this.drawStroboscopy();
     }
 
-    drawComponents(startX, startY, tipX, tipY, color, lineWidth) {
+    // The components run along the referential's axes from the origin, so each is laid along
+    // its axis as that axis lies on the board.
+    drawComponents(origin, color, lineWidth) {
         if (!this.properties.showComponents) {
             this.componentGroup.setAttribute("display", "none");
             return;
         }
         this.componentGroup.removeAttribute("display");
         const componentOpacity = 0.4;
-        const hasHorizontal = Math.abs(tipX - startX) > 0.5;
-        const hasVertical = Math.abs(tipY - startY) > 0.5;
+        const startX = origin.x;
+        const startY = origin.y;
+        const horizontalOffset = this.getBoardOffsetFromLocalOffset(this.properties.width, 0);
+        const verticalOffset = this.getBoardOffsetFromLocalOffset(0, this.properties.height);
+        const hasHorizontal = Math.abs(this.properties.width) > 0.5;
+        const hasVertical = Math.abs(this.properties.height) > 0.5;
         if (hasHorizontal) {
             this.horizontalComponentLine.removeAttribute("display");
             this.horizontalComponentLine.setAttribute("x1", startX);
             this.horizontalComponentLine.setAttribute("y1", startY);
-            this.horizontalComponentLine.setAttribute("x2", tipX);
-            this.horizontalComponentLine.setAttribute("y2", startY);
+            this.horizontalComponentLine.setAttribute("x2", startX + horizontalOffset.x);
+            this.horizontalComponentLine.setAttribute("y2", startY + horizontalOffset.y);
             this.horizontalComponentLine.setAttribute("stroke", color);
             this.horizontalComponentLine.setAttribute("stroke-width", lineWidth);
             this.horizontalComponentLine.setAttribute("opacity", componentOpacity);
@@ -649,8 +664,8 @@ class VectorShape extends ChildShape {
             this.verticalComponentLine.removeAttribute("display");
             this.verticalComponentLine.setAttribute("x1", startX);
             this.verticalComponentLine.setAttribute("y1", startY);
-            this.verticalComponentLine.setAttribute("x2", startX);
-            this.verticalComponentLine.setAttribute("y2", tipY);
+            this.verticalComponentLine.setAttribute("x2", startX + verticalOffset.x);
+            this.verticalComponentLine.setAttribute("y2", startY + verticalOffset.y);
             this.verticalComponentLine.setAttribute("stroke", color);
             this.verticalComponentLine.setAttribute("stroke-width", lineWidth);
             this.verticalComponentLine.setAttribute("opacity", componentOpacity);
@@ -668,14 +683,13 @@ class VectorShape extends ChildShape {
     }
 
     getShapeCenterPosition() {
-        const position = this.getBoardPosition();
-        return { x: position.x + this.properties.width, y: position.y + this.properties.height };
+        return this.getTipBoardPosition();
     }
 
     getTermEntryAnchorPoint(entry) {
         const position = this.getBoardPosition();
         if (entry.endpoint === "tip")
-            return { x: position.x + this.properties.width, y: position.y + this.properties.height };
+            return this.getTipBoardPosition(position);
         return { x: position.x, y: position.y };
     }
 
@@ -696,7 +710,8 @@ class VectorShape extends ChildShape {
 
     getTrajectoryPosition() {
         const position = this.getBoardPosition();
-        return { x: position.x + this.properties.width, y: position.y + this.properties.height, startX: position.x, startY: position.y };
+        const tip = this.getTipBoardPosition(position);
+        return { x: tip.x, y: tip.y, startX: position.x, startY: position.y };
     }
 
     buildStroboscopyMarkerForTip(end) {

@@ -47,10 +47,8 @@ class ArcShape extends ChildShape {
     getArcGripPositions() {
         const origin = this.getBoardPosition();
         const radiusPx = Math.abs(Number(this.properties.radius) || 0);
-        const startRad = this.toRadians(this.properties.startAngle);
-        const endRad = this.toRadians(this.properties.endAngle);
-        const startDir = { x: Math.cos(startRad), y: -Math.sin(startRad) };
-        const endDir = { x: Math.cos(endRad), y: -Math.sin(endRad) };
+        const startDir = this.getBoardDirectionFromLocalAngle(this.toRadians(this.properties.startAngle));
+        const endDir = this.getBoardDirectionFromLocalAngle(this.toRadians(this.properties.endAngle));
         const along = (dir, t) => ({ x: origin.x + dir.x * t, y: origin.y + dir.y * t });
         const rect = this.getReferentialRect();
         if (!rect) {
@@ -125,9 +123,7 @@ class ArcShape extends ChildShape {
     getSelectionOutlinePrimitives() {
         const position = this.getBoardPosition();
         const pixelRadius = Math.abs(this.properties.radius);
-        const startRad = this.toRadians(this.properties.startAngle);
-        const endRad = this.toRadians(this.properties.endAngle);
-        const pathData = this.buildArcPathData(position.x, position.y, pixelRadius, startRad, endRad);
+        const pathData = this.buildBoardArcPathData(position.x, position.y, pixelRadius, this.properties.startAngle, this.properties.endAngle);
         if (!pathData)
             return null;
         const lineWidth = this.properties.lineWidth ?? 2;
@@ -410,6 +406,14 @@ class ArcShape extends ChildShape {
         return `M ${startX} ${startY} A ${pixelRadius} ${pixelRadius} 0 ${largeArc} ${sweepFlag} ${endX} ${endY}`;
     }
 
+    // The angles are measured in the referential; the arc is drawn on the board, where the
+    // referential may be turned, so they are turned along with it first.
+    buildBoardArcPathData(cx, cy, pixelRadius, startAngle, endAngle) {
+        const startRad = this.getBoardAngleFromLocalAngle(this.toRadians(startAngle));
+        const endRad = this.getBoardAngleFromLocalAngle(this.toRadians(endAngle));
+        return this.buildArcPathData(cx, cy, pixelRadius, startRad, endRad);
+    }
+
     getPulseElements(key) {
         return [this.arcPath, this.pointMarker];
     }
@@ -420,11 +424,9 @@ class ArcShape extends ChildShape {
         const cx = position.x;
         const cy = position.y;
         const pixelRadius = Math.abs(this.properties.radius);
-        const startRad = this.toRadians(this.properties.startAngle);
-        const endRad = this.toRadians(this.properties.endAngle);
         const lineWidth = this.properties.lineWidth ?? 2;
         const color = this.properties.foregroundColor;
-        const pathData = this.buildArcPathData(cx, cy, pixelRadius, startRad, endRad);
+        const pathData = this.buildBoardArcPathData(cx, cy, pixelRadius, this.properties.startAngle, this.properties.endAngle);
         if (pathData) {
             this.arcPath.setAttribute("d", pathData);
             this.arcPath.setAttribute("stroke", color);
@@ -466,14 +468,7 @@ class ArcShape extends ChildShape {
         const scaleY = scale.y ?? 1;
         const localX = scaleX !== 0 ? logicalX / scaleX : 0;
         const localY = scaleY !== 0 ? -logicalY / scaleY : 0;
-        const parent = this.parent;
-        if (!parent)
-            return { x: localX, y: localY };
-        const parentPosition = parent.getBoardPosition?.() ?? { x: 0, y: 0 };
-        return {
-            x: localX + parentPosition.x + (parent.properties?.originX ?? 0),
-            y: localY + parentPosition.y + (parent.properties?.originY ?? 0)
-        };
+        return this.getBoardPositionFromLocalPosition({ x: localX, y: localY });
     }
 
     tickTrajectory() {
@@ -522,9 +517,7 @@ class ArcShape extends ChildShape {
             const logical = positions[i];
             const pos = this.logicalToBoardPosition(logical.logicalX, logical.logicalY);
             const pixelRadius = scaleX !== 0 ? Math.abs(logical.radius) / scaleX : 0;
-            const startRad = this.toRadians(logical.startAngle);
-            const endRad = this.toRadians(logical.endAngle);
-            const pathData = this.buildArcPathData(pos.x, pos.y, pixelRadius, startRad, endRad);
+            const pathData = this.buildBoardArcPathData(pos.x, pos.y, pixelRadius, logical.startAngle, logical.endAngle);
             if (pathData)
                 html += `<path d="${pathData}" fill="none" stroke="${color}" stroke-width="${lineWidth}" opacity="${opacity}"/>`;
         }

@@ -803,6 +803,29 @@ class BaseShape {
         return Object.assign({}, point, { x: x, y: y });
     }
 
+    // The way back: a point in the shape's unrotated, unmirrored frame, placed where it lies on
+    // the board. Mirror first, then rotate, the reverse of the order the frame is undone in.
+    getBoardPointFromLocalPoint(point) {
+        const rotation = this.getHandleRotationDegrees();
+        const center = this.getHandleRotationCenter();
+        if (!center)
+            return point;
+        let x = point.x;
+        let y = point.y;
+        if (this.isFlippedHorizontally())
+            x = 2 * center.x - x;
+        if (this.isFlippedVertically())
+            y = 2 * center.y - y;
+        if (Math.abs(rotation) >= 0.00001) {
+            const rotated = this.rotatePointAroundCenter(x, y, center.x, center.y, rotation);
+            x = rotated.x;
+            y = rotated.y;
+        }
+        if (x === point.x && y === point.y)
+            return point;
+        return Object.assign({}, point, { x: x, y: y });
+    }
+
     // Mirrors a point the shape computed from its own geometry, so a handle
     // placed from it lands on the mirrored drawing. Handles take their rotation
     // from applyHandleRotation, which is why only the mirror belongs here.
@@ -1824,6 +1847,38 @@ class BaseShape {
         return normalizedLocalRotation + parentRotation;
     }
 
+    // How far the frame a shape is placed in is turned on the board: the rotation of its parent
+    // together with that of everything the parent sits in. A shape with no parent sits in the
+    // board itself, which is never turned.
+    getParentRotationDegrees() {
+        const parent = this.parent;
+        if (!parent)
+            return 0;
+        const rotation = typeof parent.getAbsoluteRotation == "function"
+            ? Number(parent.getAbsoluteRotation())
+            : Number(parent.properties?.rotation);
+        return Number.isFinite(rotation) ? rotation : 0;
+    }
+
+    rotateOffset(offsetX, offsetY, angleDegrees) {
+        if (!Number.isFinite(angleDegrees) || Math.abs(angleDegrees) < 0.00001)
+            return { x: offsetX, y: offsetY };
+        const radians = angleDegrees * Math.PI / 180;
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        return { x: offsetX * cos - offsetY * sin, y: offsetX * sin + offsetY * cos };
+    }
+
+    // An offset measured in the parent's own frame, as it lies on the board once the parent is
+    // turned - and back again, for a pointer movement that has to be read in the parent's frame.
+    getBoardOffsetFromLocalOffset(offsetX, offsetY) {
+        return this.rotateOffset(offsetX, offsetY, this.getParentRotationDegrees());
+    }
+
+    getLocalOffsetFromBoardOffset(offsetX, offsetY) {
+        return this.rotateOffset(offsetX, offsetY, -this.getParentRotationDegrees());
+    }
+
     // Flipping mirrors what the shape draws about its own center. Pivoting on
     // the center leaves position and bounds untouched, so the handles, the
     // selection outline and the resize math keep working unchanged.
@@ -2537,6 +2592,12 @@ class BaseShape {
 
     getTermDisplayModeProperty(term) {
         return `${term}DisplayMode`;
+    }
+
+    // How far the term labels are turned on the board. A shape drawn through its own
+    // transform turns its labels with the rest of it, so nothing more is asked here.
+    getTermLabelRotationDegrees() {
+        return 0;
     }
 
     normalizeTermValue(value) {

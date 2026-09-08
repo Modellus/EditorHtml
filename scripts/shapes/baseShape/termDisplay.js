@@ -35,10 +35,8 @@
         this.labelsLayer = this.board.createSvgElement("g");
         this.layer.appendChild(this.guidesLayer);
         this.layer.appendChild(this.labelsLayer);
-        if (element.firstChild)
-            element.insertBefore(this.layer, element.firstChild);
-        else
-            element.appendChild(this.layer);
+        // The labels are there to be read, so they go over whatever the shape draws.
+        element.appendChild(this.layer);
     }
 
     getDisplayModeProperty(term) {
@@ -273,6 +271,8 @@
         return { x: position.x, y: position.y };
     }
 
+    // Where the axes cross, in the referential's own frame: the frame its axes are laid out
+    // straight in, before the referential is turned on the board.
     getReferentialAxesPosition() {
         const referential = this.shape.getReferentialParent();
         if (!referential)
@@ -283,6 +283,65 @@
         const axisX = referentialPosition.x + Number(referential.properties.originX ?? 0);
         const axisY = referentialPosition.y + Number(referential.properties.originY ?? 0);
         return { x: axisX, y: axisY };
+    }
+
+    // How the referential's frame is turned on the board, and the point it turns about.
+    getReferentialFrame() {
+        const referential = this.shape.getReferentialParent();
+        if (!referential)
+            return null;
+        const referentialPosition = referential.getBoardPosition?.();
+        if (!referentialPosition)
+            return null;
+        const rotation = typeof referential.getAbsoluteRotation == "function"
+            ? Number(referential.getAbsoluteRotation())
+            : Number(referential.properties.rotation);
+        const center = this.shape.getRotationCenterForShape?.(referential, referentialPosition) ?? null;
+        return { rotation: Number.isFinite(rotation) ? rotation : 0, center: center };
+    }
+
+    // A point on the board, as it lies in the referential's own frame - and back. The labels are
+    // laid out in that frame, where the axes run straight, and placed on the board afterwards.
+    toReferentialFrame(point) {
+        const frame = this.getReferentialFrame();
+        if (!frame?.center || Math.abs(frame.rotation) < 0.00001)
+            return point;
+        return this.shape.rotatePointAroundCenter(point.x, point.y, frame.center.x, frame.center.y, -frame.rotation);
+    }
+
+    toBoardFrame(point) {
+        const frame = this.getReferentialFrame();
+        if (!frame?.center || Math.abs(frame.rotation) < 0.00001)
+            return point;
+        return this.shape.rotatePointAroundCenter(point.x, point.y, frame.center.x, frame.center.y, frame.rotation);
+    }
+
+    // How far the labels are turned on the board: a shape drawn straight onto the board inside a
+    // turned referential turns its labels with it, so they read along its axes.
+    getLabelRotationDegrees() {
+        const rotation = Number(this.shape.getTermLabelRotationDegrees?.());
+        return Number.isFinite(rotation) ? rotation : 0;
+    }
+
+    // A label laid out under the shape, in the frame the shape is drawn in, placed where that
+    // frame lies on the board: turned about the shape by as much as the labels are.
+    turnLabelPointAboutShape(point) {
+        if (!point)
+            return point;
+        const rotation = this.getLabelRotationDegrees();
+        const position = this.shape.getBoardPosition?.();
+        if (!position || Math.abs(rotation) < 0.00001)
+            return point;
+        const turned = this.shape.rotatePointAroundCenter(point.x, point.y, position.x, position.y, rotation);
+        return Object.assign({}, point, { x: turned.x, y: turned.y });
+    }
+
+    applyLabelRotation(labelGroup, x, y) {
+        const rotation = this.getLabelRotationDegrees();
+        if (Math.abs(rotation) < 0.00001)
+            labelGroup.removeAttribute("transform");
+        else
+            labelGroup.setAttribute("transform", `rotate(${rotation} ${x} ${y})`);
     }
 
     getTermAxis(termProperty) {
@@ -296,36 +355,42 @@
         return null;
     }
 
+    // The label of a value sits on the far side of the axis from the shape, at the point the
+    // shape projects to on that axis. The shape's point is on the board; the axes cross in the
+    // referential's frame, so the layout is done there and the label placed back on the board.
     getAxisLabelPosition(axis, shapeCenterPosition, axesPosition, axisLabelIndex) {
+        const framePosition = this.toReferentialFrame(shapeCenterPosition);
+        let frameLabelPosition;
         if (axis == "x") {
-            if (shapeCenterPosition.y <= axesPosition.y)
-                return { x: shapeCenterPosition.x, y: axesPosition.y + 12 + axisLabelIndex * 12, anchor: "middle" };
-            return { x: shapeCenterPosition.x, y: axesPosition.y - 12 - axisLabelIndex * 12, anchor: "middle" };
+            const side = framePosition.y <= axesPosition.y ? 1 : -1;
+            frameLabelPosition = { x: framePosition.x, y: axesPosition.y + side * (12 + axisLabelIndex * 12), anchor: "middle" };
+        } else {
+            const side = framePosition.x <= axesPosition.x ? 1 : -1;
+            frameLabelPosition = { x: axesPosition.x + side * 6, y: framePosition.y + axisLabelIndex * 12, anchor: side > 0 ? "start" : "end" };
         }
-        if (shapeCenterPosition.x <= axesPosition.x)
-            return { x: axesPosition.x + 6, y: shapeCenterPosition.y + axisLabelIndex * 12, anchor: "start" };
-        return { x: axesPosition.x - 6, y: shapeCenterPosition.y + axisLabelIndex * 12, anchor: "end" };
+        const boardLabelPosition = this.toBoardFrame(frameLabelPosition);
+        return { x: boardLabelPosition.x, y: boardLabelPosition.y, anchor: frameLabelPosition.anchor };
     }
 
+    // The guide runs from the shape straight to the axis - straight in the referential's frame,
+    // so it lands on the axis wherever the referential is turned to.
     createGuideLine(axis, shapeCenterPosition, axesPosition, color) {
         if (!this.guidesLayer)
             return;
+        const framePosition = this.toReferentialFrame(shapeCenterPosition);
+        const frameAxisPoint = axis == "x"
+            ? { x: framePosition.x, y: axesPosition.y }
+            : { x: axesPosition.x, y: framePosition.y };
+        const boardAxisPoint = this.toBoardFrame(frameAxisPoint);
         const line = this.board.createSvgElement("line");
         line.setAttribute("class", "shape-term-guide-line");
         line.setAttribute("stroke", color);
         line.setAttribute("stroke-width", 1);
         line.setAttribute("stroke-dasharray", "3 2");
-        if (axis == "x") {
-            line.setAttribute("x1", shapeCenterPosition.x);
-            line.setAttribute("y1", shapeCenterPosition.y);
-            line.setAttribute("x2", shapeCenterPosition.x);
-            line.setAttribute("y2", axesPosition.y);
-        } else {
-            line.setAttribute("x1", shapeCenterPosition.x);
-            line.setAttribute("y1", shapeCenterPosition.y);
-            line.setAttribute("x2", axesPosition.x);
-            line.setAttribute("y2", shapeCenterPosition.y);
-        }
+        line.setAttribute("x1", shapeCenterPosition.x);
+        line.setAttribute("y1", shapeCenterPosition.y);
+        line.setAttribute("x2", boardAxisPoint.x);
+        line.setAttribute("y2", boardAxisPoint.y);
         this.guidesLayer.appendChild(line);
     }
 
@@ -366,11 +431,13 @@
                 continue;
             const entryColor = this.getEntryLabelColor(entry, fallbackLabelIndex);
             const coloredEntry = entryColor ? { ...entry, color: entryColor } : entry;
-            const entryPosition = this.getEntryLabelPosition(entry, fallbackLabelIndex);
+            const entryPosition = this.turnLabelPointAboutShape(this.getEntryLabelPosition(entry, fallbackLabelIndex));
             if (entryPosition)
                 labels.push(this.createLabelDefinition(coloredEntry, labelData, entryPosition.x, entryPosition.y, entryPosition.anchor ?? "middle"));
-            else
-                labels.push(this.createLabelDefinition(coloredEntry, labelData, fallbackAnchor.x, fallbackAnchor.y + fallbackLabelIndex * 12, fallbackAnchor.anchor ?? "middle"));
+            else {
+                const stackedAnchor = this.turnLabelPointAboutShape({ x: fallbackAnchor.x, y: fallbackAnchor.y + fallbackLabelIndex * 12 });
+                labels.push(this.createLabelDefinition(coloredEntry, labelData, stackedAnchor.x, stackedAnchor.y, fallbackAnchor.anchor ?? "middle"));
+            }
             fallbackLabelIndex++;
         }
         while (this.labelsLayer.children.length > labels.length)
@@ -393,6 +460,7 @@
             labelText.setAttribute("x", iconLayout.textX);
             this.applyCaseIcon(labelElements.caseIconGroup, label.caseNumber, iconLayout);
             this.applyLabelBackground(labelElements.backgroundRect, labelText, labelColor, label.anchor, this.getCaseIconBounds(iconLayout));
+            this.applyLabelRotation(labelElements.group, label.x, label.y);
         }
     }
 

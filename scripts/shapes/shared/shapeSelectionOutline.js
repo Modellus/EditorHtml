@@ -39,12 +39,16 @@ class ShapeSelectionOutline {
         const clipPath = this.resolveClipPath(shape);
         if (clipPath)
             proxy.setAttribute("clip-path", clipPath);
+        // The clip is laid on the board, so the turn goes on a group inside it: a clip on the
+        // turned group itself would be turned along with it.
+        const content = this.board.createSvgElement("g");
+        proxy.appendChild(content);
         for (const primitive of primitives) {
-            proxy.appendChild(this.createGlowElement(primitive, color, glowFilterId));
+            content.appendChild(this.createGlowElement(primitive, color, glowFilterId));
             if (primitive.mode !== "stroke")
-                proxy.appendChild(this.createOutlineElement(primitive, color));
+                content.appendChild(this.createOutlineElement(primitive, color));
         }
-        this.applyRotation(proxy, options.rotation, primitives, options.bounds);
+        this.applyRotation(content, options.rotation, primitives, options.bounds);
         return proxy;
     }
 

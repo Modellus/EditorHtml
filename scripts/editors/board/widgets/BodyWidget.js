@@ -660,8 +660,9 @@ class BodyShape extends ChildShape {
                 imageClone.setAttribute("height", diameter);
                 imageClone.setAttribute("preserveAspectRatio", "xMidYMid meet");
                 imageClone.setAttribute("opacity", this.properties.stroboscopyOpacity);
-                if (Number.isFinite(pos.rotation))
-                    imageClone.setAttribute("transform", `rotate(${pos.rotation} ${pos.x} ${pos.y})`);
+                const ghostRotation = this.getImageRotationDegrees(Number.isFinite(pos.rotation) ? pos.rotation : null);
+                if (ghostRotation !== null)
+                    imageClone.setAttribute("transform", `rotate(${ghostRotation} ${pos.x} ${pos.y})`);
                 else
                     imageClone.removeAttribute("transform");
             } else {
@@ -863,14 +864,31 @@ class BodyShape extends ChildShape {
         const mirrorHorizontally = hasImage && autoFlipHorizontally !== this.isFlippedHorizontally();
         const mirrorVertically = hasImage && this.isFlippedVertically();
         const parts = [];
-        if (rotationDegrees !== null)
-            parts.push(`rotate(${rotationDegrees} ${position.x} ${position.y})`);
+        const imageRotation = this.getImageRotationDegrees(rotationDegrees);
+        if (imageRotation !== null)
+            parts.push(`rotate(${imageRotation} ${position.x} ${position.y})`);
         if (mirrorHorizontally || mirrorVertically)
             parts.push(`translate(${position.x} ${position.y}) scale(${mirrorHorizontally ? -1 : 1} ${mirrorVertically ? -1 : 1}) translate(${-position.x} ${-position.y})`);
         if (parts.length)
             this.image.setAttribute("transform", parts.join(" "));
         else
             this.image.removeAttribute("transform");
+    }
+
+    // An image turned to face a direction is already turned as the referential is: the
+    // direction was found on the board. One facing nowhere in particular is turned with the
+    // referential alone, so it sits in it the way it was drawn.
+    getImageRotationDegrees(ownRotationDegrees) {
+        if (ownRotationDegrees !== null && ownRotationDegrees !== undefined)
+            return ownRotationDegrees;
+        const parentRotation = this.getParentRotationDegrees();
+        return Math.abs(parentRotation) >= 0.00001 ? parentRotation : null;
+    }
+
+    // The outline of an image body is the square the image is drawn in, which turns with the
+    // referential about the body's centre.
+    getSelectionOutlineRotationDegrees() {
+        return this.getParentRotationDegrees();
     }
 
     loadApiCharacterIfNeeded(characterKey) {
