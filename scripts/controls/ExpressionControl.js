@@ -331,6 +331,8 @@ class ExpressionControl {
         this._leaveTermNamedIndexOnKeydown(keydownEvent);
         if (this._leaveDifferentialNameOnKeydown(keydownEvent))
             return;
+        if (this._breakAlignedRowOnKeydown(keydownEvent))
+            return;
         if (keydownEvent.key === "Dead") {
             keydownEvent.preventDefault();
             keydownEvent.stopImmediatePropagation();
@@ -682,6 +684,79 @@ class ExpressionControl {
         }
         this.mathfield.selection = savedSelection;
         return rowRanges;
+    }
+
+    // A row of an aligned expression is written as two cells, so the row break MathLive writes at the caret
+    // only breaks the cell holding it: breaking `y & =2x` at its head leaves `=2x` where it stands and
+    // carries `y` down on its own. The row is broken whole here instead, the way a row breaks when the
+    // expression is not aligned - what stands before the caret stays, what follows it opens the row below.
+    // A caret standing inside a group of its own, a fraction or a pair of delimiters, breaks no row, which
+    // is what MathLive does there too.
+    _breakAlignedRowOnKeydown(keydownEvent) {
+        if (keydownEvent.key !== "Enter" || keydownEvent.altKey || keydownEvent.ctrlKey || keydownEvent.metaKey || keydownEvent.shiftKey)
+            return false;
+        if (this.options.alignEquations === false || !this.mathfield.selectionIsCollapsed)
+            return false;
+        if (!ExpressionAlignment.isAligned(this.readPresentedLatex()))
+            return false;
+        const brokenRows = this._readRowsBrokenAtCaret();
+        if (!brokenRows)
+            return false;
+        keydownEvent.preventDefault();
+        keydownEvent.stopImmediatePropagation();
+        this._writeRows(brokenRows.rowsLatex, brokenRows.openedRowIndex);
+        return true;
+    }
+
+    _readRowsBrokenAtCaret() {
+        const caretPosition = this.mathfield.position;
+        const cellRanges = this._getRowRanges();
+        const rowsLatex = [];
+        let brokenRowIndex = -1;
+        let brokenRowOffset = 0;
+        for (let cellIndex = 0; cellIndex < cellRanges.length; cellIndex++) {
+            const [cellStart, cellEnd] = cellRanges[cellIndex];
+            const rowIndex = Math.floor(cellIndex / 2);
+            const writtenRowLatex = rowsLatex[rowIndex] ?? "";
+            if (brokenRowIndex < 0 && caretPosition >= cellStart && caretPosition <= cellEnd) {
+                if (this.mathliveController?.getCurrentGroupStartPosition() !== cellStart)
+                    return null;
+                brokenRowIndex = rowIndex;
+                brokenRowOffset = writtenRowLatex.length + this._readRangeLatex(cellStart, caretPosition).length;
+            }
+            rowsLatex[rowIndex] = writtenRowLatex + this._readRangeLatex(cellStart, cellEnd);
+        }
+        if (brokenRowIndex < 0)
+            return null;
+        const brokenRowLatex = rowsLatex[brokenRowIndex];
+        rowsLatex.splice(brokenRowIndex, 1, brokenRowLatex.substring(0, brokenRowOffset), brokenRowLatex.substring(brokenRowOffset));
+        return { rowsLatex, openedRowIndex: brokenRowIndex + 1 };
+    }
+
+    _readRangeLatex(startPosition, endPosition) {
+        if (endPosition <= startPosition)
+            return "";
+        return this.mathfield.getValue([startPosition, endPosition], "latex-unstyled");
+    }
+
+    // The rows are written back through the canonical form, so the alignment is built around them again and
+    // the caret is put back at the head of the row the break opened, where a broken row carries on. The
+    // rows go in as an edit rather than as a value, so the break is one step of the undo history and is
+    // announced as the input the rest of the editor listens for; a value is written in silence.
+    _writeRows(rowsLatex, caretRowIndex) {
+        const canonicalLatex = `${ExpressionAlignment.displaylinesPrefix}${rowsLatex.join("\\\\")}}`;
+        this.mathfield.insert(this.buildPresentedLatex(canonicalLatex), { insertionMode: "replaceAll", format: "latex", suppressChangeNotifications: false });
+        this._moveCaretToRowStart(caretRowIndex);
+        this.semanticDecorator?.invalidate();
+        this.syncAlignedLayoutClass();
+    }
+
+    _moveCaretToRowStart(rowIndex) {
+        const cellRanges = this._getRowRanges();
+        const cellIndex = ExpressionAlignment.isAligned(this.readPresentedLatex()) ? rowIndex * 2 : rowIndex;
+        const cellRange = cellRanges[Math.min(cellIndex, cellRanges.length - 1)];
+        if (cellRange)
+            this.mathfield.position = cellRange[0];
     }
 
     _getSelectionRange() {

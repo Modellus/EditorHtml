@@ -262,6 +262,55 @@ test.describe('editing an aligned block', () => {
         expect(await canonicalLatex(page, 'Parameters')).toBe('\\displaylines{a=0.10\\\\b=21.55\\\\K=5}');
     });
 
+    test('a row broken at its head leaves an empty row above and the equation whole', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Parameters', '\\displaylines{y=2\\cdot\\cos\\left(\\omega\\cdot x\\right)\\\\d=\\frac{\\differentialD{y}}{\\differentialD{x}}}');
+        await page.evaluate(() => {
+            const mathfield = shell.board.shapes.getByName('Parameters').mathfield;
+            mathfield.focus();
+            mathfield.position = 0;
+        });
+        await page.waitForTimeout(200);
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(400);
+        expect(await canonicalLatex(page, 'Parameters')).toBe('\\displaylines{\\\\y=2\\cdot\\cos\\left(\\omega\\cdot x\\right)\\\\d=\\frac{\\differentialD{y}}{\\differentialD{x}}}');
+        expect(await storedExpression(page, 'Parameters')).toBe(await canonicalLatex(page, 'Parameters'));
+        await page.keyboard.press('ArrowUp');
+        await page.keyboard.type('w=1', { delay: 40 });
+        await page.waitForTimeout(400);
+        expect(await canonicalLatex(page, 'Parameters')).toBe('\\displaylines{w=1\\\\y=2\\cdot\\cos\\left(\\omega\\cdot x\\right)\\\\d=\\frac{\\differentialD{y}}{\\differentialD{x}}}');
+    });
+
+    test('a row is broken where the caret stands, both sides of the equals sign included', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Parameters', '\\displaylines{a=0.10\\\\b=21.55}');
+        await page.evaluate(() => {
+            const mathfield = shell.board.shapes.getByName('Parameters').mathfield;
+            mathfield.focus();
+            mathfield.position = 1;
+        });
+        await page.waitForTimeout(200);
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(400);
+        expect(await canonicalLatex(page, 'Parameters')).toBe('\\displaylines{a\\\\=0.10\\\\b=21.55}');
+    });
+
+    // MathLive breaks no row around a caret standing inside a fraction or a pair of delimiters, and the
+    // aligned rows are broken on the same terms.
+    test('a caret inside a group breaks no row', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Parameters', '\\displaylines{y=2\\cdot\\cos\\left(\\omega\\cdot x\\right)\\\\d=2}');
+        await page.evaluate(() => {
+            const mathfield = shell.board.shapes.getByName('Parameters').mathfield;
+            mathfield.focus();
+            mathfield.position = 8;
+        });
+        await page.waitForTimeout(200);
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(400);
+        expect(await canonicalLatex(page, 'Parameters')).toBe('\\displaylines{y=2\\cdot\\cos\\left(\\omega\\cdot x\\right)\\\\d=2}');
+    });
+
     test('a removed row leaves the remaining equations aligned', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Parameters', '\\displaylines{a=0.10\\\\b=21.55\\\\c=3}');
