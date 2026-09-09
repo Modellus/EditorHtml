@@ -14,11 +14,18 @@ declare class Branch {
      * comparison such as `color = red` from arithmetic on a label.
      */
     categorical?: boolean;
+    /**
+     * How the branch was written, kept on a branch that reading the statement wrote differently.  A
+     * derivative is worked out as the statement is read, so the branch calculating `2` remembers the
+     * `\frac{\differentialD{x}}{\differentialD{t}}` it was written as and the reader is shown both.
+     */
+    writtenBranch?: Branch;
     constructor(text: string, calculate: (values: {
         [name: string]: number;
     }) => number, ...children: Branch[]);
     withOp(op: string): this;
     asCategorical(): this;
+    asWritten(writtenBranch: Branch): this;
 }
 
 declare enum TermType {
@@ -1090,6 +1097,7 @@ declare class System {
 
 declare class LatexVisitor {
     private readonly system;
+    private writesAsWritten;
     constructor(system: System);
     build(): void;
     /**
@@ -1100,6 +1108,19 @@ declare class LatexVisitor {
      * bare name, so every row is shown back the way it was written.
      */
     private buildIndexedLatex;
+    /**
+     * A statement is written back as it was read and, where reading it wrote it differently, as it was
+     * written first: reading works a derivative out, so `d=\frac{\differentialD{x}}{\differentialD{t}}`
+     * standing over `x=2 \cdot t` is written back as `d=\frac{\differentialD{x}}{\differentialD{t}}=2` -
+     * what the reader wrote, and what the model calculates.  Everything else reads the one way it was
+     * written and is written back once.
+     */
+    private buildAssignmentLatex;
+    /**
+     * A derivative over a name a later statement defines is worked out on the first evaluation and holds
+     * nothing to be written back until then, so it is written back as it was written and stands once.
+     */
+    private hasNoReadingYet;
     private getTermLatexName;
     private buildConditionalLatex;
     private buildRegressionConditionalLatex;
@@ -1954,6 +1975,18 @@ declare class LatexMathListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitFactorial?: (ctx: FactorialContext) => void;
+    /**
+     * Enter a parse tree produced by the `DerivativePrimeImplicit`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterDerivativePrimeImplicit?: (ctx: DerivativePrimeImplicitContext) => void;
+    /**
+     * Exit a parse tree produced by the `DerivativePrimeImplicit`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitDerivativePrimeImplicit?: (ctx: DerivativePrimeImplicitContext) => void;
     /**
      * Enter a parse tree produced by the `Parenthesis`
      * labeled alternative in `LatexMathParser.expression`.
@@ -3156,6 +3189,13 @@ declare class FactorialContext extends ExpressionContext {
     exitRule(listener: LatexMathListener): void;
     accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
 }
+declare class DerivativePrimeImplicitContext extends ExpressionContext {
+    constructor(ctx: ExpressionContext);
+    name(): NameContext;
+    enterRule(listener: LatexMathListener): void;
+    exitRule(listener: LatexMathListener): void;
+    accept<Result>(visitor: LatexMathVisitor<Result>): Result | null;
+}
 declare class ParenthesisContext extends ExpressionContext {
     constructor(ctx: ExpressionContext);
     expression(): ExpressionContext;
@@ -4135,6 +4175,13 @@ declare class LatexMathVisitor<Result> extends AbstractParseTreeVisitor<Result> 
      */
     visitFactorial?: (ctx: FactorialContext) => Result;
     /**
+     * Visit a parse tree produced by the `DerivativePrimeImplicit`
+     * labeled alternative in `LatexMathParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitDerivativePrimeImplicit?: (ctx: DerivativePrimeImplicitContext) => Result;
+    /**
      * Visit a parse tree produced by the `Parenthesis`
      * labeled alternative in `LatexMathParser.expression`.
      * @param ctx the parse tree
@@ -4569,6 +4616,7 @@ declare class Deriver extends LatexMathVisitor<Branch> {
     visitDerivativeDOperatorNoBraces: (context: DerivativeDOperatorNoBracesContext) => Branch;
     visitDerivativePrimeExpression: (context: DerivativePrimeExpressionContext) => Branch;
     visitDerivativePrimeExpressionPlain: (context: DerivativePrimeExpressionPlainContext) => Branch;
+    visitDerivativePrimeImplicit: (context: DerivativePrimeImplicitContext) => Branch;
     private derivePrimeInner;
     private deriveInnerDerivative;
 }
@@ -4976,8 +5024,30 @@ declare class Visitor extends LatexMathVisitor<Branch> {
     visitDerivativeDOperatorNoBraces: (context: DerivativeDOperatorNoBracesContext) => Branch;
     visitDerivativePrimeExpression: (context: DerivativePrimeExpressionContext) => Branch;
     visitDerivativePrimeExpressionPlain: (context: DerivativePrimeExpressionPlainContext) => Branch;
+    /** `y'` names no argument, so it derives against the independent: `x=y'` says what `x=y'(t)` says. */
+    visitDerivativePrimeImplicit: (context: DerivativePrimeImplicitContext) => Branch;
     private primeDerivativeBranch;
     private deriveExpressionBranch;
+    /**
+     * The derivative stands on a branch of its own, holding what it was worked out into and what it was
+     * written as.  Working a derivative out reads the statement it derives and can hand back a branch of
+     * that statement - the derivative of `2 \cdot t` is the very `2` standing in `x=2 \cdot t` - and a
+     * branch that belongs to another statement is left as it is, so that statement still reads as written.
+     */
+    private derivativeBranch;
+    /**
+     * The derivative as it was written, kept beside the derivative worked out from it so a reader can be
+     * shown the statement they wrote as well as the one the model calculates.  The expression under the
+     * differential is read as it stands, undifferentiated, so it is written back the way every other
+     * expression is; nothing else reads these branches, and calculating one calculates the derivative.
+     */
+    private writtenDerivativeBranch;
+    /**
+     * The variable is kept as a child even where the prime did not name it, so a reader of the branch
+     * can still see what the derivative was taken against; only the wording drops it.
+     */
+    private writtenPrimeDerivativeBranch;
+    private nameBranch;
     /**
      * Names read at the current iteration by `tree`, i.e. those written `name_{n}` with the
      * iteration term as the subscript.  `name_{n-1}` and friends read an earlier row and are

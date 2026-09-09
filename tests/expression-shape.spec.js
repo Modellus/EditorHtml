@@ -637,6 +637,56 @@ test.describe('Keyboard shortcuts', () => {
         expect(value).toMatch(/f\^\{\\prime\}\\left\(t\\right\)=x\\cdot t/);
     });
 
+    // A prime with no variable written beside it is the derivative by the independent variable, so `x=y'`
+    // is written as `x=y^{\prime}` and read the way `\frac{\differentialD{y}}{\differentialD{t}}` is.
+    test("' with no variable beside it writes a derivative by the independent variable", async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('y=t^2');
+        await page.waitForTimeout(300);
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(300);
+        await page.keyboard.type("x=y'");
+        await page.waitForTimeout(500);
+        const canonicalValue = await page.evaluate(() => shell.board.shapes.getByName('Expr1').expressionControl.getCanonicalValue());
+        expect(canonicalValue).toBe('\\displaylines{y=t^2\\\\x=y^{\\prime}}');
+        const model = await page.evaluate(() => {
+            shell.reset();
+            const calculator = shell.board.calculator;
+            for (let step = 0; step < 4; step++)
+                calculator.engine.iterate();
+            return {
+                rowErrors: calculator.findRowParseErrors(['y=t^2', 'x=y^{\\prime}']),
+                latex: calculator.system.getTerm('x')?.expressionLatex ?? null,
+                independent: calculator.getByName('t'),
+                derivative: calculator.getByName('x')
+            };
+        });
+        expect(model.rowErrors).toEqual([null, null]);
+        expect(model.latex).toBe('x=y^{\\prime}=2 \\cdot t');
+        expect(model.derivative).toBeCloseTo(2 * model.independent, 8);
+    });
+
+    test("' writes the prime where the caret stands and carries on with the row", async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await focusExpression(page, 'Expr1');
+        await page.keyboard.type('y=t^2');
+        await page.waitForTimeout(300);
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(300);
+        await page.keyboard.type("x=y'+1");
+        await page.waitForTimeout(500);
+        const canonicalValue = await page.evaluate(() => shell.board.shapes.getByName('Expr1').expressionControl.getCanonicalValue());
+        expect(canonicalValue).toBe('\\displaylines{y=t^2\\\\x=y^{\\prime}+1}');
+        const derivativeLatex = await page.evaluate(() => {
+            shell.reset();
+            return shell.board.calculator.system.getTerm('x')?.expressionLatex ?? null;
+        });
+        expect(derivativeLatex).toBe('x=y^{\\prime} + 1=2 \\cdot t + 1');
+    });
+
     test('dead key does not stall the editor', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
