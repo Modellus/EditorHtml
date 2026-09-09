@@ -799,6 +799,8 @@ test.describe('Deletion across aligned rows', () => {
         expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x=1\\\\y10}');
     });
 
+    // Deleting on past the empty row joins the row below to the one the caret stands in, as it does when
+    // the expression is not aligned; the row below is what an empty row leaves behind.
     test('delete at the end of a row takes an empty row below away', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Expr1');
@@ -806,6 +808,28 @@ test.describe('Deletion across aligned rows', () => {
         await pressRepeatedly(page, 'Delete', 1);
         expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x=1\\\\y=10}');
         await pressRepeatedly(page, 'Delete', 1);
-        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x=1\\\\y=10}');
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x=1y=10}');
+    });
+
+    test('backspace at the head of a row joins it to the row above, blank or not', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await presentExpression(page, 'Expr1', '\\displaylines{\\\\x=2\\cdot t\\\\d=3}', 2);
+        await pressRepeatedly(page, 'Backspace', 1);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x=2\\cdot t\\\\d=3}');
+        await page.evaluate(() => {
+            const mathfield = shell.board.shapes.getByName('Expr1').mathfield;
+            mathfield.position = shell.board.shapes.getByName('Expr1').expressionControl._readRows()[1].cellRanges[0][0];
+        });
+        await pressRepeatedly(page, 'Backspace', 1);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{x=2\\cdot td=3}');
+    });
+
+    test('backspace in the second cell of a blank row takes that row away', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Expr1');
+        await presentExpression(page, 'Expr1', '\\displaylines{a=1\\\\\\\\b=2}', 6);
+        await pressRepeatedly(page, 'Backspace', 1);
+        expect(await getCanonicalValue(page, 'Expr1')).toBe('\\displaylines{a=1\\\\b=2}');
     });
 });

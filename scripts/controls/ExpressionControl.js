@@ -403,6 +403,8 @@ class ExpressionControl {
         this._startTermNamedIndexOnKeydown(keydownEvent);
         if (this._handleSpaceKeydown(keydownEvent))
             return;
+        if (this._joinAlignedRowsOnKeydown(keydownEvent))
+            return;
         if (this.mathliveController?.handleBackspaceKeydown(keydownEvent))
             return;
         this.mathliveController?.handleDeleteKeydown(keydownEvent);
@@ -704,33 +706,104 @@ class ExpressionControl {
             return false;
         keydownEvent.preventDefault();
         keydownEvent.stopImmediatePropagation();
-        this._writeRows(brokenRows.rowsLatex, brokenRows.openedRowIndex);
+        this._writeRows(brokenRows.rowsLatex);
+        this._moveCaretToRowStart(brokenRows.openedRowIndex);
         return true;
     }
 
     _readRowsBrokenAtCaret() {
-        const caretPosition = this.mathfield.position;
-        const cellRanges = this._getRowRanges();
-        const rowsLatex = [];
-        let brokenRowIndex = -1;
-        let brokenRowOffset = 0;
-        for (let cellIndex = 0; cellIndex < cellRanges.length; cellIndex++) {
-            const [cellStart, cellEnd] = cellRanges[cellIndex];
-            const rowIndex = Math.floor(cellIndex / 2);
-            const writtenRowLatex = rowsLatex[rowIndex] ?? "";
-            if (brokenRowIndex < 0 && caretPosition >= cellStart && caretPosition <= cellEnd) {
-                if (this.mathliveController?.getCurrentGroupStartPosition() !== cellStart)
-                    return null;
-                brokenRowIndex = rowIndex;
-                brokenRowOffset = writtenRowLatex.length + this._readRangeLatex(cellStart, caretPosition).length;
-            }
-            rowsLatex[rowIndex] = writtenRowLatex + this._readRangeLatex(cellStart, cellEnd);
-        }
-        if (brokenRowIndex < 0)
+        const rows = this._readRows();
+        const caretPlace = this._readCaretPlace(rows);
+        if (!caretPlace)
             return null;
-        const brokenRowLatex = rowsLatex[brokenRowIndex];
-        rowsLatex.splice(brokenRowIndex, 1, brokenRowLatex.substring(0, brokenRowOffset), brokenRowLatex.substring(brokenRowOffset));
-        return { rowsLatex, openedRowIndex: brokenRowIndex + 1 };
+        const rowsLatex = rows.map(row => row.latex);
+        const brokenRowLatex = rowsLatex[caretPlace.rowIndex];
+        rowsLatex.splice(caretPlace.rowIndex, 1, brokenRowLatex.substring(0, caretPlace.rowOffset), brokenRowLatex.substring(caretPlace.rowOffset));
+        return { rowsLatex, openedRowIndex: caretPlace.rowIndex + 1 };
+    }
+
+    // A row of an aligned expression is joined to the one above it when a character is deleted backwards at
+    // its head, and to the one below it when a character is deleted forwards at its end, the way rows join
+    // when the expression is not aligned. MathLive joins no rows of an array of its own, so a blank row
+    // above an equation stays there however often it is backspaced over. The join answers first, before the
+    // deletion keys that take an empty row away or reach over a cell boundary for the character before it:
+    // it stands for the rows of an aligned expression alone and leaves every other row to them.
+    _joinAlignedRowsOnKeydown(keydownEvent) {
+        if (keydownEvent.key !== "Backspace" && keydownEvent.key !== "Delete")
+            return false;
+        if (keydownEvent.altKey || keydownEvent.ctrlKey || keydownEvent.metaKey || keydownEvent.shiftKey)
+            return false;
+        if (this.options.alignEquations === false || !this.mathfield.selectionIsCollapsed)
+            return false;
+        if (!ExpressionAlignment.isAligned(this.readPresentedLatex()))
+            return false;
+        const joinedRows = this._readRowsJoinedAtCaret(keydownEvent.key === "Backspace");
+        if (!joinedRows)
+            return false;
+        keydownEvent.preventDefault();
+        keydownEvent.stopImmediatePropagation();
+        const junctionLeafCount = MathSemanticDecorator.countLeavesBeforeOffset(this.mathfield, joinedRows.junctionOffset);
+        this._writeRows(joinedRows.rowsLatex);
+        this.mathfield.position = MathSemanticDecorator.findOffsetForLeafCount(this.mathfield, junctionLeafCount);
+        return true;
+    }
+
+    // Joining rows leaves the caret where the two of them meet, which is where the row taking the other in
+    // used to end. The join writes the same leaves in the same order, so the meeting point is found again
+    // by counting them.
+    _readRowsJoinedAtCaret(joinsRowAbove) {
+        const rows = this._readRows();
+        const caretPlace = this._readCaretPlace(rows);
+        if (!caretPlace)
+            return null;
+        const caretRowLatex = rows[caretPlace.rowIndex].latex;
+        const standsAtTheJoin = joinsRowAbove ? caretPlace.rowOffset === 0 : caretPlace.rowOffset === caretRowLatex.length;
+        if (!standsAtTheJoin)
+            return null;
+        const joiningRowIndex = joinsRowAbove ? caretPlace.rowIndex - 1 : caretPlace.rowIndex;
+        if (joiningRowIndex < 0 || joiningRowIndex + 1 >= rows.length)
+            return null;
+        const rowsLatex = rows.map(row => row.latex);
+        rowsLatex.splice(joiningRowIndex, 2, rowsLatex[joiningRowIndex] + rowsLatex[joiningRowIndex + 1]);
+        return { rowsLatex, junctionOffset: rows[joiningRowIndex].end };
+    }
+
+    // An aligned row is written as two cells, so the rows are read two cells at a time: a row holds the
+    // latex of its cells one after the other and spans the offsets from the head of its first cell to the
+    // end of its last.
+    _readRows() {
+        const cellRanges = this._getRowRanges();
+        const rows = [];
+        for (let cellIndex = 0; cellIndex < cellRanges.length; cellIndex++) {
+            const rowIndex = Math.floor(cellIndex / 2);
+            const row = rows[rowIndex] ?? { latex: "", cellRanges: [], end: 0 };
+            row.cellRanges.push(cellRanges[cellIndex]);
+            row.latex += this._readRangeLatex(cellRanges[cellIndex][0], cellRanges[cellIndex][1]);
+            row.end = cellRanges[cellIndex][1];
+            rows[rowIndex] = row;
+        }
+        return rows;
+    }
+
+    // The caret stands in one cell of one row, and what stands before it in that row is the latex of the
+    // cells it has already passed followed by the part of its own cell written before it. A caret standing
+    // inside a group of its own, a fraction or a pair of delimiters, stands in no row of the expression.
+    _readCaretPlace(rows) {
+        const caretPosition = this.mathfield.position;
+        for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+            let rowOffset = 0;
+            const cellRanges = rows[rowIndex].cellRanges;
+            for (let cellIndex = 0; cellIndex < cellRanges.length; cellIndex++) {
+                const [cellStart, cellEnd] = cellRanges[cellIndex];
+                if (caretPosition >= cellStart && caretPosition <= cellEnd) {
+                    if (this.mathliveController?.getCurrentGroupStartPosition() !== cellStart)
+                        return null;
+                    return { rowIndex, rowOffset: rowOffset + this._readRangeLatex(cellStart, caretPosition).length };
+                }
+                rowOffset += this._readRangeLatex(cellStart, cellEnd).length;
+            }
+        }
+        return null;
     }
 
     _readRangeLatex(startPosition, endPosition) {
@@ -739,14 +812,12 @@ class ExpressionControl {
         return this.mathfield.getValue([startPosition, endPosition], "latex-unstyled");
     }
 
-    // The rows are written back through the canonical form, so the alignment is built around them again and
-    // the caret is put back at the head of the row the break opened, where a broken row carries on. The
-    // rows go in as an edit rather than as a value, so the break is one step of the undo history and is
+    // The rows are written back through the canonical form, so the alignment is built around them again.
+    // They go in as an edit rather than as a value, so the change is one step of the undo history and is
     // announced as the input the rest of the editor listens for; a value is written in silence.
-    _writeRows(rowsLatex, caretRowIndex) {
+    _writeRows(rowsLatex) {
         const canonicalLatex = `${ExpressionAlignment.displaylinesPrefix}${rowsLatex.join("\\\\")}}`;
         this.mathfield.insert(this.buildPresentedLatex(canonicalLatex), { insertionMode: "replaceAll", format: "latex", suppressChangeNotifications: false });
-        this._moveCaretToRowStart(caretRowIndex);
         this.semanticDecorator?.invalidate();
         this.syncAlignedLayoutClass();
     }
