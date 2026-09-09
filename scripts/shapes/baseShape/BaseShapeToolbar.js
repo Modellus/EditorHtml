@@ -157,8 +157,10 @@ var ShapeContextToolbarMixin = {
         requestAnimationFrame(() => requestAnimationFrame(() => this.positionContextToolbar()));
     },
     hideContextToolbar() {
-        if (this.contextToolbar)
-            this.contextToolbar.classList.remove("visible");
+        if (!this.contextToolbar)
+            return;
+        Utils.closeToolbarOverlays(this.contextToolbar);
+        this.contextToolbar.classList.remove("visible");
     },
     positionContextToolbar() {
         if (!this.contextToolbar)

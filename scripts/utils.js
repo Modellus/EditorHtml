@@ -1550,6 +1550,40 @@ class Utils {
         return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="${tokens.getNumber("crosshair.strokeWidth", 1)}" stroke-dasharray="${tokens.get("crosshair.dash", "4 3")}" stroke-opacity="${tokens.getNumber("crosshair.opacity", 0.25)}" />`;
     }
 
+    static dropDownWidgetNames = ["dxDropDownButton", "dxDropDownBox", "dxSelectBox", "dxColorBox", "dxTagBox", "dxLookup", "dxDateBox", "dxAutocomplete"];
+
+    static getOpenDropDownInstance(element) {
+        for (const widgetName of Utils.dropDownWidgetNames) {
+            const instance = window.DevExpress?.ui?.[widgetName]?.getInstance?.(element);
+            if (instance?.option("opened") === true)
+                return instance;
+        }
+        return null;
+    }
+
+    static closeOpenDropDowns(rootElement) {
+        let closedAny = false;
+        rootElement.querySelectorAll(".dx-dropdownbutton, .dx-dropdowneditor").forEach(element => {
+            const instance = Utils.getOpenDropDownInstance(element);
+            if (!instance)
+                return;
+            instance.close();
+            closedAny = true;
+        });
+        return closedAny;
+    }
+
+    static closeToolbarOverlays(toolbarHost) {
+        let closedAny = true;
+        while (closedAny) {
+            closedAny = Utils.closeOpenDropDowns(toolbarHost);
+            document.querySelectorAll(".mdl-shape-overlay-popup, .mdl-shape-overlay-popup-nested").forEach(wrapper => {
+                if (Utils.closeOpenDropDowns(wrapper))
+                    closedAny = true;
+            });
+        }
+    }
+
     static createTooltip(e, html, width, canShow, wrapperClassName) {
         const resolvedWrapperClassName = wrapperClassName ?? "mdl-shape-overlay-popup mdl-shape-overlay-popup-nested";
         return $('<div>')

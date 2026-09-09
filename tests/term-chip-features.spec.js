@@ -266,6 +266,22 @@ test.describe('Term chip features', () => {
         expect(await page.locator('.mdl-term-tree-custom-input').count()).toBe(0);
     });
 
+    test('the menus opened from a shape toolbar close with the toolbar', async ({ page }) => {
+        await setupEditor(page);
+        await addModel(page, '\\frac{dx}{dt}=v', 'v');
+        await page.evaluate(() => {
+            modellus.shape.addReferential('Referential');
+            modellus.shape.addBody('Body', 'Referential');
+        });
+        await openTermsMenu(page, 'Body');
+        await openTermChip(page, 0);
+        await page.locator('.mdl-term-editor-rows:visible .shape-term-term-row .dx-dropdowneditor').click();
+        await expect(page.locator('.mdl-term-tree-popup')).toBeVisible();
+        await page.evaluate(() => shell.board.selection.deselect());
+        await expect(page.locator('.shape-context-toolbar.visible')).toHaveCount(0);
+        await expect(page.locator('.mdl-shape-overlay-popup:visible, .mdl-shape-overlay-popup-nested:visible')).toHaveCount(0);
+    });
+
     test('a table column carries the mark its values are drawn with, under a label of its own', async ({ page }) => {
         await setupEditor(page);
         await addModel(page, 'y=2\\cdot t', 'y');

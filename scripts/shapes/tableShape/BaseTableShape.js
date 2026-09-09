@@ -449,8 +449,10 @@ class BaseTableShape extends BaseShape {
     }
 
     hideCellsContextToolbar() {
-        if (this.cellsContextToolbar)
-            this.cellsContextToolbar.classList.remove("visible");
+        if (!this.cellsContextToolbar)
+            return;
+        Utils.closeToolbarOverlays(this.cellsContextToolbar);
+        this.cellsContextToolbar.classList.remove("visible");
     }
 
     positionCellsContextToolbar() {
