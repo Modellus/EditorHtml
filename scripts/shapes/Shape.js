@@ -2241,12 +2241,24 @@ class BaseShape {
 
     dragStart() {
         this._dragStartSnapshot = Utils.cloneProperties(this.properties);
+        // The toolbar is anchored under the shape, so through a drag or a resize it either trails
+        // behind what is being moved or sits over it, and any menu opened from it hangs there too.
+        // It goes away for the gesture and is put back by dragEnd.
+        this._contextToolbarOpenBeforeDrag = this.contextToolbar?.classList.contains("visible") === true;
+        this.hideContextToolbar?.();
         this.dispatchEvent("shapeDragStart", {});
     }
 
     dragEnd() {
         this._gridSnapGrabOffset = null;
         this.dispatchEvent("shapeDragEnd", {});
+        // On a board the shape is selected again by the event above, which shows the toolbar where
+        // the shape now stands. Nothing does that for a shape a notebook block hosts, so a toolbar
+        // that was open before the drag is opened again here.
+        const wasContextToolbarOpen = this._contextToolbarOpenBeforeDrag === true;
+        this._contextToolbarOpenBeforeDrag = false;
+        if (wasContextToolbarOpen && this.contextToolbar?.classList.contains("visible") !== true)
+            this.showContextToolbar?.();
         if (!this._dragStartSnapshot)
             return;
         const command = new SetShapePropertiesCommand(this.board, this, Utils.cloneProperties(this.properties));

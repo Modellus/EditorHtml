@@ -648,6 +648,9 @@ class NotebookEditor extends Workspace {
                 data: this.blocks,
                 onDragStart: event => {
                     event.itemData = event.fromData[event.fromIndex];
+                    // A toolbar anchored under the block would hang over the list for the whole
+                    // reorder; re-rendering the moved block selects it again and brings it back.
+                    this.hideAllShapeContextToolbars();
                 },
                 onReorder: event => {
                     const [movedBlock] = event.fromData.splice(event.fromIndex, 1);
@@ -938,6 +941,10 @@ class NotebookEditor extends Workspace {
             // so the command snapshots the pre-drag height for undo.
             if (currentHeight > 0 && currentHeight !== block.contentHeight)
                 this.setBlockPropertyCommand(block.id, "contentHeight", currentHeight);
+            // The toolbar was closed for the resize (see the pointerdown below); the block is still
+            // the selected one, so it comes back under the size the block now has.
+            if (this.shapeInteractionController?.selectedItemId === block.id)
+                shape.showContextToolbar?.();
         };
         handle.addEventListener("pointerdown", event => {
             if (event.button !== 0)
@@ -949,6 +956,7 @@ class NotebookEditor extends Workspace {
             startHeight = contentElement.getBoundingClientRect().height;
             currentHeight = startHeight;
             handle.classList.add("is-active");
+            this.hideAllShapeContextToolbars();
             window.addEventListener("pointermove", onPointerMove);
             window.addEventListener("pointerup", onPointerUp);
             window.addEventListener("pointercancel", onPointerUp);
