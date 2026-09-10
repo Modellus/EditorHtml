@@ -6,16 +6,13 @@
     "description": "A scale bent round a vertex to measure an angle against: a band of degrees numbered at every division, divided ten ways between one number and the next, standing on the arms it is read between. It is laid over whatever is being measured — a vector, a body's path, a drawing — and resting the pointer on it reads the angle from its zero. How far round it goes is its own, so the same object is a half circle, a quadrant or a whole dial, and the numbers the two ends read are its own too, so a protractor can be marked in degrees, in turns, or in whatever the model measures its angles in.",
     "icon": "fa-light fa-angle",
     "defaultSize": { "width": 300, "height": 170 },
+    "writesNotation": false,
     "tags": ["object", "protractor", "angle", "scale", "measure", "ticks", "interaction"],
     "capabilities": ["radial", "angular", "scale", "interaction"],
     "parameters": [
-        { "id": "startAngle", "label": "Zero direction", "valueType": "number", "defaultValue": 0, "unit": "deg", "minimum": -360, "maximum": 360, "category": "scale", "description": "Where the zero of the scale points, measured anticlockwise from straight right, so a protractor lying the usual way up reads zero at its right-hand arm." },
-        { "id": "spanAngle", "label": "Span", "valueType": "number", "defaultValue": 180, "unit": "deg", "minimum": 1, "maximum": 360, "category": "scale", "description": "How far round the vertex the scale runs, anticlockwise from the zero direction. A whole turn stands the vertex in the middle of the box and draws the band as a full dial; anything less stands it on the bottom edge, where a protractor's vertex belongs." },
-        { "id": "divisions", "label": "Divisions", "valueType": "number", "defaultValue": 18, "minimum": 1, "maximum": 36, "bindable": false, "category": "scale", "description": "How many numbered parts the scale is cut into — eighteen over a half circle is the ten degrees a protractor is marked in. Each part is divided ten ways by smaller marks of its own." },
-        { "id": "startValue", "label": "First number", "valueType": "number", "defaultValue": 0, "category": "scale", "description": "What the zero end of the scale reads. With the last number it decides what the protractor is marked in: 0 to 180 measures degrees, 0 to 3.1416 measures the same angles in radians, and 0 to 1 measures them in turns." },
-        { "id": "endValue", "label": "Last number", "valueType": "number", "defaultValue": 180, "category": "scale" },
-        { "id": "numbers", "label": "Numbers", "valueType": "string", "defaultValue": "decimal", "enumValues": ["decimal", "pi"], "enumIcons": ["fa-light fa-1", "fa-light fa-pi"], "category": "display", "description": "How the scale is numbered, and how the angle under the pointer is read: as plain numbers, or as multiples of π. A protractor whose ends read 0 and 3.1416 is a protractor marked in radians, and this is what writes its numbers as π/6, π/3, π/2 rather than as decimals of it." },
-        { "id": "unit", "label": "Unit", "valueType": "unit", "defaultValue": "º", "category": "display", "description": "What the angle is measured in, written after the value the pointer reads. The numbers round the band stay bare, the way an axis writes its own." },
+        { "id": "startAngle", "label": "Start angle", "valueType": "number", "defaultValue": 0, "unit": "deg", "minimum": -360, "maximum": 360, "category": "scale", "description": "The arm the scale is read from, measured anticlockwise from straight right, so a protractor lying the usual way up starts at nothing and its zero is its right-hand arm. Set in whatever the protractor is marked in.", "angleUnitParameter": "angleUnit" },
+        { "id": "endAngle", "label": "End angle", "valueType": "number", "defaultValue": 180, "unit": "deg", "minimum": -360, "maximum": 360, "category": "scale", "angleUnitParameter": "angleUnit", "description": "The arm the scale runs to, anticlockwise from the start angle and set in the same unit. A whole turn between the two closes the band into a dial and stands the vertex in the middle of the box; anything less stands it on the bottom edge, where a protractor's vertex belongs. An end that does not stand after the start leaves the protractor the half circle it is drawn as." },
+        { "id": "angleUnit", "label": "Angle unit", "valueType": "string", "defaultValue": "degrees", "enumValues": ["degrees", "radians"], "category": "scale", "description": "What the protractor is marked in. Degrees number the band the way a protractor is printed, one number every ten degrees, and its two angles are set in degrees. Radians number the same band in the fractions of π those angles are, one number every thirty, and its two angles are set in multiples of π — half a turn is 1, a whole turn is 2.", "enumControl": "buttons" },
         { "id": "digits", "label": "Decimals", "valueType": "number", "defaultValue": 0, "category": "display", "minimum": 0, "maximum": 6, "description": "Decimals the angle under the pointer is read to. The numbers round the band follow it only when the divisions need them." },
         { "id": "faceColor", "label": "Band colour", "valueType": "colour", "defaultValue": "token:surface.default", "category": "style" },
         { "id": "borderColor", "label": "Border colour", "valueType": "colour", "defaultValue": "token:stroke.default", "category": "style" },
@@ -42,28 +39,62 @@
         { "id": "badgePadY", "value": { "token": "badge.paddingY" } },
         { "id": "badgeChar", "value": { "token": "badge.charWidth" } },
         { "id": "badgeCorner", "value": { "token": "badge.cornerRadius" } },
-        { "id": "spanUp", "formula": "\\max\\left(1,\\min\\left(360,spanAngle\\right)\\right)" },
+        { "id": "spanRaw", "formula": "endAngle-startAngle" },
+        { "id": "spanUsable", "formula": "\\max\\left(0,spanRaw-0.5\\right)" },
+        { "id": "spanUp", "value": { "choose": { "parameter": "spanUsable" }, "then": { "formula": "\\min\\left(360,spanRaw\\right)" }, "otherwise": 180 } },
         { "id": "full", "formula": "\\max\\left(0,spanUp-359.5\\right)" },
         { "id": "notFull", "value": { "choose": { "parameter": "full" }, "then": 0, "otherwise": 1 } },
+        { "id": "rel0", "formula": "\\mod\\left(0-startAngle+720,360\\right)" },
+        { "id": "inside0", "formula": "\\max\\left(0,\\min\\left(rel0,spanUp-rel0\\right)-0.5\\right)" },
+        { "id": "spoke0", "value": { "choose": { "parameter": "full" }, "then": 1, "otherwise": { "parameter": "inside0" } } },
+        { "id": "rel90", "formula": "\\mod\\left(90-startAngle+720,360\\right)" },
+        { "id": "inside90", "formula": "\\max\\left(0,\\min\\left(rel90,spanUp-rel90\\right)-0.5\\right)" },
+        { "id": "spoke90", "value": { "choose": { "parameter": "full" }, "then": 1, "otherwise": { "parameter": "inside90" } } },
+        { "id": "rel180", "formula": "\\mod\\left(180-startAngle+720,360\\right)" },
+        { "id": "inside180", "formula": "\\max\\left(0,\\min\\left(rel180,spanUp-rel180\\right)-0.5\\right)" },
+        { "id": "spoke180", "value": { "choose": { "parameter": "full" }, "then": 1, "otherwise": { "parameter": "inside180" } } },
+        { "id": "rel270", "formula": "\\mod\\left(270-startAngle+720,360\\right)" },
+        { "id": "inside270", "formula": "\\max\\left(0,\\min\\left(rel270,spanUp-rel270\\right)-0.5\\right)" },
+        { "id": "spoke270", "value": { "choose": { "parameter": "full" }, "then": 1, "otherwise": { "parameter": "inside270" } } },
+        { "id": "endUp", "formula": "startAngle+spanUp" },
+        { "id": "startSin", "formula": "\\sin\\left(\\frac{startAngle\\cdot\\pi}{180}\\right)" },
+        { "id": "endSin", "formula": "\\sin\\left(\\frac{endAngle\\cdot\\pi}{180}\\right)" },
+        { "id": "endsRise", "formula": "\\max\\left(0,\\max\\left(startSin,endSin\\right)\\right)" },
+        { "id": "endsDrop", "formula": "\\max\\left(0,\\max\\left(0-startSin,0-endSin\\right)\\right)" },
+        { "id": "riseFraction", "value": { "choose": { "parameter": "inside90" }, "then": 1, "otherwise": { "parameter": "endsRise" } } },
+        { "id": "dropFraction", "value": { "choose": { "parameter": "inside270" }, "then": 1, "otherwise": { "parameter": "endsDrop" } } },
+        { "id": "reachFraction", "formula": "\\max\\left(0.05,riseFraction+dropFraction\\right)" },
         { "id": "halfW", "formula": "\\frac{w}{2}" },
         { "id": "halfH", "formula": "\\frac{h}{2}" },
         { "id": "cx", "formula": "halfW" },
-        { "id": "cy", "value": { "choose": { "parameter": "full" }, "then": { "parameter": "halfH" }, "otherwise": { "formula": "h-pad" } } },
         { "id": "radiusFull", "formula": "\\max\\left(8,\\min\\left(halfW,halfH\\right)-pad\\right)" },
-        { "id": "radiusPart", "formula": "\\max\\left(8,\\min\\left(halfW,h\\right)-pad\\right)" },
+        { "id": "radiusPart", "formula": "\\max\\left(8,\\min\\left(halfW-pad,\\frac{h-pad}{reachFraction}\\right)\\right)" },
         { "id": "outerR", "value": { "choose": { "parameter": "full" }, "then": { "parameter": "radiusFull" }, "otherwise": { "parameter": "radiusPart" } } },
+        { "id": "cy", "value": { "choose": { "parameter": "full" }, "then": { "parameter": "halfH" }, "otherwise": { "formula": "h-pad-outerR\\cdot dropFraction" } } },
         { "id": "majorTickLength", "formula": "\\max\\left(4,outerR\\cdot0.1\\right)" },
         { "id": "minorTickLength", "formula": "majorTickLength\\cdot0.45" },
+        { "id": "middleTickLength", "formula": "majorTickLength\\cdot0.7" },
         { "id": "labelRadius", "formula": "outerR-majorTickLength-tickFont\\cdot0.9" },
         { "id": "innerR", "formula": "\\max\\left(4,\\min\\left(outerR\\cdot0.72,labelRadius-tickFont\\cdot0.8\\right)\\right)" },
-        { "id": "endAngle", "formula": "startAngle+spanUp" },
-        { "id": "divisionsUp", "formula": "\\max\\left(1,\\min\\left(36,divisions-\\mod\\left(divisions,1\\right)\\right)\\right)" },
-        { "id": "labelCount", "formula": "divisionsUp+1" },
+        { "id": "isRadians", "value": { "choose": { "parameter": "angleUnit" }, "equals": "radians", "then": 1, "otherwise": 0 } },
+        { "id": "stepDegrees", "formula": "10+isRadians\\cdot20" },
+        { "id": "gridOffset", "formula": "\\mod\\left(stepDegrees-\\mod\\left(startAngle+720,stepDegrees\\right),stepDegrees\\right)" },
+        { "id": "firstNumberAngle", "formula": "startAngle+gridOffset" },
+        { "id": "gridSpan", "formula": "\\max\\left(0,spanUp-gridOffset\\right)" },
+        { "id": "numberedRaw", "formula": "\\frac{gridSpan}{stepDegrees}" },
+        { "id": "numberedParts", "formula": "\\max\\left(0,\\min\\left(36,numberedRaw-\\mod\\left(numberedRaw,1\\right)\\right)\\right)" },
+        { "id": "labelCount", "formula": "numberedParts+1" },
+        { "id": "labelSpan", "formula": "numberedParts\\cdot stepDegrees" },
+        { "id": "labelRingSpan", "formula": "0-labelSpan" },
+        { "id": "gridCount", "formula": "numberedParts\\cdot2+1" },
+        { "id": "minorRaw", "formula": "spanUp-\\mod\\left(spanUp,1\\right)" },
+        { "id": "minorCount", "value": { "choose": { "parameter": "full" }, "then": { "parameter": "minorRaw" }, "otherwise": { "formula": "minorRaw+1" } } },
         { "id": "ringSpan", "formula": "0-spanUp" },
-        { "id": "tickCount", "value": { "choose": { "parameter": "full" }, "then": { "formula": "divisionsUp\\cdot10" }, "otherwise": { "formula": "divisionsUp\\cdot10+1" } } },
         { "id": "includeEndTick", "value": { "choose": { "parameter": "full" }, "then": false, "otherwise": true } },
-        { "id": "valueSpan", "formula": "endValue-startValue" },
-        { "id": "valueStep", "formula": "\\frac{valueSpan}{divisionsUp}" },
+        { "id": "unitScale", "formula": "1+isRadians\\cdot\\left(\\frac{\\pi}{180}-1\\right)" },
+        { "id": "scaleNumbers", "value": { "choose": { "parameter": "isRadians" }, "then": "pi", "otherwise": "decimal" } },
+        { "id": "labelStartValue", "formula": "firstNumberAngle\\cdot unitScale" },
+        { "id": "valueStep", "formula": "stepDegrees\\cdot unitScale" },
         { "id": "labelDigits", "value": { "choose": { "formula": "\\mod\\left(valueStep,1\\right)" }, "then": { "parameter": "digits" }, "otherwise": 0 } },
         { "id": "startTurn", "formula": "0-startAngle" },
         { "id": "endTurn", "formula": "0-endAngle" },
@@ -76,10 +107,10 @@
         { "id": "pointerAngle", "formula": "startAngle+relative" },
         { "id": "pointerTurn", "formula": "0-pointerAngle" },
         { "id": "pointerRadians", "formula": "\\frac{\\left(pointerAngle\\cdot\\pi\\right)}{180}" },
-        { "id": "reading", "formula": "startValue+\\frac{\\left(relative\\cdot valueSpan\\right)}{spanUp}" },
+        { "id": "reading", "formula": "\\left(startAngle+relative\\right)\\cdot unitScale" },
         { "id": "readingDecimalText", "value": { "format": { "parameter": "reading" }, "digits": { "parameter": "digits" } } },
         { "id": "readingPiText", "value": { "format": { "parameter": "reading" }, "style": "pi" } },
-        { "id": "readingText", "value": { "choose": { "parameter": "numbers" }, "equals": "pi", "then": { "parameter": "readingPiText" }, "otherwise": { "parameter": "readingDecimalText" } } },
+        { "id": "readingText", "value": { "choose": { "parameter": "scaleNumbers" }, "equals": "pi", "then": { "parameter": "readingPiText" }, "otherwise": { "parameter": "readingDecimalText" } } },
         { "id": "badgeRadius", "formula": "\\frac{\\left(innerR+labelRadius\\right)}{2}" },
         { "id": "badgeCenterX", "formula": "cx+badgeRadius\\cdot\\cos\\left(pointerRadians\\right)" },
         { "id": "badgeCenterY", "formula": "cy-badgeRadius\\cdot\\sin\\left(pointerRadians\\right)" },
@@ -156,14 +187,73 @@
                 ]
             },
             {
+                "id": "spoke-0",
+                "type": "line",
+                "when": { "parameter": "spoke0" },
+                "bindings": {
+                    "x1": { "parameter": "cx" },
+                    "y1": { "parameter": "cy" },
+                    "x2": { "formula": "cx+innerR" },
+                    "y2": { "parameter": "cy" },
+                    "stroke": { "parameter": "scaleColor" },
+                    "strokeWidth": { "parameter": "strokeDefault" }
+                },
+                "modifiers": [
+                    { "type": "rotate", "angle": 0, "centerX": { "parameter": "cx" }, "centerY": { "parameter": "cy" } }
+                ]
+            },
+            {
+                "id": "spoke-90",
+                "type": "line",
+                "when": { "parameter": "spoke90" },
+                "bindings": {
+                    "x1": { "parameter": "cx" },
+                    "y1": { "parameter": "cy" },
+                    "x2": { "formula": "cx+innerR" },
+                    "y2": { "parameter": "cy" },
+                    "stroke": { "parameter": "scaleColor" },
+                    "strokeWidth": { "parameter": "strokeDefault" }
+                },
+                "modifiers": [
+                    { "type": "rotate", "angle": -90, "centerX": { "parameter": "cx" }, "centerY": { "parameter": "cy" } }
+                ]
+            },
+            {
+                "id": "spoke-180",
+                "type": "line",
+                "when": { "parameter": "spoke180" },
+                "bindings": {
+                    "x1": { "parameter": "cx" },
+                    "y1": { "parameter": "cy" },
+                    "x2": { "formula": "cx+innerR" },
+                    "y2": { "parameter": "cy" },
+                    "stroke": { "parameter": "scaleColor" },
+                    "strokeWidth": { "parameter": "strokeDefault" }
+                },
+                "modifiers": [
+                    { "type": "rotate", "angle": -180, "centerX": { "parameter": "cx" }, "centerY": { "parameter": "cy" } }
+                ]
+            },
+            {
+                "id": "spoke-270",
+                "type": "line",
+                "when": { "parameter": "spoke270" },
+                "bindings": {
+                    "x1": { "parameter": "cx" },
+                    "y1": { "parameter": "cy" },
+                    "x2": { "formula": "cx+innerR" },
+                    "y2": { "parameter": "cy" },
+                    "stroke": { "parameter": "scaleColor" },
+                    "strokeWidth": { "parameter": "strokeDefault" }
+                },
+                "modifiers": [
+                    { "type": "rotate", "angle": -270, "centerX": { "parameter": "cx" }, "centerY": { "parameter": "cy" } }
+                ]
+            },
+            {
                 "id": "vertex",
                 "type": "circle",
-                "bindings": {
-                    "centerX": { "parameter": "cx" },
-                    "centerY": { "parameter": "cy" },
-                    "radius": { "parameter": "centerDot" },
-                    "fill": { "parameter": "scaleColor" }
-                },
+                "bindings": { "centerX": { "parameter": "cx" }, "centerY": { "parameter": "cy" }, "radius": { "parameter": "centerDot" }, "fill": { "parameter": "scaleColor" } },
                 "properties": { "stroke": "none" }
             },
             {
@@ -173,14 +263,30 @@
                     "centerX": { "parameter": "cx" },
                     "centerY": { "parameter": "cy" },
                     "radius": { "parameter": "outerR" },
-                    "count": { "parameter": "tickCount" },
+                    "count": { "parameter": "minorCount" },
                     "startAngle": { "parameter": "startAngle" },
                     "spanAngle": { "parameter": "ringSpan" },
                     "includeEnd": { "parameter": "includeEndTick" },
                     "length": { "parameter": "minorTickLength" },
                     "width": { "parameter": "strokeDefault" },
+                    "color": { "parameter": "scaleColor" }
+                }
+            },
+            {
+                "id": "grid",
+                "type": "tick-ring",
+                "parameters": {
+                    "centerX": { "parameter": "cx" },
+                    "centerY": { "parameter": "cy" },
+                    "radius": { "parameter": "outerR" },
+                    "count": { "parameter": "gridCount" },
+                    "startAngle": { "parameter": "firstNumberAngle" },
+                    "spanAngle": { "parameter": "labelRingSpan" },
+                    "includeEnd": true,
+                    "length": { "parameter": "middleTickLength" },
+                    "width": { "parameter": "strokeDefault" },
                     "color": { "parameter": "scaleColor" },
-                    "majorEvery": 10,
+                    "majorEvery": 2,
                     "majorLength": { "parameter": "majorTickLength" },
                     "majorWidth": { "parameter": "axisStroke" }
                 }
@@ -193,14 +299,14 @@
                     "centerY": { "parameter": "cy" },
                     "radius": { "parameter": "labelRadius" },
                     "count": { "parameter": "labelCount" },
-                    "startAngle": { "parameter": "startAngle" },
-                    "spanAngle": { "parameter": "ringSpan" },
+                    "startAngle": { "parameter": "firstNumberAngle" },
+                    "spanAngle": { "parameter": "labelRingSpan" },
                     "includeEnd": true,
-                    "startValue": { "parameter": "startValue" },
+                    "startValue": { "parameter": "labelStartValue" },
                     "valueStep": { "parameter": "valueStep" },
                     "wrapAt": 0,
                     "digits": { "parameter": "labelDigits" },
-                    "numberFormat": { "parameter": "numbers" },
+                    "numberFormat": { "parameter": "scaleNumbers" },
                     "fontSize": { "parameter": "tickFont" },
                     "fontFamily": { "parameter": "labelFont" },
                     "color": { "parameter": "scaleLabelColor" }
@@ -248,7 +354,6 @@
                     "x": { "parameter": "badgeCenterX" },
                     "y": { "parameter": "badgeCenterY" },
                     "text": { "parameter": "readingText" },
-                    "unit": { "parameter": "unit" },
                     "fontSize": { "parameter": "tickFont" },
                     "fill": { "parameter": "badgeTextColor" }
                 },
@@ -257,10 +362,7 @@
             {
                 "id": "scale-grab",
                 "type": "rect",
-                "bindings": {
-                    "width": { "parameter": "w" },
-                    "height": { "parameter": "h" }
-                },
+                "bindings": { "width": { "parameter": "w" }, "height": { "parameter": "h" } },
                 "properties": { "x": 0, "y": 0, "fill": "none", "stroke": "none" },
                 "behaviours": [
                     {

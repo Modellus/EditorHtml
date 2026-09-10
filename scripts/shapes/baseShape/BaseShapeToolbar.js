@@ -444,6 +444,22 @@ var BaseShapeToolbarMixin = {
             }
         };
     },
+    // An angle is written with the mark of what it is measured in standing inside the box, after the
+    // number: the degree sign, or π for a number that is a multiple of it. It is drawn rather than
+    // typed, so it cannot be edited away, and the field keeps room for it.
+    applyAngleSuffix(numberBoxElement, angleSuffix) {
+        const host = $(numberBoxElement);
+        host.find(".mdl-numberbox-angle-suffix").remove();
+        host.find(".dx-texteditor-input").css("padding-right", "20px");
+        const inputContainer = host.find(".dx-texteditor-input-container");
+        if (!inputContainer.length)
+            return;
+        inputContainer.css("position", "relative");
+        $("<span class='mdl-numberbox-angle-suffix'></span>")
+            .text(angleSuffix)
+            .css({ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: angleSuffix === "\u00ba" ? "20px" : "14px", lineHeight: "1", opacity: "0.8" })
+            .appendTo(inputContainer);
+    },
     // Every shape writes numbers somewhere - a label, a tick, a cell, a reading - and every shape
     // chooses how on the same row: the last of its settings menu, or of its own menu when it has no
     // settings.

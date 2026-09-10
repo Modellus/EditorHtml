@@ -23,6 +23,56 @@ async function addObject(page, componentType, name, properties) {
     await expect.poll(() => page.evaluate(name => shell.board.shapes.getByName(name)?.contentGroup?.children.length ?? 0, name)).toBeGreaterThan(0);
 }
 
+// Writes onto an object already on the board and redraws it, the way a key on its toolbar does.
+async function setProperties(page, name, properties) {
+    await page.evaluate(input => {
+        const shape = shell.board.shapes.getByName(input.name);
+        shape.setProperties(input.properties);
+        shape.draw();
+    }, { name, properties });
+}
+
+// Opens the settings key of an object's toolbar.
+async function openComponentSettings(page, name) {
+    await page.evaluate(name => shell.board.selection.select(shell.board.shapes.getByName(name)), name);
+    await page.waitForTimeout(300);
+    await page.locator('.shape-context-toolbar.visible .mdl-component-settings-selector').click();
+    await expect(page.locator('.mdl-shape-overlay-popup .mdl-dropdown-list-item').first()).toBeVisible();
+}
+
+// Each row of the open settings menu as "label = value", with the mark drawn inside a number field
+// in brackets after it.
+function readSettingsRows(page) {
+    return page.evaluate(() => [...document.querySelectorAll('.mdl-shape-overlay-popup .mdl-dropdown-list-item')].map(row => {
+        const label = row.innerText.trim().split('\n')[0];
+        const chosen = row.querySelector('.mdl-pill-group .dx-item-selected');
+        if (chosen)
+            return `${label} = ${chosen.textContent.trim()}`;
+        const input = row.querySelector('.dx-texteditor-input');
+        const mark = row.querySelector('.mdl-numberbox-angle-suffix');
+        return `${label} = ${input ? input.value : ''}${mark ? ` [${mark.textContent}]` : ''}`;
+    }));
+}
+
+// The unit is picked from the keys themselves, not from a list to open.
+async function chooseAngleUnit(page, unit) {
+    const row = page.locator('.mdl-shape-overlay-popup .mdl-dropdown-list-item').filter({ hasText: 'Angle unit' }).first();
+    await row.getByText(unit, { exact: true }).click();
+    await page.waitForTimeout(500);
+}
+
+// An angle is typed into the math field the number box is written through, the way every value on
+// the board is typed, and Tab takes it.
+async function typeAngle(page, label, text) {
+    const row = page.locator('.mdl-shape-overlay-popup .mdl-dropdown-list-item').filter({ hasText: label }).first();
+    const field = row.locator('math-field.mdl-numeric-math-field').first();
+    await field.click();
+    await field.evaluate(node => node.executeCommand('selectAll'));
+    await page.keyboard.type(text);
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(400);
+}
+
 function readNodes(page, name, sourceId, tag = '*') {
     return page.evaluate(input => Array.from(shell.board.shapes.getByName(input.name).contentGroup.querySelectorAll(`${input.tag}[data-source-id^="${input.sourceId}"]`))
         .map(node => ({ id: node.getAttribute('data-source-id'), text: node.textContent, x: Number(node.getAttribute('x')), width: Number(node.getAttribute('width')) })), { name, sourceId, tag });
@@ -197,7 +247,7 @@ test.describe('the protractor, built from blocks', () => {
         await addObject(page, 'protractor', 'Protractor', Object.assign({}, PROTRACTOR_AT));
         expect((await readNodes(page, 'Protractor', 'label-', 'text')).map(node => node.text))
             .toEqual(['0', '10', '20', '30', '40', '50', '60', '70', '80', '90', '100', '110', '120', '130', '140', '150', '160', '170', '180']);
-        expect(await readNodes(page, 'Protractor', 'tick-', 'line')).toHaveLength(181);
+        expect(await readNodes(page, 'Protractor', 'tick-', 'line')).toHaveLength(181 + 37);
         expect(await readNodes(page, 'Protractor', 'band')).toHaveLength(1);
     });
 
@@ -205,23 +255,135 @@ test.describe('the protractor, built from blocks', () => {
     // between go, and the vertex moves to the middle of the box.
     test('a whole turn closes the band into a dial', async ({ page }) => {
         await setupBoard(page);
-        await addObject(page, 'protractor', 'Protractor', { x: 60, y: 60, width: 240, height: 240, spanAngle: 360, divisions: 36, endValue: 360 });
+        await addObject(page, 'protractor', 'Protractor', { x: 60, y: 60, width: 240, height: 240, endAngle: 360 });
         expect(await readNodes(page, 'Protractor', 'band-full')).toHaveLength(1);
         expect(await readNodes(page, 'Protractor', 'arm-')).toHaveLength(0);
-        expect(await readNodes(page, 'Protractor', 'tick-', 'line')).toHaveLength(360);
+        expect(await readNodes(page, 'Protractor', 'tick-', 'line')).toHaveLength(360 + 73);
         expect((await readNodes(page, 'Protractor', 'label-', 'text')).map(node => node.text)).toHaveLength(37);
     });
 
-    // The numbers the two ends read say what the protractor is marked in, and π numbering writes
-    // them as the fractions of π they are rather than as decimals of it.
-    test('marked in radians, it is numbered in π', async ({ page }) => {
+    // What the protractor is marked in is one choice rather than four: the band, the numbers on it
+    // and the angle the pointer reads all follow it, so radians is a row on the settings menu rather
+    // than a scale the reader has to work out the ends of.
+    test('the angle unit marks the band in degrees or in π', async ({ page }) => {
         await setupBoard(page);
-        await addObject(page, 'protractor', 'Protractor', Object.assign({ numbers: 'pi', endValue: 3.14159265, divisions: 6, unit: 'rad', digits: 2 }, PROTRACTOR_AT));
+        await addObject(page, 'protractor', 'Protractor', Object.assign({}, PROTRACTOR_AT));
+        expect((await readNodes(page, 'Protractor', 'label-', 'text')).map(node => node.text))
+            .toEqual(['0', '10', '20', '30', '40', '50', '60', '70', '80', '90', '100', '110', '120', '130', '140', '150', '160', '170', '180']);
+        await setProperties(page, 'Protractor', { angleUnit: 'radians' });
         expect((await readNodes(page, 'Protractor', 'label-', 'text')).map(node => node.text))
             .toEqual(['0', 'π/6', 'π/3', 'π/2', '2π/3', '5π/6', 'π']);
+        // A number every thirty degrees rather than every ten, and the plain marks between them
+        // still a degree apart, so the band is ruled as finely as it is in degrees.
+        expect(await readNodes(page, 'Protractor', 'tick-', 'line')).toHaveLength(181 + 13);
         await movePointerInto(page, PROTRACTOR_AT, PROTRACTOR_AT.width / 2, 40);
         await expect.poll(() => readNodes(page, 'Protractor', 'crosshair')).toHaveLength(1);
         expect(await readTexts(page, 'Protractor')).toContain('π/2');
+    });
+
+    // The arms are not the only lines the band is read against: a direction the box itself stands
+    // on — straight right, straight up — is drawn to the vertex wherever the span reaches it.
+    test('is spoked on the cardinal directions it reaches', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'protractor', 'Protractor', Object.assign({}, PROTRACTOR_AT));
+        expect((await readNodes(page, 'Protractor', 'spoke-', 'line')).map(node => node.id)).toEqual(['spoke-90']);
+        // A whole turn reaches all four, and has no arms of its own to draw the first one.
+        await setProperties(page, 'Protractor', { endAngle: 360 });
+        expect((await readNodes(page, 'Protractor', 'spoke-', 'line')).map(node => node.id))
+            .toEqual(['spoke-0', 'spoke-90', 'spoke-180', 'spoke-270']);
+    });
+
+    // The two angles are set in whatever the band is marked in: degrees as they stand with the degree
+    // mark after them, radians as the multiple of π they are — half a turn is 1 — with π after them.
+    // What is stored stays in degrees throughout, so only the writing changes.
+    test('sets its two angles in the unit it is marked in, and marks them', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'protractor', 'Protractor', Object.assign({}, PROTRACTOR_AT));
+        await openComponentSettings(page, 'Protractor');
+        expect(await readSettingsRows(page)).toEqual([
+            'Start angle = 0 [\u00ba]',
+            'End angle = 180 [\u00ba]',
+            'Angle unit = Degrees',
+            'Decimals = 0'
+        ]);
+        await chooseAngleUnit(page, 'Radians');
+        expect(await readSettingsRows(page)).toEqual([
+            'Start angle = 0 [\u03c0]',
+            'End angle = 1 [\u03c0]',
+            'Angle unit = Radians',
+            'Decimals = 0'
+        ]);
+        // An end written as one half-turn of π is still the same one hundred and eighty degrees.
+        expect(await readProperties(page, 'Protractor')).toMatchObject({ endAngle: 180, angleUnit: 'radians' });
+        // The reader types into the field, decimals and all, and what is stored is the degrees it
+        // stands for — so three quarters of π is a hundred and thirty-five of them.
+        await typeAngle(page, 'End angle', '0.75');
+        await expect.poll(() => readProperties(page, 'Protractor').then(properties => properties.endAngle)).toBe(135);
+        expect(await readSettingsRows(page)).toContain('End angle = 0.75 [\u03c0]');
+        expect((await readNodes(page, 'Protractor', 'label-', 'text')).map(node => node.text))
+            .toEqual(['0', '\u03c0/6', '\u03c0/3', '\u03c0/2', '2\u03c0/3']);
+        // And back in degrees the same field takes a decimal number of them.
+        await chooseAngleUnit(page, 'Degrees');
+        await typeAngle(page, 'End angle', '112.5');
+        await expect.poll(() => readProperties(page, 'Protractor').then(properties => Number(properties.endAngle))).toBe(112.5);
+        expect(await readSettingsRows(page)).toContain('End angle = 112.5 [\u00ba]');
+        // The numbers keep to round angles whatever the far arm is set to.
+        expect((await readNodes(page, 'Protractor', 'label-', 'text')).map(node => node.text))
+            .toEqual(['0', '10', '20', '30', '40', '50', '60', '70', '80', '90', '100', '110']);
+    });
+
+    // A protractor is marked in degrees or in fractions of π, and neither is ever written as a power
+    // of ten, so it is not offered the notation the objects writing plain numbers are.
+    test('is offered no notation, having no plain numbers to write', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'protractor', 'Protractor', Object.assign({}, PROTRACTOR_AT));
+        await openComponentSettings(page, 'Protractor');
+        expect((await readSettingsRows(page)).join(' ')).not.toContain('Notation');
+        // The ruler writes plain numbers, so it still is.
+        await addObject(page, 'ruler', 'Ruler', Object.assign({}, RULER_AT, { y: 300 }));
+        await openComponentSettings(page, 'Ruler');
+        expect((await readSettingsRows(page)).join(' ')).toContain('Notation');
+    });
+
+    // Nothing the protractor draws leaves the box it was given, whatever it is marked in and however
+    // far round it goes. A band swinging below its vertex — anything past a half circle — lifts the
+    // vertex and gives up the radius it costs rather than running off the bottom edge.
+    test('keeps its band, its marks and its numbers inside its own box', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'protractor', 'Protractor', Object.assign({}, PROTRACTOR_AT));
+        for (const [width, height] of [[300, 170], [120, 70], [600, 340], [90, 200]]) {
+            for (const endAngle of [45, 90, 180, 270, 360]) {
+                for (const angleUnit of ['degrees', 'radians']) {
+                    await setProperties(page, 'Protractor', { width, height, endAngle, angleUnit });
+                    const overflow = await page.evaluate(box => {
+                        const drawn = shell.board.shapes.getByName('Protractor').contentGroup.querySelectorAll('[data-source-id]');
+                        let worst = 0;
+                        for (const node of drawn) {
+                            const bounds = node.getBBox();
+                            worst = Math.max(worst, -bounds.x, -bounds.y, bounds.x + bounds.width - box.width, bounds.y + bounds.height - box.height);
+                        }
+                        return Math.round(worst * 10) / 10;
+                    }, { width, height });
+                    expect(overflow, `${width}x${height} to ${endAngle} in ${angleUnit}`).toBeLessThanOrEqual(0.5);
+                }
+            }
+        }
+    });
+
+    // Three lengths of mark, the way a protractor is printed: one at every number, a taller one
+    // halfway between two numbers, and the plain ones between those.
+    test('rules the band in three lengths of mark', async ({ page }) => {
+        await setupBoard(page);
+        await addObject(page, 'protractor', 'Protractor', Object.assign({}, PROTRACTOR_AT));
+        const lengths = await page.evaluate(() => {
+            const nodes = [...shell.board.shapes.getByName('Protractor').contentGroup.querySelectorAll('line[data-source-id^="tick-"]')];
+            const rounded = nodes.map(node => Math.round(Math.hypot(node.x2.baseVal.value - node.x1.baseVal.value, node.y2.baseVal.value - node.y1.baseVal.value) * 10) / 10);
+            return [...new Set(rounded)].sort((a, b) => a - b);
+        });
+        expect(lengths).toHaveLength(3);
+        const [minor, middle, major] = lengths;
+        expect(middle).toBeGreaterThan(minor);
+        expect(major).toBeGreaterThan(middle);
     });
 
     test('reads the angle the pointer stands at, and stops reading when it leaves', async ({ page }) => {

@@ -111,9 +111,11 @@
         </div>
 
         <h2>Overview</h2>
-        <p>The protractor is a band of degrees numbered at every division, divided ten ways between one number and the next, standing on the arms it is read between. Lay it over what is being measured &mdash; a vector, a body&rsquo;s path, a drawing &mdash; and resting the pointer on it reads the angle from its zero, on a plate standing on the band. It measures rather than reads the model: it is bound to no term.</p>
-        <p>How far round the vertex it goes is its own: a half circle stands the vertex on the bottom edge the way a protractor sits on a page, and a whole turn closes the band into a dial with the vertex in the middle of the box. The numbers the two ends read are its own too, so the same object is marked in degrees (0 to 180), in radians (0 to 3.1416) or in turns (0 to 1).</p>
-        <p>A protractor whose ends read 0 and 3.1416 is one marked in radians, and it can be numbered in π to match: π/6, π/3, π/2 round the band, and the same fractions on the plate the pointer reads.</p>
+        <p>The protractor is a band of degrees numbered at every division, ruled from end to end by marks about a degree apart, standing on the arms it is read between. Lay it over what is being measured &mdash; a vector, a body&rsquo;s path, a drawing &mdash; and resting the pointer on it reads the angle from its zero, on a plate standing on the band. It measures rather than reads the model: it is bound to no term.</p>
+        <p>It is set by its two arms: a <b>start angle</b> and an <b>end angle</b>, both measured anticlockwise from straight right. A half circle stands the vertex on the bottom edge the way a protractor sits on a page, and a whole turn between the two closes the band into a dial with the vertex in the middle of the box. Wherever the band reaches a direction the box itself stands on &mdash; straight right, straight up, straight left, straight down &mdash; a spoke is drawn from the band to the vertex, so a half circle carries the upright the drawing under it is squared against.</p>
+        <p>The numbers read the angle they stand at rather than how far along the band they are, so a protractor set from 30 to 150 is numbered 30 to 150. They keep to round angles: the first stands at the first round one the band reaches and the last at the last, which is why a protractor ending at 112.5 is still numbered to 110.</p>
+        <p>What it is marked in is one row of its settings. <b>Degrees</b> numbers the band the way a protractor is printed, a number every ten degrees. <b>Radians</b> numbers the same band in the fractions of π those angles are &mdash; π/6, π/3, π/2 round the band, and the same fractions on the plate the pointer reads &mdash; a number every thirty degrees, with the marks between them still a degree apart.</p>
+        <p>Both angles are set in whatever the protractor is marked in, and the mark stands inside the field after the number. In degrees they are degrees, written after a degree sign; in radians they are the multiple of π they are &mdash; a half turn is 1, a whole turn is 2 &mdash; written after a π. Either takes a decimal number, so 112.5&deg; and 0.75&pi; are both set by typing them. What the object holds never changes &mdash; it is degrees throughout &mdash; only the way the number is written and read.</p>
         <p>It is placed from the protractor key on the shapes toolbar, and it is also in the objects palette and in the notebook&rsquo;s own toolbar, since it is an <a href="/docs/blocks/index.html">object built from blocks</a> like the compass or the thermometer: one JSON definition, drawn by the same compiler every other object is drawn by, wherever it stands. Models saved before the change carry the older <code>ProtractorShape</code>, which still opens.</p>
 
         <h2>Toolbar</h2>
@@ -121,6 +123,13 @@
             <i class="fa-light fa-image"></i>
             Screenshot: the protractor toolbar
         </div>
+        <table class="docs-table">
+            <thead><tr><th>Key</th><th>What it does</th></tr></thead>
+            <tbody>
+                <tr><td>Name and colours</td><td>The object&rsquo;s name, and the band, its border, the marks, the numbers and the reading, each picked as a colour of its own</td></tr>
+                <tr><td>Settings</td><td>The two arms the band is read between, what it is marked in, and the decimals the reading is written to</td></tr>
+            </tbody>
+        </table>
 
         <h2>Settings</h2>
         <div class="screenshot-placeholder">
@@ -130,12 +139,9 @@
         <table class="docs-table">
             <thead><tr><th>Property</th><th>Description</th></tr></thead>
             <tbody>
-                <tr><td>Zero direction</td><td>Where the zero of the scale points, measured anticlockwise from straight right</td></tr>
-                <tr><td>Span</td><td>How far round the vertex the scale runs. A whole turn closes the band into a dial and stands the vertex in the middle of the box</td></tr>
-                <tr><td>Divisions</td><td>How many numbered parts the scale is cut into &mdash; eighteen over a half circle is the ten degrees a protractor is marked in. Each part is divided ten ways by smaller marks</td></tr>
-                <tr><td>First number, Last number</td><td>What the two ends of the scale read, which is what decides whether the protractor is marked in degrees, radians or turns</td></tr>
-                <tr><td>Numbers</td><td>Whether the scale is numbered as plain numbers or as multiples of π, which is what a protractor marked in radians wants</td></tr>
-                <tr><td>Unit</td><td>What the angle is measured in, written after the value the pointer reads. The numbers round the band stay bare</td></tr>
+                <tr><td>Start angle</td><td>The arm the band is read from, measured anticlockwise from straight right. Set in whatever the protractor is marked in, decimals and all</td></tr>
+                <tr><td>End angle</td><td>The arm the band runs to, anticlockwise from the start and set in the same unit. A whole turn between the two closes the band into a dial and stands the vertex in the middle of the box</td></tr>
+                <tr><td>Angle unit</td><td>Degrees or radians, picked from the two keys themselves. It decides how far apart the numbers stand, what they read, and how both angles above are written</td></tr>
                 <tr><td>Decimals</td><td>Decimals the angle under the pointer is read to</td></tr>
                 <tr><td>Colours</td><td>The band, its border, the marks, the numbers and the reading, each picked in the colour menu</td></tr>
             </tbody>

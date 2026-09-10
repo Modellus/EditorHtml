@@ -78,6 +78,12 @@ class BlockObjects {
     // card, a palette thumbnail and a catalogue screenshot are all square, but an object that is not
     // square is drawn at its own proportions inside that square rather than stretched to fill it —
     // a ruler previewed as a square is a strip of scale over an acre of blank body.
+    // Whether the object writes numbers a notation could be chosen for. One marked in a unit of its
+    // own — a protractor in degrees or in fractions of π — writes none, so it is offered no choice.
+    static writesNotation(componentType) {
+        return BlockRegistry.get(componentType)?.writesNotation !== false;
+    }
+
     static getDefaultSize(componentType, tokens = null) {
         const scale = tokens ?? new BlockTokens();
         const declared = BlockRegistry.get(componentType)?.defaultSize ?? null;

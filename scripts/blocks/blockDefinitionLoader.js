@@ -61,6 +61,10 @@ class BlockDefinitionLoader {
             // strip and a protractor is wider than it is tall, so the shape that hosts them cannot
             // fall back to the square every dial wants.
             defaultSize: document.defaultSize ?? null,
+            // Whether the numbers the object writes are ever worth writing as a power of ten. A
+            // protractor is marked in degrees or in fractions of π and neither is, so it is not
+            // offered the notation the objects that write plain values are.
+            writesNotation: document.writesNotation !== false,
             parameters: (document.parameters ?? []).map(parameter => BlockDefinitionLoader.normalizeParameter(parameter)),
             agentAccessible: document.agentAccessible !== false,
             indexedSource: indexedSource,

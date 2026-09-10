@@ -66,15 +66,14 @@ test.describe('the unit of a measuring object', () => {
     // not carry is kept as written.
     test('takes a unit written into the field as well', async ({ page }) => {
         await setupBoard(page);
-        await addComponent(page, 'protractor', 'Protractor', { x: 60, y: 60, width: 300, height: 170 });
-        const row = await openUnitRow(page, 'Protractor');
+        await addComponent(page, 'ruler', 'Ruler', { x: 60, y: 60, width: 320, height: 64 });
+        const row = await openUnitRow(page, 'Ruler');
         const input = row.locator('.mdl-units-editor-input');
-        await expect(input).toHaveValue('\u00ba');
         await input.click();
         await page.keyboard.press('ControlOrMeta+a');
         await page.keyboard.type('furlong');
         await page.keyboard.press('Enter');
-        await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Protractor').properties.unit)).toBe('furlong');
+        await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Ruler').properties.unit)).toBe('furlong');
         await expect(input).toHaveValue('furlong');
     });
 });

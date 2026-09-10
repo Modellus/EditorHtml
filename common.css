@@ -119,6 +119,15 @@ input,
 }
 
 
+/* The degree mark is a dot standing where a degree sign stands, which is what the player's angle-unit
+   key and the protractor's both draw it as. A component's mode key writes its icon on its own with no
+   word beside it, so the mark is given its size here rather than in a template of its own. */
+.mdl-component-mode-selector .fa-dot {
+    font-size: 20px;
+    position: relative;
+    top: -4px;
+}
+
 /* Pill button groups: one small icon per choice, with the chosen one under a sliding pill.
    Shared by the player toolbar and the shape toolbars so a choice looks the same wherever it is made. */
 .mdl-small-icon .dx-icon {
@@ -181,6 +190,19 @@ input,
 
 .mdl-notation-group .mdl-notation-field::part(menu-toggle) {
     display: none;
+}
+
+/* A pill group whose choices are named rather than iconed: the words carry the meaning, so they are
+   given room to be read and the chosen one is weighted the way a chosen icon is. */
+.mdl-named-pill-group .dx-button-content {
+    padding: 4px 12px;
+    font-size: 13px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.mdl-named-pill-group .dx-item-selected .dx-button-content {
+    font-weight: 600;
 }
 
 .mdl-pill-group .dx-item-selected .dx-icon,

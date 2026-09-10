@@ -1175,12 +1175,8 @@ Capabilities: `radial`, `angular`, `scale`, `interaction`
 | Parameter | Type | Default | Range |
 | --- | --- | --- | --- |
 | `startAngle` | number | 0 | min -360, max 360 |
-| `spanAngle` | number | 180 | min 1, max 360 |
-| `divisions` | number | 18 | min 1, max 36 |
-| `startValue` | number | 0 |  |
-| `endValue` | number | 180 |  |
-| `numbers` | string | "decimal" | decimal \| pi |
-| `unit` | unit | "º" |  |
+| `endAngle` | number | 180 | min -360, max 360 |
+| `angleUnit` | string | "degrees" | degrees \| radians |
 | `digits` | number | 0 | min 0, max 6 |
 | `faceColor` | colour | "token:surface.default" |  |
 | `borderColor` | colour | "token:stroke.default" |  |

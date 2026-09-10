@@ -10614,6 +10614,7 @@ BlockDefinitionLoader.registerAll([
             "width": 300,
             "height": 170
         },
+        "writesNotation": false,
         "tags": [
             "object",
             "protractor",
@@ -10632,75 +10633,40 @@ BlockDefinitionLoader.registerAll([
         "parameters": [
             {
                 "id": "startAngle",
-                "label": "Zero direction",
+                "label": "Start angle",
                 "valueType": "number",
                 "defaultValue": 0,
                 "unit": "deg",
                 "minimum": -360,
                 "maximum": 360,
                 "category": "scale",
-                "description": "Where the zero of the scale points, measured anticlockwise from straight right, so a protractor lying the usual way up reads zero at its right-hand arm."
+                "description": "The arm the scale is read from, measured anticlockwise from straight right, so a protractor lying the usual way up starts at nothing and its zero is its right-hand arm. Set in whatever the protractor is marked in.",
+                "angleUnitParameter": "angleUnit"
             },
             {
-                "id": "spanAngle",
-                "label": "Span",
+                "id": "endAngle",
+                "label": "End angle",
                 "valueType": "number",
                 "defaultValue": 180,
                 "unit": "deg",
-                "minimum": 1,
+                "minimum": -360,
                 "maximum": 360,
                 "category": "scale",
-                "description": "How far round the vertex the scale runs, anticlockwise from the zero direction. A whole turn stands the vertex in the middle of the box and draws the band as a full dial; anything less stands it on the bottom edge, where a protractor's vertex belongs."
+                "angleUnitParameter": "angleUnit",
+                "description": "The arm the scale runs to, anticlockwise from the start angle and set in the same unit. A whole turn between the two closes the band into a dial and stands the vertex in the middle of the box; anything less stands it on the bottom edge, where a protractor's vertex belongs. An end that does not stand after the start leaves the protractor the half circle it is drawn as."
             },
             {
-                "id": "divisions",
-                "label": "Divisions",
-                "valueType": "number",
-                "defaultValue": 18,
-                "minimum": 1,
-                "maximum": 36,
-                "bindable": false,
-                "category": "scale",
-                "description": "How many numbered parts the scale is cut into — eighteen over a half circle is the ten degrees a protractor is marked in. Each part is divided ten ways by smaller marks of its own."
-            },
-            {
-                "id": "startValue",
-                "label": "First number",
-                "valueType": "number",
-                "defaultValue": 0,
-                "category": "scale",
-                "description": "What the zero end of the scale reads. With the last number it decides what the protractor is marked in: 0 to 180 measures degrees, 0 to 3.1416 measures the same angles in radians, and 0 to 1 measures them in turns."
-            },
-            {
-                "id": "endValue",
-                "label": "Last number",
-                "valueType": "number",
-                "defaultValue": 180,
-                "category": "scale"
-            },
-            {
-                "id": "numbers",
-                "label": "Numbers",
+                "id": "angleUnit",
+                "label": "Angle unit",
                 "valueType": "string",
-                "defaultValue": "decimal",
+                "defaultValue": "degrees",
                 "enumValues": [
-                    "decimal",
-                    "pi"
+                    "degrees",
+                    "radians"
                 ],
-                "enumIcons": [
-                    "fa-light fa-1",
-                    "fa-light fa-pi"
-                ],
-                "category": "display",
-                "description": "How the scale is numbered, and how the angle under the pointer is read: as plain numbers, or as multiples of π. A protractor whose ends read 0 and 3.1416 is a protractor marked in radians, and this is what writes its numbers as π/6, π/3, π/2 rather than as decimals of it."
-            },
-            {
-                "id": "unit",
-                "label": "Unit",
-                "valueType": "unit",
-                "defaultValue": "º",
-                "category": "display",
-                "description": "What the angle is measured in, written after the value the pointer reads. The numbers round the band stay bare, the way an axis writes its own."
+                "category": "scale",
+                "description": "What the protractor is marked in. Degrees number the band the way a protractor is printed, one number every ten degrees, and its two angles are set in degrees. Radians number the same band in the fractions of π those angles are, one number every thirty, and its two angles are set in multiples of π — half a turn is 1, a whole turn is 2.",
+                "enumControl": "buttons"
             },
             {
                 "id": "digits",
@@ -10868,8 +10834,24 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "spanRaw",
+                "formula": "endAngle-startAngle"
+            },
+            {
+                "id": "spanUsable",
+                "formula": "\\max\\left(0,spanRaw-0.5\\right)"
+            },
+            {
                 "id": "spanUp",
-                "formula": "\\max\\left(1,\\min\\left(360,spanAngle\\right)\\right)"
+                "value": {
+                    "choose": {
+                        "parameter": "spanUsable"
+                    },
+                    "then": {
+                        "formula": "\\min\\left(360,spanRaw\\right)"
+                    },
+                    "otherwise": 180
+                }
             },
             {
                 "id": "full",
@@ -10886,6 +10868,134 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "rel0",
+                "formula": "\\mod\\left(0-startAngle+720,360\\right)"
+            },
+            {
+                "id": "inside0",
+                "formula": "\\max\\left(0,\\min\\left(rel0,spanUp-rel0\\right)-0.5\\right)"
+            },
+            {
+                "id": "spoke0",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": 1,
+                    "otherwise": {
+                        "parameter": "inside0"
+                    }
+                }
+            },
+            {
+                "id": "rel90",
+                "formula": "\\mod\\left(90-startAngle+720,360\\right)"
+            },
+            {
+                "id": "inside90",
+                "formula": "\\max\\left(0,\\min\\left(rel90,spanUp-rel90\\right)-0.5\\right)"
+            },
+            {
+                "id": "spoke90",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": 1,
+                    "otherwise": {
+                        "parameter": "inside90"
+                    }
+                }
+            },
+            {
+                "id": "rel180",
+                "formula": "\\mod\\left(180-startAngle+720,360\\right)"
+            },
+            {
+                "id": "inside180",
+                "formula": "\\max\\left(0,\\min\\left(rel180,spanUp-rel180\\right)-0.5\\right)"
+            },
+            {
+                "id": "spoke180",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": 1,
+                    "otherwise": {
+                        "parameter": "inside180"
+                    }
+                }
+            },
+            {
+                "id": "rel270",
+                "formula": "\\mod\\left(270-startAngle+720,360\\right)"
+            },
+            {
+                "id": "inside270",
+                "formula": "\\max\\left(0,\\min\\left(rel270,spanUp-rel270\\right)-0.5\\right)"
+            },
+            {
+                "id": "spoke270",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": 1,
+                    "otherwise": {
+                        "parameter": "inside270"
+                    }
+                }
+            },
+            {
+                "id": "endUp",
+                "formula": "startAngle+spanUp"
+            },
+            {
+                "id": "startSin",
+                "formula": "\\sin\\left(\\frac{startAngle\\cdot\\pi}{180}\\right)"
+            },
+            {
+                "id": "endSin",
+                "formula": "\\sin\\left(\\frac{endAngle\\cdot\\pi}{180}\\right)"
+            },
+            {
+                "id": "endsRise",
+                "formula": "\\max\\left(0,\\max\\left(startSin,endSin\\right)\\right)"
+            },
+            {
+                "id": "endsDrop",
+                "formula": "\\max\\left(0,\\max\\left(0-startSin,0-endSin\\right)\\right)"
+            },
+            {
+                "id": "riseFraction",
+                "value": {
+                    "choose": {
+                        "parameter": "inside90"
+                    },
+                    "then": 1,
+                    "otherwise": {
+                        "parameter": "endsRise"
+                    }
+                }
+            },
+            {
+                "id": "dropFraction",
+                "value": {
+                    "choose": {
+                        "parameter": "inside270"
+                    },
+                    "then": 1,
+                    "otherwise": {
+                        "parameter": "endsDrop"
+                    }
+                }
+            },
+            {
+                "id": "reachFraction",
+                "formula": "\\max\\left(0.05,riseFraction+dropFraction\\right)"
+            },
+            {
                 "id": "halfW",
                 "formula": "\\frac{w}{2}"
             },
@@ -10898,26 +11008,12 @@ BlockDefinitionLoader.registerAll([
                 "formula": "halfW"
             },
             {
-                "id": "cy",
-                "value": {
-                    "choose": {
-                        "parameter": "full"
-                    },
-                    "then": {
-                        "parameter": "halfH"
-                    },
-                    "otherwise": {
-                        "formula": "h-pad"
-                    }
-                }
-            },
-            {
                 "id": "radiusFull",
                 "formula": "\\max\\left(8,\\min\\left(halfW,halfH\\right)-pad\\right)"
             },
             {
                 "id": "radiusPart",
-                "formula": "\\max\\left(8,\\min\\left(halfW,h\\right)-pad\\right)"
+                "formula": "\\max\\left(8,\\min\\left(halfW-pad,\\frac{h-pad}{reachFraction}\\right)\\right)"
             },
             {
                 "id": "outerR",
@@ -10934,12 +11030,30 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
+                "id": "cy",
+                "value": {
+                    "choose": {
+                        "parameter": "full"
+                    },
+                    "then": {
+                        "parameter": "halfH"
+                    },
+                    "otherwise": {
+                        "formula": "h-pad-outerR\\cdot dropFraction"
+                    }
+                }
+            },
+            {
                 "id": "majorTickLength",
                 "formula": "\\max\\left(4,outerR\\cdot0.1\\right)"
             },
             {
                 "id": "minorTickLength",
                 "formula": "majorTickLength\\cdot0.45"
+            },
+            {
+                "id": "middleTickLength",
+                "formula": "majorTickLength\\cdot0.7"
             },
             {
                 "id": "labelRadius",
@@ -10950,34 +11064,77 @@ BlockDefinitionLoader.registerAll([
                 "formula": "\\max\\left(4,\\min\\left(outerR\\cdot0.72,labelRadius-tickFont\\cdot0.8\\right)\\right)"
             },
             {
-                "id": "endAngle",
-                "formula": "startAngle+spanUp"
+                "id": "isRadians",
+                "value": {
+                    "choose": {
+                        "parameter": "angleUnit"
+                    },
+                    "equals": "radians",
+                    "then": 1,
+                    "otherwise": 0
+                }
             },
             {
-                "id": "divisionsUp",
-                "formula": "\\max\\left(1,\\min\\left(36,divisions-\\mod\\left(divisions,1\\right)\\right)\\right)"
+                "id": "stepDegrees",
+                "formula": "10+isRadians\\cdot20"
+            },
+            {
+                "id": "gridOffset",
+                "formula": "\\mod\\left(stepDegrees-\\mod\\left(startAngle+720,stepDegrees\\right),stepDegrees\\right)"
+            },
+            {
+                "id": "firstNumberAngle",
+                "formula": "startAngle+gridOffset"
+            },
+            {
+                "id": "gridSpan",
+                "formula": "\\max\\left(0,spanUp-gridOffset\\right)"
+            },
+            {
+                "id": "numberedRaw",
+                "formula": "\\frac{gridSpan}{stepDegrees}"
+            },
+            {
+                "id": "numberedParts",
+                "formula": "\\max\\left(0,\\min\\left(36,numberedRaw-\\mod\\left(numberedRaw,1\\right)\\right)\\right)"
             },
             {
                 "id": "labelCount",
-                "formula": "divisionsUp+1"
+                "formula": "numberedParts+1"
             },
             {
-                "id": "ringSpan",
-                "formula": "0-spanUp"
+                "id": "labelSpan",
+                "formula": "numberedParts\\cdot stepDegrees"
             },
             {
-                "id": "tickCount",
+                "id": "labelRingSpan",
+                "formula": "0-labelSpan"
+            },
+            {
+                "id": "gridCount",
+                "formula": "numberedParts\\cdot2+1"
+            },
+            {
+                "id": "minorRaw",
+                "formula": "spanUp-\\mod\\left(spanUp,1\\right)"
+            },
+            {
+                "id": "minorCount",
                 "value": {
                     "choose": {
                         "parameter": "full"
                     },
                     "then": {
-                        "formula": "divisionsUp\\cdot10"
+                        "parameter": "minorRaw"
                     },
                     "otherwise": {
-                        "formula": "divisionsUp\\cdot10+1"
+                        "formula": "minorRaw+1"
                     }
                 }
+            },
+            {
+                "id": "ringSpan",
+                "formula": "0-spanUp"
             },
             {
                 "id": "includeEndTick",
@@ -10990,12 +11147,26 @@ BlockDefinitionLoader.registerAll([
                 }
             },
             {
-                "id": "valueSpan",
-                "formula": "endValue-startValue"
+                "id": "unitScale",
+                "formula": "1+isRadians\\cdot\\left(\\frac{\\pi}{180}-1\\right)"
+            },
+            {
+                "id": "scaleNumbers",
+                "value": {
+                    "choose": {
+                        "parameter": "isRadians"
+                    },
+                    "then": "pi",
+                    "otherwise": "decimal"
+                }
+            },
+            {
+                "id": "labelStartValue",
+                "formula": "firstNumberAngle\\cdot unitScale"
             },
             {
                 "id": "valueStep",
-                "formula": "\\frac{valueSpan}{divisionsUp}"
+                "formula": "stepDegrees\\cdot unitScale"
             },
             {
                 "id": "labelDigits",
@@ -11075,7 +11246,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "reading",
-                "formula": "startValue+\\frac{\\left(relative\\cdot valueSpan\\right)}{spanUp}"
+                "formula": "\\left(startAngle+relative\\right)\\cdot unitScale"
             },
             {
                 "id": "readingDecimalText",
@@ -11101,7 +11272,7 @@ BlockDefinitionLoader.registerAll([
                 "id": "readingText",
                 "value": {
                     "choose": {
-                        "parameter": "numbers"
+                        "parameter": "scaleNumbers"
                     },
                     "equals": "pi",
                     "then": {
@@ -11302,6 +11473,162 @@ BlockDefinitionLoader.registerAll([
                     ]
                 },
                 {
+                    "id": "spoke-0",
+                    "type": "line",
+                    "when": {
+                        "parameter": "spoke0"
+                    },
+                    "bindings": {
+                        "x1": {
+                            "parameter": "cx"
+                        },
+                        "y1": {
+                            "parameter": "cy"
+                        },
+                        "x2": {
+                            "formula": "cx+innerR"
+                        },
+                        "y2": {
+                            "parameter": "cy"
+                        },
+                        "stroke": {
+                            "parameter": "scaleColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeDefault"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "rotate",
+                            "angle": 0,
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "spoke-90",
+                    "type": "line",
+                    "when": {
+                        "parameter": "spoke90"
+                    },
+                    "bindings": {
+                        "x1": {
+                            "parameter": "cx"
+                        },
+                        "y1": {
+                            "parameter": "cy"
+                        },
+                        "x2": {
+                            "formula": "cx+innerR"
+                        },
+                        "y2": {
+                            "parameter": "cy"
+                        },
+                        "stroke": {
+                            "parameter": "scaleColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeDefault"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "rotate",
+                            "angle": -90,
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "spoke-180",
+                    "type": "line",
+                    "when": {
+                        "parameter": "spoke180"
+                    },
+                    "bindings": {
+                        "x1": {
+                            "parameter": "cx"
+                        },
+                        "y1": {
+                            "parameter": "cy"
+                        },
+                        "x2": {
+                            "formula": "cx+innerR"
+                        },
+                        "y2": {
+                            "parameter": "cy"
+                        },
+                        "stroke": {
+                            "parameter": "scaleColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeDefault"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "rotate",
+                            "angle": -180,
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "spoke-270",
+                    "type": "line",
+                    "when": {
+                        "parameter": "spoke270"
+                    },
+                    "bindings": {
+                        "x1": {
+                            "parameter": "cx"
+                        },
+                        "y1": {
+                            "parameter": "cy"
+                        },
+                        "x2": {
+                            "formula": "cx+innerR"
+                        },
+                        "y2": {
+                            "parameter": "cy"
+                        },
+                        "stroke": {
+                            "parameter": "scaleColor"
+                        },
+                        "strokeWidth": {
+                            "parameter": "strokeDefault"
+                        }
+                    },
+                    "modifiers": [
+                        {
+                            "type": "rotate",
+                            "angle": -270,
+                            "centerX": {
+                                "parameter": "cx"
+                            },
+                            "centerY": {
+                                "parameter": "cy"
+                            }
+                        }
+                    ]
+                },
+                {
                     "id": "vertex",
                     "type": "circle",
                     "bindings": {
@@ -11336,7 +11663,7 @@ BlockDefinitionLoader.registerAll([
                             "parameter": "outerR"
                         },
                         "count": {
-                            "parameter": "tickCount"
+                            "parameter": "minorCount"
                         },
                         "startAngle": {
                             "parameter": "startAngle"
@@ -11355,8 +11682,42 @@ BlockDefinitionLoader.registerAll([
                         },
                         "color": {
                             "parameter": "scaleColor"
+                        }
+                    }
+                },
+                {
+                    "id": "grid",
+                    "type": "tick-ring",
+                    "parameters": {
+                        "centerX": {
+                            "parameter": "cx"
                         },
-                        "majorEvery": 10,
+                        "centerY": {
+                            "parameter": "cy"
+                        },
+                        "radius": {
+                            "parameter": "outerR"
+                        },
+                        "count": {
+                            "parameter": "gridCount"
+                        },
+                        "startAngle": {
+                            "parameter": "firstNumberAngle"
+                        },
+                        "spanAngle": {
+                            "parameter": "labelRingSpan"
+                        },
+                        "includeEnd": true,
+                        "length": {
+                            "parameter": "middleTickLength"
+                        },
+                        "width": {
+                            "parameter": "strokeDefault"
+                        },
+                        "color": {
+                            "parameter": "scaleColor"
+                        },
+                        "majorEvery": 2,
                         "majorLength": {
                             "parameter": "majorTickLength"
                         },
@@ -11382,14 +11743,14 @@ BlockDefinitionLoader.registerAll([
                             "parameter": "labelCount"
                         },
                         "startAngle": {
-                            "parameter": "startAngle"
+                            "parameter": "firstNumberAngle"
                         },
                         "spanAngle": {
-                            "parameter": "ringSpan"
+                            "parameter": "labelRingSpan"
                         },
                         "includeEnd": true,
                         "startValue": {
-                            "parameter": "startValue"
+                            "parameter": "labelStartValue"
                         },
                         "valueStep": {
                             "parameter": "valueStep"
@@ -11399,7 +11760,7 @@ BlockDefinitionLoader.registerAll([
                             "parameter": "labelDigits"
                         },
                         "numberFormat": {
-                            "parameter": "numbers"
+                            "parameter": "scaleNumbers"
                         },
                         "fontSize": {
                             "parameter": "tickFont"
@@ -11511,9 +11872,6 @@ BlockDefinitionLoader.registerAll([
                         },
                         "text": {
                             "parameter": "readingText"
-                        },
-                        "unit": {
-                            "parameter": "unit"
                         },
                         "fontSize": {
                             "parameter": "tickFont"

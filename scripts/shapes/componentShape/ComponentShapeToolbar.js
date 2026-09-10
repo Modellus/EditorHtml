@@ -369,7 +369,8 @@ var ComponentShapeToolbarMixin = {
                 buildControl: $container => $container.append(this.createComponentParameterControl(parameter))
             });
         }
-        items.push(this.createNotationMenuItem());
+        if (BlockObjects.writesNotation(this.getComponentType()))
+            items.push(this.createNotationMenuItem());
         this.renderComponentMenuList(contentElement, items);
     },
     // An object that says how far its axes run edits them the way the chart and the referential do:
@@ -604,10 +605,12 @@ var ComponentShapeToolbarMixin = {
             }
         });
     },
-    // Which rows a parameter decides the fate of: the ones naming it in what they are shown for.
+    // Which rows a parameter decides the fate of: the ones naming it in what they are shown for, and
+    // the ones naming it as the unit they are written in, since those are read and set in it.
     getComponentParametersGovernedBy(parameterId) {
         return this.getEditableParameters()
-            .filter(parameter => [].concat(parameter.visibleWhen ?? []).concat(parameter.disabledWhen ?? []).some(condition => condition.parameter === parameterId));
+            .filter(parameter => parameter.angleUnitParameter === parameterId
+                || [].concat(parameter.visibleWhen ?? []).concat(parameter.disabledWhen ?? []).some(condition => condition.parameter === parameterId));
     },
     // The settings menu is built when it is opened, so a choice made elsewhere in the toolbar — or on
     // one of its own switches — leaves it listing rows the object no longer offers. It is written
@@ -620,25 +623,54 @@ var ComponentShapeToolbarMixin = {
     },
     // A parameter is read by parsing wherever it is used, so a value typed here is stored as it
     // was typed - 1e-3 stays 1e-3 - and only a value the object works out for itself is a number.
+    // An angle a definition keeps in degrees but says is read in whatever unit the object is marked
+    // in. Degrees are set as they stand, with the degree mark after them; radians are set as the
+    // multiple of π they are — half a turn is 1 — with π after them, which is how an angle in
+    // radians is written and how the band the angle belongs to is numbered. What is stored never
+    // changes: the row only writes it in the unit that was chosen.
+    getComponentAngleWriting(parameter) {
+        const chooser = this.getComponentParameter(parameter.angleUnitParameter ?? "");
+        if (!chooser || parameter.unit !== "deg")
+            return null;
+        if (String(this.properties[chooser.id] ?? "") !== "radians")
+            return { suffix: "\u00ba", perUnit: 1, step: 1 };
+        return { suffix: "\u03c0", perUnit: 180, step: 0.01 };
+    },
     createComponentNumberControl(parameter) {
+        const writing = this.getComponentAngleWriting(parameter);
+        const scale = writing?.perUnit ?? 1;
+        const stored = Utils.parseNumericText(this.properties[parameter.id]);
         const editorOptions = {
-            value: Utils.parseNumericText(this.properties[parameter.id]),
-            typedTextKey: parameter.id,
+            value: Number.isFinite(stored) ? stored / scale : stored,
+            typedTextKey: scale === 1 ? parameter.id : undefined,
             typedTextHost: this.properties,
-            storesTypedValue: true,
-            min: Number.isFinite(parameter.minimum) ? parameter.minimum : undefined,
-            max: Number.isFinite(parameter.maximum) ? parameter.maximum : undefined,
+            storesTypedValue: scale === 1,
+            elementAttr: { class: "mdl-math-input" },
+            min: Number.isFinite(parameter.minimum) ? parameter.minimum / scale : undefined,
+            max: Number.isFinite(parameter.maximum) ? parameter.maximum / scale : undefined,
             width: 100,
             onValueChanged: event => {
                 if (!event.event)
                     return;
+                if (scale !== 1)
+                    return this.setPropertyCommand(parameter.id, Number(event.value) * scale);
                 this.setPropertyCommand(parameter.id, event.typedText ?? event.value);
             }
         };
+        if (writing) {
+            Object.assign(editorOptions, {
+                step: writing.step,
+                onInitialized: event => this.applyAngleSuffix(event.element, writing.suffix),
+                onContentReady: event => this.applyAngleSuffix(event.element, writing.suffix)
+            });
+        }
         return $('<div>').dxNumberBox(Utils.getNumericEditorOptions(Object.assign({ showSpinButtons: true, stylingMode: "filled" }, editorOptions)));
     },
     createComponentEnumControl(parameter) {
-        if (parameter.enumIcons)
+        // A choice of two or three is offered as the keys themselves rather than as a list to open:
+        // a definition marking one as icons gets the icons, and one asking for the names in so many
+        // words gets those, both under the sliding pill every choice on the board is made under.
+        if (parameter.enumIcons || parameter.enumControl === "buttons")
             return this.createComponentEnumButtonGroup(parameter);
         return $('<div>').dxSelectBox({
             items: parameter.enumValues.map(value => ({ value: value, text: ComponentShapeToolbarMixin.formatChoiceLabel(value) })),
@@ -651,30 +683,42 @@ var ComponentShapeToolbarMixin = {
             onValueChanged: event => {
                 if (!event.event)
                     return;
-                this.setPropertyCommand(parameter.id, event.value);
+                this.setComponentChoice(parameter, event.value);
             }
         });
     },
+    // A choice the other rows are shaped by — which of them are offered at all, or the unit they are
+    // written in — leaves the menu it was made in saying something that is no longer true, so the
+    // menu is written again once the choice has finished with itself.
+    setComponentChoice(parameter, value) {
+        this.setPropertyCommand(parameter.id, value);
+        this.board.markDirty(this);
+        if (this.getComponentParametersGovernedBy(parameter.id).length === 0)
+            return;
+        this.refreshComponentToolbarControls();
+        this.refreshComponentModelMenu();
+        queueMicrotask(() => this.refreshComponentSettingsMenu());
+    },
     createComponentEnumButtonGroup(parameter) {
-        const items = parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons[index], hint: ComponentShapeToolbarMixin.formatChoiceLabel(value) }));
+        const named = !parameter.enumIcons;
+        const items = parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons?.[index] ?? "", hint: ComponentShapeToolbarMixin.formatChoiceLabel(value) }));
         return $('<div class="mdl-component-enum-buttons">').dxButtonGroup({
             items: items,
             keyExpr: "value",
             selectionMode: "single",
             selectedItemKeys: [this.properties[parameter.id]],
             stylingMode: "outlined",
-            elementAttr: { class: "mdl-pill-group mdl-small-icon" },
+            elementAttr: { class: named ? "mdl-pill-group mdl-named-pill-group" : "mdl-pill-group mdl-small-icon" },
             buttonTemplate: (data, buttonContainer) => {
-                buttonContainer[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
+                if (named)
+                    buttonContainer[0].replaceChildren(document.createTextNode(this.board.translations.get(data.hint) ?? data.hint));
+                else
+                    buttonContainer[0].innerHTML = `<i class="dx-icon ${data.icon}"></i>`;
             },
             onContentReady: event => Utils.initPillButtonGroup(event.element[0]),
             onItemClick: event => {
-                this.setPropertyCommand(parameter.id, event.itemData.value);
-                if (this.getComponentParametersGovernedBy(parameter.id).length === 0)
-                    return;
-                this.refreshComponentToolbarControls();
-                this.refreshComponentModelMenu();
-                queueMicrotask(() => this.refreshComponentSettingsMenu());
+                Utils.movePillButtonGroup(event.component.element()[0]);
+                this.setComponentChoice(parameter, event.itemData.value);
             }
         });
     },

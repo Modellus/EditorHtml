@@ -49,7 +49,8 @@ test.describe('the measuring objects in the notebook', () => {
         await setupNotebook(page);
         const blockId = await addObjectBlock(page, 'protractor');
         expect(await readNodes(page, blockId, 'label-', 'text')).toContain('90');
-        expect(await readNodes(page, blockId, 'tick-', 'line')).toHaveLength(181);
+        // The plain marks ruling the band a degree apart, and the grid the numbers stand on over them.
+        expect(await readNodes(page, blockId, 'tick-', 'line')).toHaveLength(181 + 37);
     });
 
     // What the object shows is the block's own, so the page carries it and opening the page again

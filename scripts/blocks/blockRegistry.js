@@ -69,6 +69,10 @@ class BuildingBlockRegistry {
             // The box an object is placed in when nothing said how big to draw it, for a drawing
             // that is not square: a ruler is a strip, a protractor is wider than it is tall.
             defaultSize: registration.defaultSize ?? null,
+            // Whether the numbers the object writes are ever worth writing as a power of ten. One
+            // marked in a unit of its own — a protractor in degrees or in fractions of π — writes
+            // none, so it is offered no notation to choose.
+            writesNotation: registration.writesNotation !== false,
             aliases: registration.aliases ?? [],
             agentAccessible: registration.agentAccessible !== false,
             deprecated: registration.deprecated === true,

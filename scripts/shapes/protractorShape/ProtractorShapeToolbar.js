@@ -122,20 +122,6 @@ var ProtractorShapeToolbarMixin = {
         pill.style.left = selected.offsetLeft + "px";
         pill.style.width = selected.offsetWidth + "px";
     },
-    applyAngleSuffix(numberBoxElement, angleSuffix) {
-        const host = $(numberBoxElement);
-        host.find(".mdl-numberbox-angle-suffix").remove();
-        const input = host.find(".dx-texteditor-input");
-        input.css("padding-right", "20px");
-        const inputContainer = host.find(".dx-texteditor-input-container");
-        if (!inputContainer.length)
-            return;
-        inputContainer.css("position", "relative");
-        const suffix = $("<span class='mdl-numberbox-angle-suffix'></span>");
-        suffix.text(angleSuffix);
-        suffix.css({ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", pointerEvents: "none", fontSize: angleSuffix === "\u00ba" ? "20px" : "14px", lineHeight: "1", opacity: "0.8" });
-        inputContainer.append(suffix);
-    },
     _refreshAngleEditors() {
         const useRadians = this.getAngleUnit() === "radians";
         const angleMax = useRadians ? 2 : 360;
