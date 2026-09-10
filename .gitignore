@@ -31,3 +31,6 @@ pnpm-debug.log*
 # OS / editor
 Thumbs.db
 .idea/
+
+# Personal Claude Code settings, not shared with the repository.
+.claude/settings.local.json

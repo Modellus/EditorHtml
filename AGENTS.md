@@ -71,3 +71,34 @@ If a spec genuinely shares state across its tests, give that one file
 - Wait on the condition instead: `page.waitForFunction()`, `expect(locator).toBeVisible()`,
   or `expect(...).toPass()` / `expect.poll()` around an assertion that has to settle.
 - When editing a spec that already sleeps, convert the sleeps in the part being touched.
+
+## Branches and Deployment
+
+`main` is production. A push to it deploys the front end to Cloudflare Pages and, when it touches
+`scripts/`, `electron/`, `libraries/`, `modellus.js`, `common.css` or the board page, builds the
+desktop installers. Nothing is committed to `main` directly.
+
+- Work on `dev`. A push there runs the full suite and publishes the dev front end; production is
+  untouched. Both branches run CI, and so does every pull request.
+- Promote by fast-forward: `git switch main && git merge --ff-only dev && git push`. Open a pull
+  request from `dev` to `main` first when the change deserves the checks and the record; its diff
+  is everything not yet in production. Merge it by pushing the fast-forward, which closes it.
+- One Worker and one D1 database serve both front ends. There is no dev API and no dev data:
+  deploying the API in `../API` is a production event, and a row written from `dev` is a real row.
+
+The API deploy goes first, and the database migration before that:
+
+    npm run db:migrate        # from main only; backs the database up first
+    npm run version:upload    # a version on the same database, serving no production traffic
+    npm run version:deploy    # promote it, optionally splitting traffic
+    npm run rollback
+
+Point a front end at an unpromoted version, or at a local `wrangler dev --remote`, by appending
+`?api=<base>` to the page URL. It is remembered until `?api=` clears it.
+
+- Migrations are additive. Expand, backfill, contract in a later release: the deployed production
+  front end and the desktop builds already in users' hands read the same API this one does.
+- New behaviour ships dark behind a `feature_flags` entry enabled for your own user. With one API
+  and one database, "not deployed yet" is not a category that exists.
+- The API host lives in `scripts/apiConfig.js` and, for the Pages Function, in
+  `functions/_middleware.js`. The specs read theirs from `tests/apiHost.js`.
