@@ -2,7 +2,7 @@ DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImN
 var shell = null;
 
 (async () => {
-    const apiBase = "https://modellus-api.interactivebook.workers.dev";
+    const apiBase = ModellusApiConfig.resolveApiBase();
     try {
         shell = await BoardBootstrap.startOnline({ apiBase });
     } catch (error) {

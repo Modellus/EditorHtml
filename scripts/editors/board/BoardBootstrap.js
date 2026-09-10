@@ -1,4 +1,4 @@
-const defaultBoardApiBase = "https://modellus-api.interactivebook.workers.dev";
+const defaultBoardApiBase = ModellusApiConfig.resolveApiBase();
 
 function extractBoardModelPayload(model) {
     if (!model)

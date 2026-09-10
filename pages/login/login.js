@@ -8,7 +8,7 @@ const catalogSessionKey = "mp.session";
 const catalogUserKey = "mp.user";
 const loginPath = "/pages/login/index.html";
 const appHome = "/pages/catalog/index.html";
-const apiBase = "https://modellus-api.interactivebook.workers.dev";
+const apiBase = window.ModellusApiConfig.resolveApiBase();
 
 const userSdk = new UserSdk(catalogSessionKey, catalogUserKey, loginPath, tokenStorageKey, appHome);
 

@@ -4,7 +4,7 @@ import { ProfileController } from "../../scripts/catalog/profileController.js";
 import { countryItems } from "../../scripts/catalog/profile.js";
 import { CatalogTranslations } from "../../scripts/catalog/translations.js";
 
-const apiBase = "https://modellus-api.interactivebook.workers.dev";
+const apiBase = window.ModellusApiConfig.resolveApiBase();
 const sessionKey = window.modellus?.auth?.sessionKey || "mp.session";
 const userKey = window.modellus?.auth?.userKey || "mp.user";
 const maintenanceAccessFeatureFlagKey = "can_access_maintenance";

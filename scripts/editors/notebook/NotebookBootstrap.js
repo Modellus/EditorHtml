@@ -1,4 +1,4 @@
-const defaultNotebookApiBase = "https://modellus-api.interactivebook.workers.dev";
+const defaultNotebookApiBase = ModellusApiConfig.resolveApiBase();
 
 function redirectNotebookToLogin() {
     window.location.href = "/pages/login/index.html";

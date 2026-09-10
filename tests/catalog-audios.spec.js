@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 const CATALOG_URL = '/pages/catalog/index.html';
 const BOARD_URL = '/pages/board/index.html';
-const API_GLOB = '**/modellus-api.interactivebook.workers.dev/**';
+const { API_HOST, API_GLOB } = require('./apiHost');
 
 // One audio the way the API hands it over: no thumbnail and no education level, which is what the
 // seeded physics examples look like. The card has to stand on the fallback rather than an image.
@@ -11,7 +11,7 @@ const AUDIO_ENTRY = {
     title: 'Tuning fork 440 Hz',
     description: 'A tuning fork sounding the A above middle C.',
     thumbnail_url: '',
-    asset_url: 'https://modellus-api.interactivebook.workers.dev/audios/aud-1/asset',
+    asset_url: `${API_HOST}/audios/aud-1/asset`,
     science_id: 'sci-1',
     education_level_id: null,
     created_at: '2026-08-01T10:00:00Z'

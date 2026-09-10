@@ -17,7 +17,7 @@ const ObjectSeeder = require('../scripts/catalog/objectSeeder.js');
 const DEFINITIONS_DIRECTORY = path.join(__dirname, '..', 'scripts', 'blocks', 'definitions');
 const HARNESS_URL = '/tests/object-seed-harness.html';
 const DEFAULT_BASE_URL = 'http://localhost:8432';
-const DEFAULT_API_BASE = 'https://modellus-api.interactivebook.workers.dev';
+const { API_HOST: DEFAULT_API_BASE } = require('./apiHost');
 
 function readArguments(argv) {
     const options = {

@@ -1,4 +1,4 @@
-const notebookApiBase = "https://modellus-api.interactivebook.workers.dev";
+const notebookApiBase = ModellusApiConfig.resolveApiBase();
 
 var notebook = null;
 

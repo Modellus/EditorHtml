@@ -7,7 +7,7 @@ import { RichTextEditor, maxRichTextLength, richTextToPlainText, sanitizeRichTex
 
 DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjUyCn0=.WlJvwd9AewkKcLiqaZc3LVfKt9FGlzfDD16Zi6iEW4KIN+1MFccO3f68vdJoStCEqtYXdaUrX48WcQJMNg/7K+geEzM2ZVRCeJKxjXIi8OFVU8lXf6cvC+4b3MRFaijuN3c4ug==' });
 
-const apiBase = "https://modellus-api.interactivebook.workers.dev";
+const apiBase = window.ModellusApiConfig.resolveApiBase();
 const sessionKey = window.modellus?.auth?.sessionKey || "mp.session";
 const userKey = window.modellus?.auth?.userKey || "mp.user";
 const moderationFeatureFlagKey = "can_moderate_forum";

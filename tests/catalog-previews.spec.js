@@ -2,8 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 const CATALOG_URL = '/pages/catalog/index.html';
 const BOARD_URL = '/pages/board/index.html';
-const API_HOST = 'https://modellus-api.interactivebook.workers.dev';
-const API_GLOB = '**/modellus-api.interactivebook.workers.dev/**';
+const { API_HOST, API_GLOB } = require('./apiHost');
 
 // Three seconds of silence, so a card that says it is playing is really playing rather than failing
 // to decode and stopping again a tick later, and so there is a clip still running to be interrupted.

@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 
 const CATALOG_URL = '/pages/catalog/index.html';
 const BOARD_URL = '/pages/board/index.html';
-const API_GLOB = '**/modellus-api.interactivebook.workers.dev/**';
+const { API_HOST, API_GLOB } = require('./apiHost');
 
 // One image the way the API hands it over. It carries no separate thumbnail, which is the ordinary
 // case for a picture: the picture is its own thumbnail, so the card has to draw the asset itself.
@@ -11,7 +11,7 @@ const IMAGE_ENTRY = {
     title: 'Inclined plane',
     description: 'A block resting on a ramp.',
     thumbnail_url: '',
-    asset_url: 'https://modellus-api.interactivebook.workers.dev/images/img-1/asset',
+    asset_url: `${API_HOST}/images/img-1/asset`,
     science_id: 'sci-1',
     education_level_id: null,
     created_at: '2026-08-01T10:00:00Z'

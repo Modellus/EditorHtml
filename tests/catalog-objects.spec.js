@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 const CATALOG_URL = '/pages/catalog/index.html';
-const API_GLOB = '**/modellus-api.interactivebook.workers.dev/**';
+const { API_HOST, API_GLOB } = require('./apiHost');
 
 const OBJECT_ENTRY = {
     id: 'obj-1',

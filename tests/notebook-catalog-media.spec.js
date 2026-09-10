@@ -1,14 +1,14 @@
 const { test, expect } = require('@playwright/test');
 
 const NOTEBOOK_URL = '/pages/notebook/index.html';
-const API_GLOB = '**/modellus-api.interactivebook.workers.dev/**';
+const { API_HOST, API_GLOB } = require('./apiHost');
 
 const IMAGE_ENTRY = {
     id: 'img-1',
     title: 'Inclined plane',
     description: '',
     thumbnail_url: '',
-    asset_url: 'https://modellus-api.interactivebook.workers.dev/images/img-1/asset',
+    asset_url: `${API_HOST}/images/img-1/asset`,
     science_id: 'sci-1',
     education_level_id: null,
     created_at: '2026-09-03T10:00:00Z'
@@ -19,7 +19,7 @@ const AUDIO_ENTRY = {
     title: 'Tuning fork 440 Hz',
     description: '',
     thumbnail_url: '',
-    asset_url: 'https://modellus-api.interactivebook.workers.dev/audios/aud-1/asset',
+    asset_url: `${API_HOST}/audios/aud-1/asset`,
     science_id: 'sci-1',
     education_level_id: null,
     created_at: '2026-09-03T10:00:00Z'

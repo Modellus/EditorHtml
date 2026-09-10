@@ -770,7 +770,7 @@ class BoardEditor extends Workspace {
             return;
         this.collabCoordinator?.destroy();
         this.collabCoordinator = new CollabCoordinator({
-            apiBase: "https://modellus-api.interactivebook.workers.dev",
+            apiBase: ModellusApiConfig.resolveApiBase(),
             modelId,
             getToken: () => window.modellus?.auth?.getSession?.()?.token ?? "",
             onRemoteOp: op => this.applyRemoteOp(op),

@@ -1,7 +1,7 @@
 const { test, expect } = require('@playwright/test');
 
 const CATALOG_URL = '/pages/catalog/index.html';
-const API_GLOB = '**/modellus-api.interactivebook.workers.dev/**';
+const { API_HOST, API_GLOB } = require('./apiHost');
 
 // Sign-ups from three countries, one of them from before the chart opens and one whose
 // country was never given.
