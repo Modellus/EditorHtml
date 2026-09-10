@@ -420,6 +420,19 @@ class Utils {
             field.addEventListener("mount", () => configure(field), { once: true });
     }
 
+    // A field holding nothing has no mathematics under the pointer for the caret to be put in, so a
+    // click on it is left to the page, which takes the caret out of the field's own keyboard and
+    // leaves the field focused but deaf to what is typed. The click on an empty field is taken here
+    // instead: the page is kept out of it and the field is focused, which is what a click on it means.
+    static keepEmptyMathFieldTypable(field) {
+        field.addEventListener("pointerdown", event => {
+            if (String(field.getValue?.("latex-unstyled") || field.getValue?.() || "") !== "")
+                return;
+            event.preventDefault();
+            field.focus();
+        }, true);
+    }
+
     // What a field for a value or a name turns typed letters into: nothing, save the star that
     // writes a multiplication sign, so a name like "in" or "int" is the letters it is spelt with.
     static valueFieldInlineShortcuts = { "*": "\\cdot" };

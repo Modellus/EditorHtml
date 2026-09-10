@@ -1621,6 +1621,7 @@ class TermControl {
         field.setAttribute("smart-mode", "false");
         field.setAttribute("tabindex", "0");
         Utils.configureMathFieldOnMount(field, mounted => { mounted.inlineShortcuts = Utils.valueFieldInlineShortcuts; });
+        Utils.keepEmptyMathFieldTypable(field);
         inputContainer.append(field);
         field.addEventListener("keydown", event => this.onTypedTermFieldKeyDown(event, component, field), true);
         field.addEventListener("blur", () => this.onTypedTermFieldBlur(component, field));

@@ -201,6 +201,50 @@ test.describe('a value typed into a number field', () => {
     });
 });
 
+// A box standing empty has no mathematics under the pointer for the caret to be put in, so the
+// click on it is taken by the field itself and what is typed next lands in it. The player's step
+// delay is the box that starts empty.
+test.describe('a field standing empty', () => {
+    async function openPlayerStart(page) {
+        await page.evaluate(() => shell.bottomToolbar._startDropdownElement.dxDropDownButton('instance').open());
+        const fields = page.locator('.mdl-independent-dropdown math-field.mdl-numeric-math-field');
+        await expect(fields).toHaveCount(3);
+        await page.waitForTimeout(500);
+        return fields;
+    }
+
+    test('takes what is typed into it after a click', async ({ page }) => {
+        await setupBoard(page);
+        const delay = (await openPlayerStart(page)).nth(2);
+        expect(await readField(delay)).toBe('');
+        await delay.click();
+        await page.waitForTimeout(200);
+        await page.keyboard.type('0.25');
+        expect(await readField(delay)).toBe('0.25');
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(300);
+        expect(await page.evaluate(() => shell.calculator.properties.iterationDuration)).toBe(0.25);
+    });
+
+    test('takes typing again after the reader has emptied it and left it', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => { shell.calculator.properties.iterationDuration = 0.5; });
+        const fields = await openPlayerStart(page);
+        const delay = fields.nth(2);
+        await delay.click();
+        await page.locator('.mdl-independent-dropdown .dx-clear-button-area').click();
+        await page.waitForTimeout(300);
+        expect(await readField(delay)).toBe('');
+        expect(await page.evaluate(() => shell.calculator.properties.iterationDuration)).toBe(null);
+        await fields.first().click();
+        await page.waitForTimeout(200);
+        await delay.click();
+        await page.waitForTimeout(200);
+        await page.keyboard.type('3');
+        expect(await readField(delay)).toBe('3');
+    });
+});
+
 test.describe('the numeric grammar the fields share', () => {
     test('reads a value in either notation and nothing with a comma', async ({ page }) => {
         await setupBoard(page);

@@ -54,6 +54,7 @@ class NumericMathInput {
         field.setAttribute("smart-mode", "false");
         field.setAttribute("tabindex", "0");
         Utils.configureMathFieldOnMount(field, mounted => { mounted.inlineShortcuts = Utils.valueFieldInlineShortcuts; });
+        Utils.keepEmptyMathFieldTypable(field);
         input.before(field);
         this.field = field;
         field.addEventListener("keydown", event => this.onKeyDown(event), true);
