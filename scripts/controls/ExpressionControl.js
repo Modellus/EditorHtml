@@ -113,7 +113,19 @@ class ExpressionControl {
         clearTimeout(this._errorCheckTimer);
         this.allFailingRows = this.options.findFailingRows?.() ?? [];
         this.rowCellRanges = this.allFailingRows.length > 0 ? this._getRowCellRanges() : [];
+        this._readRowAnchors();
         this._writeFailingRows(true);
+    }
+
+    // Where each reading belongs is worked out once, with the rows, rather than every time the marks are
+    // laid out again: the place moves only when the expression does, while the marks are laid out again
+    // whenever the card is scrolled or the caret moves.
+    _readRowAnchors() {
+        for (let failingRowIndex = 0; failingRowIndex < this.allFailingRows.length; failingRowIndex++) {
+            const failingRow = this.allFailingRows[failingRowIndex];
+            const index = failingRow.finding?.index;
+            failingRow.anchor = Number.isFinite(index) ? this.readRowAnchor(failingRow.rowIndex, index) : null;
+        }
     }
 
     // Which row the caret stands in is only worth reading between keystrokes: while the field is being
@@ -208,6 +220,37 @@ class ExpressionControl {
         if (top === Infinity)
             return null;
         return { top, bottom, height: bottom - top };
+    }
+
+    // Where in the field a place in the row's latex stands. The row is walked one symbol at a time,
+    // adding up the latex passed. A place the walk lands on exactly stands between two symbols, which is
+    // where something missing belongs; a place a symbol steps over stands inside that symbol, and then
+    // all that can be said is which symbol it is. The walk only lands exactly where the row is written
+    // flat - the field reports the contents of a fraction or a root rather than the latex wrapping them
+    // - so a place inside one of those is reported as the symbol holding it rather than guessed at.
+    readRowAnchor(rowIndex, rowCharacterIndex) {
+        const cellRanges = this.rowCellRanges[rowIndex];
+        if (!this.mathfield || !cellRanges)
+            return null;
+        let passedLength = 0;
+        let reachedLength = 0;
+        let lastOffset = null;
+        for (let cellIndex = 0; cellIndex < cellRanges.length; cellIndex++) {
+            const [cellStart, cellEnd] = cellRanges[cellIndex];
+            for (let offset = cellStart + 1; offset <= cellEnd; offset++) {
+                const offsetLength = passedLength + this._readRangeLatex(cellStart, offset).length;
+                if (offsetLength > rowCharacterIndex)
+                    return { offset, placement: reachedLength === rowCharacterIndex ? "before" : "on" };
+                reachedLength = offsetLength;
+                lastOffset = offset;
+            }
+            passedLength += this._readRangeLatex(cellStart, cellEnd).length;
+        }
+        return lastOffset === null ? null : { offset: lastOffset, placement: "after" };
+    }
+
+    getOffsetBounds(offset) {
+        return this.mathfield?.getElementInfo(offset)?.bounds ?? null;
     }
 
     // A row reached from the panel takes the caret at its end, where writing carries on from what is

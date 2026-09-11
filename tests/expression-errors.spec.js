@@ -54,7 +54,31 @@ async function hoverExpression(page, name) {
 }
 
 test.describe('a parse failure is written in the reader\'s language', () => {
-    test('a row the grammar could not finish reading is reported as incomplete', () => {
+    // The grammar names what it would have accepted, and a set offering a digit or a name is a set
+    // offering a value, however many functions the grammar grows.
+    const OPERAND_EXPECTED = "{'{', '\\frac', '\\left(', '(', '\\sin', '\\sqrt', '+', '-', STRING, DIGIT, ID, SPECIAL}";
+
+    test('a row that stops where a value was expected is reported as missing a value', () => {
+        const error = { message: `Syntax error at line 1, column 2: mismatched input '<EOF>' expecting ${OPERAND_EXPECTED}` };
+        expect(translate(error, 'en-US')).toBe('A value is missing here.');
+        expect(translate(error, 'pt-PT')).toBe('Falta aqui um valor.');
+        expect(MathErrorMessage.readSyntax(error.message)).toEqual({ column: 2, text: '<EOF>', kind: 'operand' });
+    });
+
+    test('a row stopping on a symbol it cannot hold there is reported as one symbol too many', () => {
+        const error = { message: "Syntax error at line 1, column 5: extraneous input '(' expecting {<EOF>, '\\quad'}" };
+        expect(translate(error, 'en-US')).toBe('( cannot stand here.');
+        expect(translate(error, 'pt-PT')).toBe('( não pode estar aqui.');
+    });
+
+    // A delimiter is named by the command that sizes it, which is not what anybody wrote.
+    test('a missing bracket is named as the bracket, not as the command sizing it', () => {
+        expect(translate({ message: "Syntax error at line 1, column 6: missing ')' at '<EOF>'" }, 'en-US')).toBe(') is missing.');
+        expect(translate({ message: "Syntax error at line 1, column 15: missing '\\right)' at '<EOF>'" }, 'en-US')).toBe(') is missing.');
+        expect(translate({ message: "Syntax error at line 1, column 3: mismatched input '<EOF>' expecting '='" }, 'pt-PT')).toBe('Falta =.');
+    });
+
+    test('a row the grammar could not finish reading, expecting nothing it can name, is reported as incomplete', () => {
         const error = { message: "Syntax error at line 1, column 4: mismatched input '<EOF>' expecting {'{', '+'}" };
         expect(translate(error, 'en-US')).toBe('The expression is incomplete.');
         expect(translate(error, 'pt-PT')).toBe('A expressão está incompleta.');
@@ -155,9 +179,17 @@ test.describe('a card the engine refused says why where the row was written', ()
         await hoverExpression(page, 'Broken');
         const panel = page.locator('.mdl-expression-error-panel.visible');
         await expect(panel).toBeVisible();
-        await expect(panel.locator('.mdl-expression-error-title')).toHaveText('Erro na expressão');
-        await expect(panel.locator('.mdl-expression-error-row-label')).toHaveText('Linha 2');
-        await expect(panel.locator('.mdl-expression-error-row-message')).toHaveText('Não é possível ler esta linha junto a b=.');
+        await expect(panel.locator('.mdl-expression-error-row-message')).toHaveText('Falta aqui um valor.');
+    });
+
+    // A symbol named in a sentence is typeset the way the reader writes it, not spelled out.
+    test('a bracket the row never closes is named as a bracket, typeset in the message', async ({ page }) => {
+        await setupEditor(page, 'en-US');
+        await addExpression(page, 'Unclosed', '\\displaylines{a=1\\\\b=\\left(2+3}');
+        await expect.poll(() => failingRowsOf(page, 'Unclosed')).toEqual([1]);
+        await hoverExpression(page, 'Unclosed');
+        const panel = page.locator('.mdl-expression-error-panel.visible');
+        await expect(panel.locator('.mdl-expression-error-row-message')).toHaveText(') is missing.');
         await expect(panel.locator('.mdl-expression-error-row-message .mdl-message-math .ML__latex')).toHaveCount(1);
     });
 
@@ -168,8 +200,53 @@ test.describe('a card the engine refused says why where the row was written', ()
         await hoverExpression(page, 'Broken');
         const panel = page.locator('.mdl-expression-error-panel.visible');
         await expect(panel).toBeVisible();
-        await expect(panel.locator('.mdl-expression-error-title')).toHaveText('Expression error');
-        await expect(panel.locator('.mdl-expression-error-row-message')).toHaveText('This row cannot be read around b=.');
+        await expect(panel.locator('.mdl-expression-error-row-message')).toHaveText('A value is missing here.');
+    });
+
+    // The panel carries the readings and the number of the row each is about, with no heading over them
+    // and no word in front of the number; the mark on the row shows which row as well.
+    test('the panel numbers its readings and lights the row the one reached for belongs to', async ({ page }) => {
+        await setupEditor(page, 'en-US');
+        await addExpression(page, 'Broken', '\\displaylines{a=1\\\\b=\\\\c=}');
+        await expect.poll(() => failingRowsOf(page, 'Broken')).toEqual([1, 2]);
+        await hoverExpression(page, 'Broken');
+        const panel = page.locator('.mdl-expression-error-panel.visible');
+        await expect(panel.locator('.mdl-expression-error-row')).toHaveCount(2);
+        await expect(panel.locator('.mdl-expression-error-row-label')).toHaveText(['2', '3']);
+        await expect(panel).toHaveText('2A value is missing here.3A value is missing here.');
+        const rowBox = await panel.locator('.mdl-expression-error-row').last().boundingBox();
+        await page.mouse.move(rowBox.x + rowBox.width / 2, rowBox.y + rowBox.height / 2);
+        await expect(page.locator('.mdl-expression-error-mark.lit')).toHaveCount(1);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Broken').expressionControl.errorReport.litRowIndex)).toBe(2);
+    });
+
+    // A row that stops early is missing its value at the end of what was written, so the slot stands
+    // after the last symbol of the row rather than anywhere inside it.
+    test('a row that stops early carries a slot after its last symbol', async ({ page }) => {
+        await setupEditor(page, 'en-US');
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await expect.poll(() => failingRowsOf(page, 'Broken')).toEqual([1]);
+        const slot = page.locator('.mdl-expression-error-spot.hole');
+        await expect(slot).toHaveCount(1);
+        const places = await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Broken');
+            const anchor = shape.expressionControl.readRowAnchor(1, shape.failingRows[0].finding.index);
+            return { placement: anchor.placement, slot: document.querySelector('.mdl-expression-error-spot.hole').getBoundingClientRect().left, last: shape.expressionControl.getOffsetBounds(anchor.offset).right };
+        });
+        expect(places.placement).toBe('after');
+        expect(places.slot).toBeGreaterThanOrEqual(places.last);
+    });
+
+    // A value missing from inside a fraction or a root cannot be placed between two symbols, so the
+    // symbol holding it is underlined rather than a slot being drawn a symbol out from where it belongs.
+    test('a value missing from inside a root is underlined there, not slotted beside it', async ({ page }) => {
+        await setupEditor(page, 'en-US');
+        await addExpression(page, 'Rooted', '\\displaylines{a=1\\\\z=\\sqrt{}}');
+        await expect.poll(() => failingRowsOf(page, 'Rooted')).toEqual([1]);
+        await hoverExpression(page, 'Rooted');
+        await expect(page.locator('.mdl-expression-error-panel.visible .mdl-expression-error-row-message')).toHaveText('A value is missing here.');
+        await expect(page.locator('.mdl-expression-error-spot')).toHaveCount(1);
+        await expect(page.locator('.mdl-expression-error-spot.hole')).toHaveCount(0);
     });
 
     // The mark is the card's own, so it is there for anyone looking at the board; the sentence is for

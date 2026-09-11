@@ -32,6 +32,7 @@ test('a notebook expression block marks the row the engine refused and says why'
     await expect(page.locator('.mdl-expression-error-mark')).toHaveCount(1);
     const panel = page.locator('.mdl-expression-error-panel.visible');
     await expect(panel).toBeVisible();
-    await expect(panel.locator('.mdl-expression-error-row-label')).toHaveCount(1);
-    await expect(panel.locator('.mdl-expression-error-row-message')).toHaveText('This row cannot be read around b=.');
+    await expect(panel.locator('.mdl-expression-error-row')).toHaveCount(1);
+    await expect(panel.locator('.mdl-expression-error-row-message')).toHaveText('A value is missing here.');
+    await expect(page.locator('.mdl-expression-error-spot.hole')).toHaveCount(1);
 });

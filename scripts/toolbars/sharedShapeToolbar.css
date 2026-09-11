@@ -1113,6 +1113,33 @@ math-field {
     border-radius: 1px;
 }
 
+/* Where in the row the reading is about: a slot standing where something is missing, drawn the way an
+   empty slot of a template is drawn, or a line under what cannot stand where it was written. */
+.mdl-expression-error-spot {
+    position: absolute;
+    top: 50%;
+    height: 2px;
+    transform: translateY(0.55em);
+    background-color: var(--math-error, #d32f2f);
+    border-radius: 1px;
+    opacity: 0.85;
+}
+
+.mdl-expression-error-spot.hole {
+    top: 2px;
+    bottom: 2px;
+    height: auto;
+    transform: none;
+    background-color: transparent;
+    border: 1px dashed var(--math-error, #d32f2f);
+    border-radius: 3px;
+    opacity: 0.9;
+}
+
+.mdl-expression-error-mark.lit .mdl-expression-error-mark-band {
+    opacity: 0.24;
+}
+
 .mdl-expression-error-mark.pulsing .mdl-expression-error-mark-band {
     animation: mdl-expression-error-pulse 0.9s ease-out;
 }
@@ -1131,7 +1158,7 @@ math-field {
     display: none;
     overflow-y: auto;
     box-sizing: border-box;
-    padding: 6px 8px;
+    padding: 4px 6px;
     background-color: var(--math-error-panel-background, #ffffff);
     color: var(--math-error-panel-color, #1f2430);
     border-top: 1px solid var(--math-error, #d32f2f);
@@ -1143,19 +1170,9 @@ math-field {
     display: block;
 }
 
-.mdl-expression-error-title {
-    margin-bottom: 4px;
-    color: var(--math-error, #d32f2f);
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    text-align: left;
-}
-
 .mdl-expression-error-row {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: baseline;
     width: 100%;
     padding: 2px 4px;
@@ -1178,12 +1195,15 @@ math-field {
     margin-top: 2px;
 }
 
+/* A row is named by its number alone, in a column of its own so the readings line up beside it. */
 .mdl-expression-error-row-label {
     flex: 0 0 auto;
+    min-width: 0.9em;
     color: var(--math-error, #d32f2f);
     font-size: 11px;
     font-weight: 600;
-    white-space: nowrap;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
 .mdl-expression-error-row-message {

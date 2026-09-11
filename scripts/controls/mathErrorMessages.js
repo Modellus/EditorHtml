@@ -58,11 +58,30 @@ class MathErrorMessage {
         storedUnknownKind: () => ["Expression Error Stored Unknown Kind", {}]
     };
 
-    static syntaxPatterns = [
-        { pattern: /missing (?:'(.*?)'|(\S+)) at /, key: "Expression Error Missing", placeholder: "symbol" },
-        { pattern: /(?:mismatched|extraneous) input '([\s\S]*?)' expecting/, key: "Expression Error Unexpected", placeholder: "text" },
-        { pattern: /no viable alternative at input '([\s\S]*)'/, key: "Expression Error Unexpected", placeholder: "text" }
-    ];
+    // What the grammar says when it stops: where it stopped, what it was holding, and what it would
+    // have accepted there. The editor reads all three - the sentence and the mark in the field are
+    // written from the same reading, so the row says the same thing twice, once in words and once
+    // where the words are about.
+    static syntaxHeaderPattern = /^Syntax error at line \d+, column (\d+): ([\s\S]*)$/;
+
+    static missingPattern = /^missing (?:'([\s\S]*?)'|(\S+)) at /;
+
+    static unexpectedPattern = /^(?:mismatched|extraneous) input '([\s\S]*?)' expecting ([\s\S]*)$/;
+
+    static noAlternativePattern = /^no viable alternative at input '([\s\S]*)'$/;
+
+    // The grammar names a value it would have accepted by its lexer rules rather than one at a time, so
+    // a set offering either of these is a set offering a value - a number, a name, or anything that
+    // opens one - however many functions the grammar grows.
+    static operandTokenNames = ["DIGIT", "ID", "STRING"];
+
+    static syntaxWordings = {
+        operand: () => ["Expression Error Operand Missing", {}],
+        symbol: finding => ["Expression Error Missing", { symbol: MathErrorMessage.symbol(finding.symbol) }],
+        surplus: finding => ["Expression Error Does Not Belong", { text: MathErrorMessage.symbol(finding.text) }],
+        incomplete: () => ["Expression Error Incomplete", {}],
+        unreadable: finding => ["Expression Error Unexpected", { text: finding.text }]
+    };
 
     static get utils() {
         return typeof Utils !== "undefined" ? Utils : require("../utils.js");
@@ -93,6 +112,12 @@ class MathErrorMessage {
         return domainText === undefined || domainText === null || domainText === "" ? undefined : MathErrorMessage.utils.convertDomainTextToLatex(domainText);
     }
 
+    // The grammar names a delimiter by the command that sizes it, and a brace by the character that
+    // groups latex. A reader wrote neither: they wrote the bracket, so that is what is shown to them.
+    static symbol(symbol) {
+        return String(symbol ?? "").replace(/^\\(?:left|right)(?=[^a-zA-Z])/, "").replace(/^[{}]$/, brace => `\\${brace}`);
+    }
+
     static builtin(kind) {
         return kind === undefined || kind === null || kind === "" ? undefined : `\\mathbb{${kind}}`;
     }
@@ -111,18 +136,58 @@ class MathErrorMessage {
     }
 
     static translateSyntaxError(message, translations) {
+        return MathErrorMessage.translateFinding(MathErrorMessage.readSyntax(message), translations) ?? MathErrorMessage.readUnreadable(translations);
+    }
+
+    // A finding the editor made for itself is worded the same way as one read from the grammar, so a
+    // row says the same thing however the editor came to know it.
+    static translateFinding(finding, translations) {
+        const wording = MathErrorMessage.syntaxWordings[finding?.kind];
+        if (wording === undefined)
+            return null;
+        const [key, values] = wording(finding);
+        return MathErrorMessage.read(key, values, translations);
+    }
+
+    // What the grammar stopped over, as something the editor can both word and point at: `column` is
+    // where it stopped, counted in the text the engine was given, and `kind` says what would have made
+    // the row readable there - a value, a symbol the grammar names, or one token too many.
+    static readSyntax(message) {
         const text = String(message ?? "");
-        for (let patternIndex = 0; patternIndex < MathErrorMessage.syntaxPatterns.length; patternIndex++) {
-            const syntaxPattern = MathErrorMessage.syntaxPatterns[patternIndex];
-            const match = syntaxPattern.pattern.exec(text);
-            if (match === null)
-                continue;
-            const offendingText = match[1] ?? match[2];
-            if (offendingText === MathErrorMessage.endOfInputMarker)
-                return MathErrorMessage.read("Expression Error Incomplete", {}, translations) ?? MathErrorMessage.readUnreadable(translations);
-            return MathErrorMessage.read(syntaxPattern.key, { [syntaxPattern.placeholder]: offendingText }, translations) ?? MathErrorMessage.readUnreadable(translations);
-        }
-        return MathErrorMessage.readUnreadable(translations);
+        const header = MathErrorMessage.syntaxHeaderPattern.exec(text);
+        const column = header === null ? null : Number(header[1]);
+        const body = header === null ? text : header[2];
+        const missing = MathErrorMessage.missingPattern.exec(body);
+        if (missing !== null)
+            return { column, kind: "symbol", symbol: missing[1] ?? missing[2] };
+        const unexpected = MathErrorMessage.unexpectedPattern.exec(body);
+        if (unexpected !== null)
+            return { column, text: unexpected[1], ...MathErrorMessage.readExpectation(unexpected[2], unexpected[1]) };
+        const noAlternative = MathErrorMessage.noAlternativePattern.exec(body);
+        if (noAlternative !== null)
+            return { column, kind: "unreadable", text: noAlternative[1] };
+        return { column, kind: "unknown" };
+    }
+
+    // A row that stops where a value was expected is a row missing a value, whatever it stopped on; a
+    // row stopping where the grammar was ready to finish has one token too many, and a row stopping
+    // where one symbol and no other would do is missing that symbol.
+    static readExpectation(expectedText, offendingText) {
+        const expectedTokens = MathErrorMessage.readExpectedTokens(expectedText);
+        if (expectedTokens.some(token => MathErrorMessage.operandTokenNames.includes(token)))
+            return { kind: "operand" };
+        if (expectedTokens.includes(MathErrorMessage.endOfInputMarker))
+            return offendingText === MathErrorMessage.endOfInputMarker ? { kind: "incomplete" } : { kind: "surplus" };
+        const namedSymbols = expectedTokens.filter(token => token.startsWith("'") && token.endsWith("'"));
+        if (namedSymbols.length === 1)
+            return { kind: "symbol", symbol: namedSymbols[0].slice(1, -1) };
+        return offendingText === MathErrorMessage.endOfInputMarker ? { kind: "incomplete" } : { kind: "surplus" };
+    }
+
+    static readExpectedTokens(expectedText) {
+        const text = String(expectedText ?? "").trim();
+        const listed = text.startsWith("{") && text.endsWith("}") ? text.slice(1, -1) : text;
+        return listed.split(",").map(token => token.trim()).filter(token => token !== "");
     }
 
     // A sentence the editor has worded is written from the values the engine named; one it has not,
