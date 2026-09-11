@@ -184,6 +184,7 @@ class BottomToolbar {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: e => this.shell.createTranslatedTooltip(e, "Independent Start Tooltip", 280),
             template: (data, element) => {
                 const $span = $('<span>')
                     .css({ fontFamily: "KaTeX_Main, serif", fontSize: "15px" });
@@ -192,7 +193,7 @@ class BottomToolbar {
             },
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { class: "mdl-independent-dropdown" },
+                wrapperAttr: { class: "mdl-independent-dropdown mdl-player-range-dropdown" },
                 width: "auto",
                 contentTemplate: contentElement => this.buildStartMenuContent(contentElement)
             }
@@ -259,6 +260,7 @@ class BottomToolbar {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: e => this.shell.createTranslatedTooltip(e, "Independent End Tooltip", 280),
             template: (data, element) => {
                 const $span = $('<span>')
                     .css({ fontFamily: "KaTeX_Main, serif", fontSize: "15px" });
@@ -267,7 +269,7 @@ class BottomToolbar {
             },
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { class: "mdl-independent-dropdown" },
+                wrapperAttr: { class: "mdl-independent-dropdown mdl-player-range-dropdown" },
                 width: "auto",
                 contentTemplate: contentElement => this.buildEndMenuContent(contentElement)
             }
@@ -424,6 +426,7 @@ class BottomToolbar {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: e => this.shell.createTranslatedTooltip(e, "Independent Tooltip", 280),
             template: (data, element) => {
                 const $span = $('<span>')
                     .css({

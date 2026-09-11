@@ -392,6 +392,7 @@ class NotebookEditor extends Workspace {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: event => this.createTranslatedTooltip(event, "Independent Tooltip", 280),
             template: (data, element) => {
                 const span = $('<span>').css({
                     fontFamily: "KaTeX_Math, serif",
@@ -444,6 +445,7 @@ class NotebookEditor extends Workspace {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: event => this.createTranslatedTooltip(event, "Independent Start Tooltip", 280),
             template: (data, element) => {
                 const span = $('<span>').css({ fontFamily: "KaTeX_Main, serif", fontSize: "15px" });
                 this._startLabel = span[0];
@@ -452,7 +454,7 @@ class NotebookEditor extends Workspace {
             },
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { class: "mdl-independent-dropdown" },
+                wrapperAttr: { class: "mdl-independent-dropdown mdl-player-range-dropdown" },
                 width: "auto",
                 contentTemplate: contentElement => this._buildStartMenuContent(contentElement)
             }
@@ -503,6 +505,7 @@ class NotebookEditor extends Workspace {
             showArrowIcon: false,
             stylingMode: "text",
             useSelectMode: false,
+            onInitialized: event => this.createTranslatedTooltip(event, "Independent End Tooltip", 280),
             template: (data, element) => {
                 const span = $('<span>').css({ fontFamily: "KaTeX_Main, serif", fontSize: "15px" });
                 this._endLabel = span[0];
@@ -511,7 +514,7 @@ class NotebookEditor extends Workspace {
             },
             dropDownOptions: {
                 container: document.body,
-                wrapperAttr: { class: "mdl-independent-dropdown" },
+                wrapperAttr: { class: "mdl-independent-dropdown mdl-player-range-dropdown" },
                 width: "auto",
                 contentTemplate: contentElement => this._buildEndMenuContent(contentElement)
             }

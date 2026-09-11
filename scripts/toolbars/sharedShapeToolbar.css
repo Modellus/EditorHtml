@@ -138,6 +138,21 @@ math-field {
     align-items: center;
 }
 
+/* The start and end menus each hold a single number, and stood only as wide as that number was. They
+   keep a floor a third wider than that, and the room goes to the field rather than to empty padding. */
+.mdl-player-range-dropdown .dx-overlay-content {
+    min-width: 215px;
+}
+
+.mdl-player-range-dropdown .mdl-dropdown-list-control {
+    min-width: 110px;
+    justify-content: flex-end;
+}
+
+.mdl-player-range-dropdown .mdl-dropdown-list-control .dx-numberbox {
+    width: 100%;
+}
+
 /* A term standing alone and a list of terms are given the same room, so a chip reads the same
    wherever it is: one control's width, whether the row holds one of them or a list. */
 .mdl-dropdown-list-control .term-packed-control,
