@@ -490,25 +490,26 @@ class BottomToolbar {
             {
                 text: this.shell.board.translations.get("AngleUnit"),
                 buildControl: $container => {
+                    // The unit the whole model reads its angles in is named in so many words, the way
+                    // the protractor names its own: two symbols read alike at a glance, the words do not.
                     $('<div>').dxButtonGroup({
                         items: [
-                            { key: "radians", icon: "fa-light fa-pi",  hint: "Radians" },
-                            { key: "degrees", icon: "fa-light fa-dot", hint: "Degrees" }
+                            { key: "radians", text: "Radians" },
+                            { key: "degrees", text: "Degrees" }
                         ],
                         keyExpr: "key",
+                        selectionMode: "single",
                         selectedItemKeys: [this.shell.properties.angleUnit],
                         stylingMode: "outlined",
-                        elementAttr: { class: "mdl-pill-group mdl-small-icon" },
+                        elementAttr: { class: "mdl-pill-group mdl-named-pill-group" },
                         buttonTemplate: (data, buttonContainer) => {
-                            const style = data.key === "degrees" ? "font-size:20px; position:relative; top:-4px" : "";
-                            buttonContainer[0].innerHTML = `<i class="dx-icon ${data.icon}" style="${style}"></i>`;
+                            const label = this.shell.board.translations.get(data.text) ?? data.text;
+                            buttonContainer[0].replaceChildren(document.createTextNode(label));
                         },
                         onContentReady: e => this._initPillButtonGroup(e.element[0]),
-                        onSelectionChanged: e => {
-                            if (e.addedItems.length > 0)
-                                this.shell.setPropertyCommand("angleUnit", e.addedItems[0].key);
+                        onItemClick: e => {
                             this._movePill(e.component.element()[0]);
-                            e.component.repaint();
+                            this.shell.setPropertyCommand("angleUnit", e.itemData.key);
                         }
                     }).appendTo($container);
                 }
