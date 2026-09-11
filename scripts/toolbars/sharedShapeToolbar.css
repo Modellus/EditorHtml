@@ -1079,16 +1079,77 @@ math-field {
     margin-left: 6px;
 }
 
-/* Why the engine refused a row, on the card the row was written in. */
-.mdl-expression-error-tooltip .dx-popup-content {
-    padding: 8px 10px;
+/* Why the engine refused a row, written where the row was written: a band across the row on the card,
+   and a panel at the foot of the card carrying the sentence. Nothing here is hovered for. */
+.mdl-expression-error-marks {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.mdl-expression-error-mark {
+    position: absolute;
+    left: 0;
+    right: 0;
+}
+
+.mdl-expression-error-mark-band {
+    position: absolute;
+    inset: 0;
+    background-color: var(--math-error, #d32f2f);
+    opacity: 0.09;
+    border-radius: 2px;
+}
+
+.mdl-expression-error-mark-bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background-color: var(--math-error, #d32f2f);
+    border-radius: 1px;
+}
+
+.mdl-expression-error-mark.pulsing .mdl-expression-error-mark-band {
+    animation: mdl-expression-error-pulse 0.9s ease-out;
+}
+
+@keyframes mdl-expression-error-pulse {
+    0% { opacity: 0.32; }
+    100% { opacity: 0.09; }
+}
+
+.mdl-expression-error-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    display: none;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    background-color: var(--math-error-panel-background, #ffffff);
+    color: var(--math-error-panel-color, #1f2430);
+    border-top: 1px solid var(--math-error, #d32f2f);
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.08);
+    text-align: left;
+}
+
+.mdl-expression-error-panel.visible {
+    display: block;
 }
 
 .mdl-expression-error-title {
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     color: var(--math-error, #d32f2f);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     text-align: left;
 }
 
@@ -1096,12 +1157,25 @@ math-field {
     display: flex;
     gap: 8px;
     align-items: baseline;
+    width: 100%;
+    padding: 2px 4px;
+    border: none;
+    border-radius: 3px;
+    background: none;
+    color: inherit;
+    font: inherit;
     text-align: left;
     line-height: 1.35;
+    cursor: pointer;
+}
+
+.mdl-expression-error-row:hover,
+.mdl-expression-error-row:focus-visible {
+    background-color: rgba(127, 127, 127, 0.14);
 }
 
 .mdl-expression-error-row + .mdl-expression-error-row {
-    margin-top: 6px;
+    margin-top: 2px;
 }
 
 .mdl-expression-error-row-label {

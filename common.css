@@ -221,6 +221,8 @@ input,
     --math-iteration-index: #7047b8;
     --math-error: #d32f2f;
     --math-caret: #0f6cbd;
+    --math-error-panel-background: #ffffff;
+    --math-error-panel-color: #1f2430;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -234,6 +236,8 @@ input,
         --math-iteration-index: #c3a9ff;
         --math-error: #ff8a80;
         --math-caret: #4fa8ff;
+        --math-error-panel-background: #2a2d33;
+        --math-error-panel-color: #e6e8eb;
     }
 }
 
@@ -247,6 +251,8 @@ input,
     --math-iteration-index: #c3a9ff;
     --math-error: #ff8a80;
     --math-caret: #4fa8ff;
+    --math-error-panel-background: #2a2d33;
+    --math-error-panel-color: #e6e8eb;
 }
 
 math-field {

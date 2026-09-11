@@ -147,18 +147,18 @@ test.describe('a parse failure is written in the reader\'s language', () => {
     });
 });
 
-test.describe('hovering a card the engine refused', () => {
-    test('the tooltip names the failing row and says why, in the language of the editor', async ({ page }) => {
+test.describe('a card the engine refused says why where the row was written', () => {
+    test('the panel names the failing row and says why, in the language of the editor', async ({ page }) => {
         await setupEditor(page, 'pt-PT');
         await addExpression(page, 'Broken', BROKEN_GROUP);
         await expect.poll(() => failingRowsOf(page, 'Broken')).toEqual([1]);
         await hoverExpression(page, 'Broken');
-        const tooltip = page.locator('.mdl-expression-error-tooltip');
-        await expect(tooltip).toBeVisible();
-        await expect(tooltip.locator('.mdl-expression-error-title')).toHaveText('Erro na expressão');
-        await expect(tooltip.locator('.mdl-expression-error-row-label')).toHaveText('Linha 2');
-        await expect(tooltip.locator('.mdl-expression-error-row-message')).toHaveText('Não é possível ler esta linha junto a b=.');
-        await expect(tooltip.locator('.mdl-expression-error-row-message .mdl-message-math .ML__latex')).toHaveCount(1);
+        const panel = page.locator('.mdl-expression-error-panel.visible');
+        await expect(panel).toBeVisible();
+        await expect(panel.locator('.mdl-expression-error-title')).toHaveText('Erro na expressão');
+        await expect(panel.locator('.mdl-expression-error-row-label')).toHaveText('Linha 2');
+        await expect(panel.locator('.mdl-expression-error-row-message')).toHaveText('Não é possível ler esta linha junto a b=.');
+        await expect(panel.locator('.mdl-expression-error-row-message .mdl-message-math .ML__latex')).toHaveCount(1);
     });
 
     test('the same card in English carries the English wording', async ({ page }) => {
@@ -166,19 +166,53 @@ test.describe('hovering a card the engine refused', () => {
         await addExpression(page, 'Broken', BROKEN_GROUP);
         await expect.poll(() => failingRowsOf(page, 'Broken')).toEqual([1]);
         await hoverExpression(page, 'Broken');
-        const tooltip = page.locator('.mdl-expression-error-tooltip');
-        await expect(tooltip).toBeVisible();
-        await expect(tooltip.locator('.mdl-expression-error-title')).toHaveText('Expression error');
-        await expect(tooltip.locator('.mdl-expression-error-row-message')).toHaveText('This row cannot be read around b=.');
+        const panel = page.locator('.mdl-expression-error-panel.visible');
+        await expect(panel).toBeVisible();
+        await expect(panel.locator('.mdl-expression-error-title')).toHaveText('Expression error');
+        await expect(panel.locator('.mdl-expression-error-row-message')).toHaveText('This row cannot be read around b=.');
     });
 
-    test('a card the engine reads leaves the tooltip out of the way', async ({ page }) => {
+    // The mark is the card's own, so it is there for anyone looking at the board; the sentence is for
+    // whoever is working on the card, and is not written over a card nobody has reached for.
+    test('the failing row carries a mark of its own, and the panel waits to be reached for', async ({ page }) => {
+        await setupEditor(page, 'en-US');
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await expect.poll(() => failingRowsOf(page, 'Broken')).toEqual([1]);
+        await expect(page.locator('.mdl-expression-error-mark')).toHaveCount(1);
+        await expect(page.locator('.mdl-expression-error-panel.visible')).toHaveCount(0);
+        await hoverExpression(page, 'Broken');
+        await expect(page.locator('.mdl-expression-error-panel.visible')).toBeVisible();
+    });
+
+    test('a card the engine reads carries neither mark nor panel', async ({ page }) => {
         await setupEditor(page, 'en-US');
         await addExpression(page, 'Sound', '\\displaylines{a=1\\\\b=2}');
         await expect.poll(() => failingRowsOf(page, 'Sound')).toEqual([]);
         await hoverExpression(page, 'Sound');
         await expect.poll(() => page.evaluate(() => shell.board.selection.hoveredShape?.properties.name)).toBe('Sound');
-        expect(await page.evaluate(() => shell.board.shapes.getByName('Sound').errorTooltipTimer)).toBeUndefined();
-        await expect(page.locator('.mdl-expression-error-tooltip')).toBeHidden();
+        await expect(page.locator('.mdl-expression-error-mark')).toHaveCount(0);
+        await expect(page.locator('.mdl-expression-error-panel.visible')).toHaveCount(0);
+    });
+
+    // The panel is how a row is reached: clicking what it says about a row puts the caret in that row,
+    // and it goes on saying what is wrong while the row is put right.
+    test('a row reached from the panel takes the caret at the end of that row', async ({ page }) => {
+        await setupEditor(page, 'en-US');
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await expect.poll(() => failingRowsOf(page, 'Broken')).toEqual([1]);
+        await hoverExpression(page, 'Broken');
+        // The card is covered by the board's move handle, so the press has to go to the handle and be
+        // given up by it, the way a real one is.
+        const rowBox = await page.locator('.mdl-expression-error-row').boundingBox();
+        await page.mouse.move(rowBox.x + rowBox.width / 2, rowBox.y + rowBox.height / 2);
+        await page.mouse.down();
+        await page.mouse.up();
+        await expect.poll(() => page.evaluate(() => {
+            const control = shell.board.shapes.getByName('Broken').expressionControl;
+            const cellRanges = control._getRowCellRanges()[1];
+            return control.mathfield.position === cellRanges[cellRanges.length - 1][1];
+        })).toBe(true);
+        await expect(page.locator('.mdl-expression-error-panel.visible')).toBeVisible();
+        expect(await failingRowsOf(page, 'Broken')).toEqual([1]);
     });
 });

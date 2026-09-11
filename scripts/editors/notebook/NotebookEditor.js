@@ -83,6 +83,17 @@ class NotebookEditor extends Workspace {
         return this.session?.calculator ?? null;
     }
 
+    // A notebook opened beside a board is written in the language the board is set to; one opened on its
+    // own falls back to the language the reader's browser asks for.
+    resolveTranslations() {
+        const boardEditor = window.shell ?? window.parent?.shell ?? window.opener?.shell ?? null;
+        if (boardEditor?.board?.translations)
+            return boardEditor.board.translations;
+        if (!this.translations)
+            this.translations = new BaseTranslations(navigator.language || "en-US");
+        return this.translations;
+    }
+
     createTranslatedTooltip(event, key, width, canShow) {
         const boardEditor = window.shell ?? window.parent?.shell ?? window.opener?.shell ?? null;
         if (boardEditor?.createTranslatedTooltip)

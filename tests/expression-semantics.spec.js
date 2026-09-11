@@ -41,6 +41,32 @@ function storedExpression(page, name) {
     return page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).properties.expression, name);
 }
 
+// A row is put right where it went wrong: the caret goes to the end of the row the engine refused, and
+// what is typed there is what makes the row readable again. What the card then says about its rows is
+// waited for by whoever asks for it: the rows are read again a moment after the writing stops.
+async function writeIntoFailingRow(page, name, text) {
+    const rowIndex = await page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).failingRowIndexes[0], name);
+    // A field taking focus places the caret itself, a moment after it is given the focus, so the caret is
+    // put where it is wanted until it stays there rather than once.
+    await page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).mathfield.focus(), name);
+    await expect.poll(() => page.evaluate(({ shapeName, index }) => {
+        const shape = shell.board.shapes.getByName(shapeName);
+        const cellRanges = shape.expressionControl._getRowCellRanges()[index];
+        const rowEnd = cellRanges[cellRanges.length - 1][1];
+        if (shape.mathfield.position === rowEnd)
+            return true;
+        shape.mathfield.position = rowEnd;
+        return false;
+    }, { shapeName: name, index: rowIndex })).toBe(true);
+    await page.keyboard.type(text);
+}
+
+// The row the card last read as the one being written in. It is written by a check of the rows, so a
+// test waiting for it is waiting for the check that follows what it typed.
+function writtenRow(page, name) {
+    return page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).expressionControl.writtenRowIndex, name);
+}
+
 async function focusExpression(page, name) {
     await page.evaluate(shapeName => {
         const shape = shell.board.shapes.getByName(shapeName);
@@ -729,15 +755,16 @@ test.describe('rows the engine cannot parse', () => {
         return page.evaluate(shapeName => shell.board.shapes.getByName(shapeName).failingRowIndexes, name);
     }
 
-    // A row is checked when the user steps out of the card, not while they are still writing it: an
-    // expression halfway through being typed is not an expression the engine could be expected to read.
-    test('the offending row is marked when the expression loses focus, not while it is typed', async ({ page }) => {
+    // A row is half-written for as long as it is being written, so the row the caret stands in is left
+    // alone until the caret leaves it: an expression halfway through being typed is not an expression the
+    // engine could be expected to read. Every other row is checked as it stands.
+    test('the row the caret stands in is left unmarked until the caret leaves it', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Broken', '\\displaylines{a=1\\\\b=2}');
         await setCardBackground(page, 'Broken', '#ffffff');
         await focusExpression(page, 'Broken');
         await page.keyboard.press('Backspace');
-        await page.waitForTimeout(400);
+        await expect.poll(() => writtenRow(page, 'Broken')).toBe(1);
         expect(await failingRows(page, 'Broken')).toEqual([]);
         expect(colorOf(await renderedColors(page, 'Broken'), 'b')).toBe(adaptedColor('#183b66', '#ffffff', 6));
         await blurExpression(page, 'Broken');
@@ -745,6 +772,15 @@ test.describe('rows the engine cannot parse', () => {
         const rendered = await renderedColors(page, 'Broken');
         expect(colorOf(rendered, 'b')).toBe(adaptedColor('#d32f2f', '#ffffff', 7));
         expect(colorOf(rendered, 'a')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+    });
+
+    test('a row the engine refused keeps its mark while another row is being written', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Broken', BROKEN_GROUP);
+        await focusExpression(page, 'Broken');
+        await page.keyboard.type('7');
+        await expect.poll(() => writtenRow(page, 'Broken')).toBe(2);
+        expect(await failingRows(page, 'Broken')).toEqual([1]);
     });
 
     function cardBorder(page, name) {
@@ -779,10 +815,8 @@ test.describe('rows the engine cannot parse', () => {
         await focusExpression(page, 'Broken');
         await blurExpression(page, 'Broken');
         expect(await cardBorder(page, 'Broken')).toBe('1px solid rgb(211, 47, 47)');
-        await focusExpression(page, 'Broken');
-        await page.keyboard.type('7');
-        await page.waitForTimeout(400);
-        expect(await cardBorder(page, 'Broken')).toBe('1px solid rgb(0, 128, 127)');
+        await writeIntoFailingRow(page, 'Broken', '7');
+        await expect.poll(() => cardBorder(page, 'Broken')).toBe('1px solid rgb(0, 128, 127)');
     });
 
     function highlightColor(page, name) {
@@ -817,10 +851,8 @@ test.describe('rows the engine cannot parse', () => {
         await focusExpression(page, 'Broken');
         await blurExpression(page, 'Broken');
         expect((await highlightColor(page, 'Broken')).resolved).toBe('#d32f2f');
-        await focusExpression(page, 'Broken');
-        await page.keyboard.type('7');
-        await page.waitForTimeout(400);
-        expect((await highlightColor(page, 'Broken')).resolved).toBe('#00807f');
+        await writeIntoFailingRow(page, 'Broken', '7');
+        await expect.poll(async () => (await highlightColor(page, 'Broken')).resolved).toBe('#00807f');
     });
 
     function playButton(page) {
@@ -849,10 +881,8 @@ test.describe('rows the engine cannot parse', () => {
         await focusExpression(page, 'Broken');
         await blurExpression(page, 'Broken');
         expect((await playButton(page)).icon).toBe('fa-solid fa-play');
-        await focusExpression(page, 'Broken');
-        await page.keyboard.type('7');
-        await page.waitForTimeout(400);
-        expect(await page.evaluate(() => shell.hasExpressionErrors())).toBe(false);
+        await writeIntoFailingRow(page, 'Broken', '7');
+        await expect.poll(() => page.evaluate(() => shell.hasExpressionErrors())).toBe(false);
         const button = await playButton(page);
         expect(button.icon).toBe('fa-light fa-play');
         expect(button.marked).toBe(false);
@@ -909,11 +939,9 @@ test.describe('rows the engine cannot parse', () => {
         await focusExpression(page, 'Broken');
         await blurExpression(page, 'Broken');
         expect(await failingRows(page, 'Broken')).toEqual([1]);
-        await focusExpression(page, 'Broken');
-        await page.keyboard.type('7');
-        await page.waitForTimeout(400);
-        expect(await failingRows(page, 'Broken')).toEqual([]);
-        expect(colorOf(await renderedColors(page, 'Broken'), 'b')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+        await writeIntoFailingRow(page, 'Broken', '7');
+        await expect.poll(() => failingRows(page, 'Broken')).toEqual([]);
+        await expect.poll(async () => colorOf(await renderedColors(page, 'Broken'), 'b')).toBe(adaptedColor('#183b66', '#ffffff', 6));
     });
 
     test('checking the rows leaves no term behind in the model', async ({ page }) => {

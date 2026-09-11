@@ -16,6 +16,8 @@ if (typeof BlocksRegistry !== "undefined") {
                 useScrollView: true,
                 value: this.block.content || "\\displaylines{}",
                 getSemanticMetadata: () => this.getSemanticMetadata(),
+                getTranslations: () => this.notebookEditor.resolveTranslations(),
+                findFailingRows: () => ExpressionRowErrors.find(this.notebookEditor.calculator, this.expressionControl.getCanonicalValue()),
                 onInput: () => this.onInput()
             });
             this.expressionControl.create(expressionContainer);
@@ -49,7 +51,7 @@ if (typeof BlocksRegistry !== "undefined") {
 
         getSemanticMetadata() {
             const functionNames = this.expressionControl.getExpressionFunctionShortcuts().map(shortcut => shortcut.shortcutText);
-            return MathSemanticMetadata.fromCalculator(this.notebookEditor.calculator, this.expressionControl.getCanonicalValue(), functionNames);
+            return MathSemanticMetadata.fromCalculator(this.notebookEditor.calculator, this.expressionControl.getCanonicalValue(), functionNames, this.expressionControl.getFailingRowIndexes());
         }
 
         getTemplateShortcuts() {

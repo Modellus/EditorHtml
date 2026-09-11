@@ -1,4 +1,8 @@
 class ExpressionControl {
+    // A row is checked once the writing of it has paused, rather than on every keystroke, so a row being
+    // built up is not reported half-written.
+    static errorCheckDelay = 600;
+
     constructor(options = {}) {
         this.options = options;
         this.containerElement = null;
@@ -6,6 +10,11 @@ class ExpressionControl {
         this.mathliveController = null;
         this.semanticDecorator = null;
         this.colorSchemeQuery = null;
+        this.errorReport = null;
+        this.allFailingRows = [];
+        this.failingRows = [];
+        this.rowCellRanges = [];
+        this.writtenRowIndex = -1;
         this.onColorSchemeChange = () => this.refreshSemanticColoring();
     }
 
@@ -34,7 +43,15 @@ class ExpressionControl {
             this.mathliveController = new MathliveController(this.mathfield);
             this.mathfield.addEventListener("keydown", keydownEvent => this._onKeyDown(keydownEvent), true);
             this._createSemanticDecorator();
+            this.checkErrors();
         });
+        // The row holding the caret is left unmarked while the field is being written in, so the check
+        // is run again as soon as the caret leaves it, off the ranges the last check already read.
+        this.mathfield.addEventListener("selection-change", () => this._syncCaretRow());
+        // The check is run a frame after the field is left, so the row that was being written in is read
+        // as a row nobody is standing in any more, and is reported like the rest.
+        this.mathfield.addEventListener("blur", () => requestAnimationFrame(() => this.checkErrors()));
+        this.mathfield.addEventListener("focus", () => this.errorReport?.refresh());
         this.mathfield.addEventListener("input", inputEvent => this._onInput(inputEvent));
         if (this.options.onInput)
             this.mathfield.addEventListener("input", inputEvent => this.options.onInput(inputEvent));
@@ -54,6 +71,10 @@ class ExpressionControl {
                 scrollByContent: true,
                 scrollByThumb: true
             });
+        if (this.options.findFailingRows) {
+            this.errorReport = new ExpressionErrorReport(this);
+            this.errorReport.create(this.containerElement);
+        }
         if (typeof this.options.value === "string")
             this.setValue(this.options.value);
         return this.containerElement;
@@ -69,6 +90,134 @@ class ExpressionControl {
             this._deferRelationalShortcutHandling();
         this._scheduleAlignmentNormalization(inputEvent);
         this.scheduleSemanticColoring();
+        this._writtenRowIsUnread = true;
+        this.scheduleErrorCheck();
+    }
+
+    scheduleErrorCheck() {
+        if (!this.errorReport)
+            return;
+        clearTimeout(this._errorCheckTimer);
+        this._errorCheckTimer = setTimeout(() => this.checkErrors(), ExpressionControl.errorCheckDelay);
+    }
+
+    // A card taken off the board leaves no check behind it: a check landing on a card that is gone would
+    // report rows of an expression nothing is drawing any more.
+    cancelErrorCheck() {
+        clearTimeout(this._errorCheckTimer);
+    }
+
+    checkErrors() {
+        if (!this.errorReport || !this.mathfield)
+            return;
+        clearTimeout(this._errorCheckTimer);
+        this.allFailingRows = this.options.findFailingRows?.() ?? [];
+        this.rowCellRanges = this.allFailingRows.length > 0 ? this._getRowCellRanges() : [];
+        this._writeFailingRows(true);
+    }
+
+    // Which row the caret stands in is only worth reading between keystrokes: while the field is being
+    // written in, the rows the last check read have moved out from under it.
+    _syncCaretRow() {
+        if (!this.errorReport || this._readingRowRanges || this._writtenRowIsUnread || this.allFailingRows.length === 0)
+            return;
+        this._writeFailingRows();
+    }
+
+    // The rows the engine refused, as the card shows them. The row being written in is left out: a row is
+    // half-written for as long as it is being written, and saying so under the caret is nagging rather
+    // than reporting. It is the row being written in, not the row the caret happens to have landed in -
+    // a card clicked into and left alone says everything that is wrong with it.
+    _writeFailingRows(rowsWereJustRead = false) {
+        const caretRowIndex = this._readCaretRowIndex();
+        if (rowsWereJustRead && this._writtenRowIsUnread) {
+            this.writtenRowIndex = caretRowIndex;
+            this._writtenRowIsUnread = false;
+        } else if (caretRowIndex !== this.writtenRowIndex)
+            this.writtenRowIndex = -1;
+        const failingRows = this.allFailingRows.filter(failingRow => failingRow.rowIndex !== this.writtenRowIndex);
+        const signature = failingRows.map(failingRow => `${failingRow.rowIndex}:${failingRow.error?.message ?? ""}`).join("|");
+        const reportIsUnchanged = signature === this._failingRowsSignature;
+        this.failingRows = failingRows;
+        this._failingRowsSignature = signature;
+        // The marks are laid out again whatever the rows are: the same row failing after an edit above it
+        // stands somewhere else on the card.
+        this.errorReport.setFailingRows(failingRows);
+        if (reportIsUnchanged)
+            return;
+        this.semanticDecorator?.invalidate();
+        this.scheduleSemanticColoring();
+        this.options.onFailingRowsChanged?.(failingRows);
+    }
+
+    getFailingRowIndexes() {
+        return this.failingRows.map(failingRow => failingRow.rowIndex);
+    }
+
+    setErrorReportActive(active) {
+        this.errorReport?.setActive(active);
+    }
+
+    _readCaretRowIndex() {
+        if (!this.mathfield?.hasFocus())
+            return -1;
+        const caretPosition = this.mathfield.position;
+        for (let rowIndex = 0; rowIndex < this.rowCellRanges.length; rowIndex++) {
+            const cellRanges = this.rowCellRanges[rowIndex];
+            for (let cellIndex = 0; cellIndex < cellRanges.length; cellIndex++) {
+                if (caretPosition >= cellRanges[cellIndex][0] && caretPosition <= cellRanges[cellIndex][1])
+                    return rowIndex;
+            }
+        }
+        return -1;
+    }
+
+    // A row of an aligned expression is written as two cells, so the cells the field reports are read
+    // back two at a time there and one at a time everywhere else.
+    _getRowCellRanges() {
+        const cellRanges = this._getRowRanges();
+        const cellsPerRow = ExpressionAlignment.isAligned(this.readPresentedLatex()) ? 2 : 1;
+        const rowCellRanges = [];
+        for (let cellIndex = 0; cellIndex < cellRanges.length; cellIndex++) {
+            const rowIndex = Math.floor(cellIndex / cellsPerRow);
+            if (!rowCellRanges[rowIndex])
+                rowCellRanges[rowIndex] = [];
+            rowCellRanges[rowIndex].push(cellRanges[cellIndex]);
+        }
+        return rowCellRanges;
+    }
+
+    // Where a row stands on screen, as the rectangle its own symbols take up. A row nothing has been
+    // written in yet reports nothing, and is left unmarked rather than marked in the wrong place.
+    getRowBounds(rowIndex) {
+        const cellRanges = this.rowCellRanges[rowIndex];
+        if (!this.mathfield || !cellRanges)
+            return null;
+        let top = Infinity;
+        let bottom = -Infinity;
+        for (let cellIndex = 0; cellIndex < cellRanges.length; cellIndex++) {
+            const [cellStart, cellEnd] = cellRanges[cellIndex];
+            for (let offset = cellStart + 1; offset <= cellEnd; offset++) {
+                const bounds = this.mathfield.getElementInfo(offset)?.bounds;
+                if (!bounds || bounds.height === 0)
+                    continue;
+                top = Math.min(top, bounds.top);
+                bottom = Math.max(bottom, bounds.bottom);
+            }
+        }
+        if (top === Infinity)
+            return null;
+        return { top, bottom, height: bottom - top };
+    }
+
+    // A row reached from the panel takes the caret at its end, where writing carries on from what is
+    // already written rather than in front of it.
+    moveCaretToRow(rowIndex) {
+        this.focus();
+        const cellRanges = this._getRowCellRanges()[rowIndex];
+        if (!cellRanges)
+            return;
+        this.mathfield.position = cellRanges[cellRanges.length - 1][1];
     }
 
     _createSemanticDecorator() {
@@ -668,23 +817,31 @@ class ExpressionControl {
             this.mathfield.executeCommand("moveToPreviousPlaceholder");
     }
 
+    // The rows are read by walking the caret through them and putting it back where it was, so while the
+    // walk is going on the caret says nothing about where the user is standing: whoever listens for the
+    // caret moving is told to wait for it to be put back.
     _getRowRanges() {
         const savedSelection = this.mathfield.selection;
         const lastOffset = this.mathfield.lastOffset;
         const rowRanges = [];
         let rowStart = 0;
-        while (rowStart <= lastOffset) {
-            this.mathfield.position = rowStart;
-            this.mathfield.executeCommand("moveToGroupEnd");
-            const rowEnd = this.mathfield.position;
-            if (rowEnd < rowStart)
-                break;
-            rowRanges.push([rowStart, rowEnd]);
-            if (rowEnd >= lastOffset)
-                break;
-            rowStart = rowEnd + 1;
+        this._readingRowRanges = true;
+        try {
+            while (rowStart <= lastOffset) {
+                this.mathfield.position = rowStart;
+                this.mathfield.executeCommand("moveToGroupEnd");
+                const rowEnd = this.mathfield.position;
+                if (rowEnd < rowStart)
+                    break;
+                rowRanges.push([rowStart, rowEnd]);
+                if (rowEnd >= lastOffset)
+                    break;
+                rowStart = rowEnd + 1;
+            }
+            this.mathfield.selection = savedSelection;
+        } finally {
+            this._readingRowRanges = false;
         }
-        this.mathfield.selection = savedSelection;
         return rowRanges;
     }
 
@@ -973,6 +1130,7 @@ class ExpressionControl {
             return;
         const scrollViewInstance = DevExpress.ui.dxScrollView.getInstance(this.containerElement);
         scrollViewInstance?.update();
+        this.errorReport?.refresh();
     }
 
     // Names written with a dot, as they come from the parser or from a saved model, are written back as
@@ -984,6 +1142,7 @@ class ExpressionControl {
         this.semanticDecorator?.invalidate();
         this.scheduleSemanticColoring();
         this.syncAlignedLayoutClass();
+        this.scheduleErrorCheck();
     }
 
     getValue(format) {
@@ -1023,6 +1182,9 @@ class ExpressionControl {
     dispose() {
         cancelAnimationFrame(this._semanticColoringFrame);
         cancelAnimationFrame(this._alignmentFrame);
+        clearTimeout(this._errorCheckTimer);
+        this.errorReport?.dispose();
+        this.errorReport = null;
         this.colorSchemeQuery?.removeEventListener("change", this.onColorSchemeChange);
         this.colorSchemeQuery = null;
         this.semanticDecorator = null;
