@@ -149,7 +149,7 @@ test.describe('semantic classification', () => {
 
     test('the role priority follows the requested order', () => {
         expect(MathSemantics.rolePriority).toEqual([
-            'error', 'derivative', 'function', 'qualifier-index', 'iteration-index', 'number', 'variable', 'operator'
+            'error', 'derivative', 'function', 'qualifier-index', 'iteration-index', 'independent', 'number', 'variable', 'operator'
         ]);
         expect(MathSemantics.resolveRole([MathSymbolRole.VARIABLE, MathSymbolRole.NUMBER])).toBe(MathSymbolRole.NUMBER);
         expect(MathSemantics.resolveRole([MathSymbolRole.OPERATOR, MathSymbolRole.QUALIFIER_INDEX])).toBe(MathSymbolRole.QUALIFIER_INDEX);
@@ -195,8 +195,32 @@ test.describe('semantic metadata', () => {
 
     test('the independent and iteration terms are always known', () => {
         const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{v=t}', []);
-        expect(metadata.getSymbolRole('t')).toBe(MathSymbolRole.VARIABLE);
-        expect(metadata.getSymbolRole('n')).toBe(MathSymbolRole.VARIABLE);
+        expect(metadata.getSymbolRole('t')).toBe(MathSymbolRole.INDEPENDENT);
+        expect(metadata.getSymbolRole('n')).toBe(MathSymbolRole.INDEPENDENT);
+    });
+
+    test('the terms the model advances by are told apart from the other variables', () => {
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{v=a\\cdot t}', []);
+        expect(rolesOf('v=a\\cdot t', metadata)).toEqual([
+            'v:variable', '=:operator', 'a:variable', '\\cdot:operator', 't:independent'
+        ]);
+        expect(roleOf('x=n', 'n', metadata)).toBe(MathSymbolRole.INDEPENDENT);
+    });
+
+    test('the independent term keeps its colour under a derivative', () => {
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{\\frac{\\differentialD{a}}{\\differentialD{t}}=b}', []);
+        expect(rolesOf('\\frac{\\differentialD{a}}{\\differentialD{t}}=b', metadata)).toEqual([
+            '\\mathrm{d}:derivative', 'a:variable', '\\mathrm{d}:derivative', 't:independent', '=:operator', 'b:variable'
+        ]);
+    });
+
+    test('the iteration term is still an index where it stands as one', () => {
+        const metadata = MathSemanticMetadata.fromCalculator(calculator, '\\displaylines{a_{n+1}=a_n+n}', []);
+        expect(rolesOf('a_{n+1}=a_n+n', metadata)).toEqual([
+            'a:variable', 'n:iteration-index', '+:operator', '1:number',
+            '=:operator',
+            'a:variable', 'n:iteration-index', '+:operator', 'n:independent'
+        ]);
     });
 
     test('a known term names its subscript a qualifying index and the iteration term an iteration index', () => {

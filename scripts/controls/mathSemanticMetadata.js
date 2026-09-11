@@ -100,9 +100,9 @@ class MathSemanticMetadata {
             return null;
         if (this.isFunction(termName))
             return null;
-        if (this.definedTermNames.includes(termName) || this.termNames.includes(termName))
-            return MathSymbolRole.VARIABLE;
         if (termName === this.independentTermName || termName === this.iterationTermName)
+            return MathSymbolRole.INDEPENDENT;
+        if (this.definedTermNames.includes(termName) || this.termNames.includes(termName))
             return MathSymbolRole.VARIABLE;
         return null;
     }

@@ -483,6 +483,16 @@ test.describe('semantic colouring', () => {
         expect(colorOf(rendered, '+')).toBe(adaptedColor('#626b75', '#ffffff', 4.5));
     });
 
+    test('the terms the model advances by are painted apart from the other variables', async ({ page }) => {
+        await setupEditor(page);
+        await addExpression(page, 'Advance', '\\displaylines{v=2\\\\x=v\\cdot t\\\\y=n}');
+        await setCardBackground(page, 'Advance', '#ffffff');
+        const rendered = await renderedColors(page, 'Advance');
+        expect(colorOf(rendered, 'v')).toBe(adaptedColor('#183b66', '#ffffff', 6));
+        expect(colorOf(rendered, 't')).toBe(adaptedColor('#7047b8', '#ffffff', 6));
+        expect(colorOf(rendered, 'n')).toBe(adaptedColor('#7047b8', '#ffffff', 6));
+    });
+
     test('colouring reaches inside fractions, powers and roots', async ({ page }) => {
         await setupEditor(page);
         await addExpression(page, 'Nested', '\\displaylines{K=\\frac{\\sqrt{b}}{a^2}\\\\a=1\\\\b=2}');

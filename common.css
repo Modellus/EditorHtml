@@ -219,6 +219,7 @@ input,
     --math-derivative: #b0185b;
     --math-qualifier-index: #347dac;
     --math-iteration-index: #7047b8;
+    --math-independent: #7047b8;
     --math-error: #d32f2f;
     --math-caret: #0f6cbd;
     --math-error-panel-background: #ffffff;
@@ -234,6 +235,7 @@ input,
         --math-derivative: #ff8ab9;
         --math-qualifier-index: #7fc4e8;
         --math-iteration-index: #c3a9ff;
+        --math-independent: #c3a9ff;
         --math-error: #ff8a80;
         --math-caret: #4fa8ff;
         --math-error-panel-background: #2a2d33;
@@ -249,6 +251,7 @@ input,
     --math-derivative: #ff8ab9;
     --math-qualifier-index: #7fc4e8;
     --math-iteration-index: #c3a9ff;
+    --math-independent: #c3a9ff;
     --math-error: #ff8a80;
     --math-caret: #4fa8ff;
     --math-error-panel-background: #2a2d33;

@@ -3,6 +3,7 @@ const MathSymbolRole = {
     FUNCTION: "function",
     QUALIFIER_INDEX: "qualifier-index",
     ITERATION_INDEX: "iteration-index",
+    INDEPENDENT: "independent",
     DERIVATIVE: "derivative",
     NUMBER: "number",
     OPERATOR: "operator",
@@ -247,6 +248,7 @@ class MathSemantics {
         MathSymbolRole.FUNCTION,
         MathSymbolRole.QUALIFIER_INDEX,
         MathSymbolRole.ITERATION_INDEX,
+        MathSymbolRole.INDEPENDENT,
         MathSymbolRole.NUMBER,
         MathSymbolRole.VARIABLE,
         MathSymbolRole.OPERATOR

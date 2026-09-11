@@ -7,6 +7,7 @@ class MathSemanticDecorator {
         "derivative": "--math-derivative",
         "qualifier-index": "--math-qualifier-index",
         "iteration-index": "--math-iteration-index",
+        "independent": "--math-independent",
         "error": "--math-error"
     };
 
@@ -18,6 +19,7 @@ class MathSemanticDecorator {
         "derivative": "#b0185b",
         "qualifier-index": "#347dac",
         "iteration-index": "#7047b8",
+        "independent": "#7047b8",
         "error": "#d32f2f"
     };
 
