@@ -12,7 +12,8 @@ class ModellusShapeToolbar {
             { text: translations.get("Mind Map Rectangle Name"), icon: "fa-light fa-rectangle", type: "MindMapRectangleShape", name: "Rectangle", properties: null },
             { text: translations.get("Mind Map Circle Name"), icon: "fa-light fa-circle", type: "MindMapCircleShape", name: "Circle", properties: null },
             { text: translations.get("Mind Map Line Name"), icon: "fa-light fa-slash-forward", type: "MindMapConnectorShape", name: "Line", properties: { startTipType: "none", endTipType: "none", routing: "straight" } },
-            { text: translations.get("Connector Name"), icon: "fa-light fa-arrow-right-long", type: "MindMapConnectorShape", name: "Connector", properties: { startTipType: "none", endTipType: "arrow", routing: "curved" } }
+            { text: translations.get("Connector Name"), icon: "fa-light fa-arrow-right-long", type: "MindMapConnectorShape", name: "Connector", properties: { startTipType: "none", endTipType: "arrow", routing: "curved" } },
+            { text: translations.get("Pencil Name"), icon: "fa-light fa-pencil", type: "MindMapConnectorShape", name: "Pencil", properties: { startTipType: "none", endTipType: "none", routing: "freehand", pencilStyle: "pencil", lineWidth: 3 } }
         ];
     }
 

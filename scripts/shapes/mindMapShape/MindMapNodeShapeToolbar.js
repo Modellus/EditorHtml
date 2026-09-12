@@ -1,4 +1,10 @@
 var MindMapNodeShapeToolbarMixin = {
+    supportsPulseSetting() {
+        return false;
+    },
+    supportsNotationSetting() {
+        return false;
+    },
     createToolbar() {
         const items = resolveShapeToolbarBaseItems(this, MindMapNodeShapeToolbarMixin.createToolbar);
         items.push(

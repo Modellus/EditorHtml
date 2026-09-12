@@ -17,11 +17,11 @@ async function openMindMapDropdown(page) {
 }
 
 test.describe('Mind map dropdown', () => {
-    test('the dropdown lists the five mind map shapes', async ({ page }) => {
+    test('the dropdown lists the six mind map shapes', async ({ page }) => {
         await setupEditor(page);
         await openMindMapDropdown(page);
         const labels = await page.$$eval('.mdl-shape-overlay-popup .mdl-dropdown-list-label', elements => elements.map(element => element.textContent));
-        expect(labels).toEqual(['Bubble', 'Rectangle', 'Circle', 'Line', 'Connector']);
+        expect(labels).toEqual(['Bubble', 'Rectangle', 'Circle', 'Line', 'Connector', 'Pencil']);
     });
 
     test('picking a shape arms draw mode and highlights the dropdown', async ({ page }) => {
@@ -59,6 +59,11 @@ test.describe('Mind map dropdown', () => {
         }));
         expect(connector.properties).toEqual({ startTipType: 'none', endTipType: 'arrow', routing: 'curved' });
         expect(connector.name).toBe('Connector');
+        await openMindMapDropdown(page);
+        await page.click('.mdl-shape-overlay-popup .dx-list-item:has-text("Pencil")');
+        await expect.poll(() => page.evaluate(() => shell.shapeDrawController.pendingShapeName)).toBe('Pencil');
+        const pencil = await page.evaluate(() => shell.shapeDrawController.pendingShapeProperties);
+        expect(pencil).toEqual({ startTipType: 'none', endTipType: 'none', routing: 'freehand', pencilStyle: 'pencil', lineWidth: 3 });
     });
 
     test('escape cancels mind map draw mode', async ({ page }) => {

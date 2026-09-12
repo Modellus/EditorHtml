@@ -431,6 +431,15 @@ var BaseShapeToolbarMixin = {
                 this.setPropertyCommand("opacity", opacity);
         }, 300);
     },
+    supportsBorderColorSetting() {
+        return true;
+    },
+    supportsPulseSetting() {
+        return true;
+    },
+    supportsNotationSetting() {
+        return true;
+    },
     createPulseMenuItem() {
         const pulseLabel = this.board.translations.get("Pulse") ?? "Pulse";
         return {
@@ -600,21 +609,23 @@ var BaseShapeToolbarMixin = {
                         text: fgLabel,
                         iconHtml: this.menuIconHtml("fa-droplet", !!fgColor),
                         buildControl: $p => $p.append(this._fgColorPicker)
-                    },
-                    {
-                        text: borderLabel,
-                        iconHtml: this.menuIconHtml("fa-square", !!hasBorder),
-                        buildControl: $p => $p.append(this._borderColorPicker)
                     }
                 ]
             }
         ];
+        if (this.supportsBorderColorSetting())
+            sections[0].items.push({
+                text: borderLabel,
+                iconHtml: this.menuIconHtml("fa-square", !!hasBorder),
+                buildControl: $p => $p.append(this._borderColorPicker)
+            });
         this.populateShapeColorMenuSections(sections);
-        sections[0].items.push(this.createPulseMenuItem());
+        if (this.supportsPulseSetting())
+            sections[0].items.push(this.createPulseMenuItem());
         sections[0].items.push(this.createOpacityMenuItem());
         // The notation stands at the end of the settings menu when the shape has one, and here,
         // beside the opacity, when it has not.
-        if (this.hasSettingsMenu?.() !== true)
+        if (this.hasSettingsMenu?.() !== true && this.supportsNotationSetting())
             sections[0].items.push(this.createNotationMenuItem());
         const listItems = sections.flatMap(section => section.items);
         Utils.renderDropdownMenuScroll(contentElement, 300, scrollContent => {

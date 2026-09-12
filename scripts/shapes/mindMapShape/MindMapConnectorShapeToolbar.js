@@ -1,4 +1,18 @@
 var MindMapConnectorShapeToolbarMixin = {
+    supportsPulseSetting() {
+        return false;
+    },
+    supportsNotationSetting() {
+        return false;
+    },
+    supportsBorderColorSetting() {
+        return !this.isFreehand();
+    },
+    populateShapeColorMenuSections(sections) {
+        if (this.isFreehand())
+            return;
+        this.pushColorMenuItem(sections, "backgroundColor", "Background", "fa-fill");
+    },
     createToolbar() {
         const items = resolveShapeToolbarBaseItems(this, MindMapConnectorShapeToolbarMixin.createToolbar);
         items.push(
@@ -25,21 +39,24 @@ var MindMapConnectorShapeToolbarMixin = {
             {
                 location: "center",
                 template: () => $(`<div class="toolbar-separator">|</div>`)
-            },
-            {
-                location: "center",
-                template: () => {
-                    const container = $('<div></div>');
-                    this.createConnectorLabelDropDownButton(container);
-                    return container;
-                }
-            },
-            {
-                location: "center",
-                template: () => $(`<div class="toolbar-separator">|</div>`)
-            },
-            this.createRemoveToolbarItem()
+            }
         );
+        if (!this.isFreehand())
+            items.push(
+                {
+                    location: "center",
+                    template: () => {
+                        const container = $('<div></div>');
+                        this.createConnectorLabelDropDownButton(container);
+                        return container;
+                    }
+                },
+                {
+                    location: "center",
+                    template: () => $(`<div class="toolbar-separator">|</div>`)
+                }
+            );
+        items.push(this.createRemoveToolbarItem());
         return items;
     },
     getTipTypeItems(end) {
@@ -77,7 +94,19 @@ var MindMapConnectorShapeToolbarMixin = {
             { key: "orthogonal", icon: "fa-light fa-arrow-trend-up" }
         ];
     },
+    getPencilStyleItems() {
+        return Object.keys(MindMapConnectorShape.pencilStyles).map(key => ({ key: key }));
+    },
+    buildPencilSampleMarkup(key) {
+        const style = MindMapConnectorShape.pencilStyles[key];
+        const sampleWidth = this.formatCoordinate(Math.min(style.widthFactor * 2.2, 9));
+        return `<svg width="26" height="16" viewBox="0 0 26 16" style="display: block; width: 26px; height: 16px; flex: none">`
+            + `<path d="M 2 11 C 8 3, 18 13, 24 5" fill="none" stroke="currentColor" stroke-width="${sampleWidth}" stroke-opacity="${style.strokeOpacity}" stroke-linecap="${style.lineCap}" stroke-linejoin="round" />`
+            + `</svg>`;
+    },
     connectorTypeIcon() {
+        if (this.isFreehand())
+            return "fa-light fa-pencil";
         return this.getConnectorTypeItems().find(item => item.key === this.properties.routing)?.icon ?? "fa-light fa-arrow-turn-right";
     },
     refreshConnectorTypeButtonIcon() {
@@ -91,7 +120,7 @@ var MindMapConnectorShapeToolbarMixin = {
             stylingMode: "text",
             useSelectMode: false,
             icon: this.connectorTypeIcon(),
-            onInitialized: event => Utils.createTranslatedTooltip(event, "Connector Type Tooltip", this.board.translations, 280),
+            onInitialized: event => Utils.createTranslatedTooltip(event, this.isFreehand() ? "Pencil Tooltip" : "Connector Type Tooltip", this.board.translations, 280),
             dropDownOptions: {
                 container: document.body,
                 wrapperAttr: this.getShapeOverlayWrapperAttr(),
@@ -101,7 +130,79 @@ var MindMapConnectorShapeToolbarMixin = {
         });
         this._connectorTypeDropdownElement.appendTo(container);
     },
+    createPencilStyleButtonGroup($container) {
+        $('<div>').dxButtonGroup({
+            items: this.getPencilStyleItems(),
+            keyExpr: "key",
+            selectedItemKeys: [this.properties.pencilStyle],
+            stylingMode: "outlined",
+            buttonTemplate: (data, buttonContainer) => {
+                buttonContainer[0].innerHTML = this.buildPencilSampleMarkup(data.key);
+            },
+            onSelectionChanged: event => {
+                if (event.addedItems.length > 0)
+                    this.setPropertyCommand("pencilStyle", event.addedItems[0].key);
+            }
+        }).appendTo($container);
+    },
+    createConnectorLineStyleMenuItem() {
+        return {
+            text: this.board.translations.get("Connector Line Style"),
+            buildControl: $container => {
+                $('<div>').dxButtonGroup({
+                    items: [
+                        { key: "solid", icon: "fa-light fa-hyphen" },
+                        { key: "dashed", icon: "fa-light fa-ellipsis" }
+                    ],
+                    keyExpr: "key",
+                    selectedItemKeys: [this.properties.lineStyle],
+                    stylingMode: "outlined",
+                    buttonTemplate: (data, buttonContainer) => {
+                        buttonContainer[0].innerHTML = `<i class="dx-icon ${data.icon}" style="font-size: 14px"></i>`;
+                    },
+                    onSelectionChanged: event => {
+                        if (event.addedItems.length > 0)
+                            this.setPropertyCommand("lineStyle", event.addedItems[0].key);
+                    }
+                }).appendTo($container);
+            }
+        };
+    },
+    createConnectorLineWidthMenuItem() {
+        return {
+            text: this.board.translations.get("Connector Line Width"),
+            buildControl: $container => {
+                $('<div>').dxSlider({
+                    min: 1,
+                    max: 20,
+                    step: 1,
+                    value: this.properties.lineWidth,
+                    width: 120,
+                    tooltip: { enabled: true, showMode: "onHover", position: "top" },
+                    onValueChanged: event => {
+                        if (event.event)
+                            this.setPropertyCommand("lineWidth", event.value);
+                    }
+                }).appendTo($container);
+            }
+        };
+    },
+    buildPencilMenuContent(contentElement) {
+        const listItems = [
+            {
+                text: this.board.translations.get("Pencil Tip"),
+                buildControl: $container => this.createPencilStyleButtonGroup($container)
+            },
+            this.createConnectorLineStyleMenuItem(),
+            this.createConnectorLineWidthMenuItem()
+        ];
+        this.buildConnectorMenuList(contentElement, listItems);
+    },
     buildConnectorTypeMenuContent(contentElement) {
+        if (this.isFreehand()) {
+            this.buildPencilMenuContent(contentElement);
+            return;
+        }
         const listItems = [
             {
                 text: this.board.translations.get("Connector Start Tip"),
@@ -129,44 +230,8 @@ var MindMapConnectorShapeToolbarMixin = {
                     }).appendTo($container);
                 }
             },
-            {
-                text: this.board.translations.get("Connector Line Style"),
-                buildControl: $container => {
-                    $('<div>').dxButtonGroup({
-                        items: [
-                            { key: "solid", icon: "fa-light fa-hyphen" },
-                            { key: "dashed", icon: "fa-light fa-ellipsis" }
-                        ],
-                        keyExpr: "key",
-                        selectedItemKeys: [this.properties.lineStyle],
-                        stylingMode: "outlined",
-                        buttonTemplate: (data, buttonContainer) => {
-                            buttonContainer[0].innerHTML = `<i class="dx-icon ${data.icon}" style="font-size: 14px"></i>`;
-                        },
-                        onSelectionChanged: event => {
-                            if (event.addedItems.length > 0)
-                                this.setPropertyCommand("lineStyle", event.addedItems[0].key);
-                        }
-                    }).appendTo($container);
-                }
-            },
-            {
-                text: this.board.translations.get("Connector Line Width"),
-                buildControl: $container => {
-                    $('<div>').dxSlider({
-                        min: 1,
-                        max: 20,
-                        step: 1,
-                        value: this.properties.lineWidth,
-                        width: 120,
-                        tooltip: { enabled: true, showMode: "onHover", position: "top" },
-                        onValueChanged: event => {
-                            if (event.event)
-                                this.setPropertyCommand("lineWidth", event.value);
-                        }
-                    }).appendTo($container);
-                }
-            }
+            this.createConnectorLineStyleMenuItem(),
+            this.createConnectorLineWidthMenuItem()
         ];
         this.buildConnectorMenuList(contentElement, listItems);
     },

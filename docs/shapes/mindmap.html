@@ -103,7 +103,7 @@
         </div>
 
         <h1>Mind Map Shapes</h1>
-        <p class="page-desc">Bubbles, rectangles, circles, lines and connectors for laying out ideas on the board. Connectors stay attached to the shapes they link, so the diagram keeps its meaning while you rearrange it.</p>
+        <p class="page-desc">Bubbles, rectangles, circles, lines, connectors and a freehand pencil for laying out ideas on the board. Connectors stay attached to the shapes they link, so the diagram keeps its meaning while you rearrange it.</p>
 
         <div class="screenshot-placeholder">
             <i class="fa-light fa-image"></i>
@@ -111,7 +111,7 @@
         </div>
 
         <h2>Overview</h2>
-        <p>The mind map set is grouped under a single dropdown in the main toolbar. Pick a shape, then drag on the board to place it: nodes are drawn as a rectangle, connectors as a segment from one point to another. Double-click a node to type its text.</p>
+        <p>The mind map set is grouped under a single dropdown in the main toolbar. Pick a shape, then drag on the board to place it: nodes are drawn as a rectangle, connectors as a segment from one point to another, and the pencil follows the pointer wherever you take it. Double-click a node to type its text.</p>
         <p>Unlike the Line, Vector and Arc shapes, mind map shapes are annotations rather than simulation objects. They are not bound to calculator terms and do not need a referential, so they can be placed anywhere on the board.</p>
 
         <h2>The shapes</h2>
@@ -123,6 +123,7 @@
                 <tr><td>Circle</td><td>Ellipse, typically the central idea of the map</td></tr>
                 <tr><td>Line</td><td>A plain segment with no tips, for grouping or underlining</td></tr>
                 <tr><td>Connector</td><td>An arrow that links two shapes and follows them when they move</td></tr>
+                <tr><td>Pencil</td><td>Freehand strokes that follow the pointer, for drawing over the board by hand</td></tr>
             </tbody>
         </table>
 
@@ -137,6 +138,8 @@
             Screenshot: a shape highlighted while a connector end is dragged over it
         </div>
 
+        <p>Mind map shapes are annotations, not readouts: none of them offers the Pulse or Notation settings that shapes carrying numbers do.</p>
+
         <h2>Node properties</h2>
         <table class="docs-table">
             <thead><tr><th>Property</th><th>Description</th></tr></thead>
@@ -148,6 +151,21 @@
                 <tr><td>Fill and border color</td><td>Set from the appearance dropdown, together with opacity, which fades the fill and leaves the border and the name alone</td></tr>
             </tbody>
         </table>
+
+        <h2>The pencil</h2>
+        <p>The pencil is the connector drawn freely: pick it from the same dropdown and drag anywhere on the board, and the stroke follows the pointer instead of running between two endpoints. A smooth curve is fitted through each recorded trail, so the line comes out clean rather than faceted.</p>
+        <p>The pencil stays in your hand until you put it down. Releasing the pointer ends one stroke, not the drawing: keep dragging and each new stroke joins the same pencil, so a sketch drawn in a dozen separate movements is one shape. <strong>Escape ends the drawing</strong> and places it on the board, and a single undo takes the whole thing away. A press without a real drag adds no stroke, and pressing Escape before anything is drawn leaves nothing behind.</p>
+        <p>A pencil is only its strokes. It paints no background and has no border, it holds no text, it carries no tips, and it does not attach to shapes or reshape from a bend handle. The whole drawing moves as one when you drag anywhere along any of its strokes, and one colour, one tip and one width apply to all of them from its toolbar.</p>
+        <table class="docs-table">
+            <thead><tr><th>Tip</th><th>Description</th></tr></thead>
+            <tbody>
+                <tr><td>Pencil</td><td>Thin and slightly rough, like graphite on paper</td></tr>
+                <tr><td>Pen</td><td>Clean and solid, with rounded ends</td></tr>
+                <tr><td>Marker</td><td>Thick and opaque, with rounded ends</td></tr>
+                <tr><td>Highlighter</td><td>Wide, flat-ended and translucent, multiplying over whatever it covers</td></tr>
+            </tbody>
+        </table>
+        <p>Each tip scales the line width rather than replacing it, so the width slider sets how big the chosen tip draws: the same width gives a fine pencil line and a broad highlighter band. The picker shows each tip as a sample of the stroke it draws rather than as an icon.</p>
 
         <h2>Connector properties</h2>
         <table class="docs-table">

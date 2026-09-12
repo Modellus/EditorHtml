@@ -1,6 +1,15 @@
 class MindMapConnectorShape extends BaseShape {
     hideSelectionOutline = true;
 
+    static freehandSampleDistance = 3;
+
+    static pencilStyles = {
+        pencil: { widthFactor: 1, strokeOpacity: 0.8, lineCap: "round", blendMode: "normal", textured: true },
+        pen: { widthFactor: 1.4, strokeOpacity: 1, lineCap: "round", blendMode: "normal", textured: false },
+        marker: { widthFactor: 2.6, strokeOpacity: 0.95, lineCap: "round", blendMode: "normal", textured: false },
+        highlighter: { widthFactor: 5, strokeOpacity: 0.35, lineCap: "butt", blendMode: "multiply", textured: false }
+    };
+
     constructor(board, parent, id) {
         super(board, parent, id);
         this.toolbarAdapter = {
@@ -33,6 +42,8 @@ class MindMapConnectorShape extends BaseShape {
         this.properties.endTipType = "arrow";
         this.properties.lineWidth = 2;
         this.properties.lineStyle = "solid";
+        this.properties.pencilStyle = "pencil";
+        this.properties.freehandStrokes = [];
         this.properties.text = "";
         this.properties.textPosition = 0.5;
         this.properties.fontSize = 12;
@@ -45,7 +56,35 @@ class MindMapConnectorShape extends BaseShape {
         return true;
     }
 
-    getDrawGesture() {
+    isFreehand() {
+        return this.properties.routing === "freehand";
+    }
+
+    getShapeIcon() {
+        if (this.isFreehand())
+            return "fa-light fa-pencil";
+        return BaseShape.shapeIcons.MindMapConnectorShape;
+    }
+
+    getStrokeColor() {
+        if (this.isFreehand())
+            return this.properties.foregroundColor;
+        return this.getBorderColor();
+    }
+
+    getPencilStyle() {
+        return MindMapConnectorShape.pencilStyles[this.properties.pencilStyle] ?? MindMapConnectorShape.pencilStyles.pencil;
+    }
+
+    getEffectiveStrokeWidth() {
+        if (!this.isFreehand())
+            return this.properties.lineWidth;
+        return this.properties.lineWidth * this.getPencilStyle().widthFactor;
+    }
+
+    getDrawGesture(pendingProperties = null) {
+        if ((pendingProperties?.routing ?? this.properties.routing) === "freehand")
+            return "freehand";
         return "segment";
     }
 
@@ -62,6 +101,8 @@ class MindMapConnectorShape extends BaseShape {
     }
 
     enterEditMode() {
+        if (this.isFreehand())
+            return false;
         this._editedText = this.properties.text;
         this._isEditingText = true;
         this.labelElement.setAttribute("contenteditable", "true");
@@ -150,19 +191,39 @@ class MindMapConnectorShape extends BaseShape {
     }
 
     setProperties(properties) {
+        const wasFreehand = this.isFreehand();
         super.setProperties(properties);
         if ("startShapeId" in properties || "endShapeId" in properties)
             this.board.connectorIndex.update(this);
-        if ("routing" in properties)
+        if ("routing" in properties || "pencilStyle" in properties)
             this.refreshConnectorTypeButtonIcon?.();
+        this.rebuildContextToolbarOnFreehandChange(wasFreehand);
     }
 
     setProperty(name, value) {
+        const wasFreehand = this.isFreehand();
         super.setProperty(name, value);
         if (name === "startShapeId" || name === "endShapeId")
             this.board.connectorIndex.update(this);
-        if (name === "routing")
+        if (name === "routing" || name === "pencilStyle")
             this.refreshConnectorTypeButtonIcon?.();
+        this.rebuildContextToolbarOnFreehandChange(wasFreehand);
+    }
+
+    // The toolbar is built when the shape is constructed, before the properties that make it a
+    // pencil arrive, so a connector turned into one is still carrying the connector's buttons.
+    rebuildContextToolbarOnFreehandChange(wasFreehand) {
+        if (this.isFreehand() === wasFreehand)
+            return;
+        if (!this.contextToolbar)
+            return;
+        this.contextToolbar.remove();
+        this.contextToolbar = null;
+        this.contextToolbarInstance = null;
+        this._connectorLabelDropdownElement = null;
+        this._connectorLabelTextBox = null;
+        this._connectorTypeDropdownElement = null;
+        this.initializeContextToolbar();
     }
 
     getAttachedShape(end) {
@@ -209,7 +270,35 @@ class MindMapConnectorShape extends BaseShape {
         this.resolveEndpoints();
     }
 
+    resolveFreehandBounds() {
+        const points = this.getAllFreehandPoints();
+        if (points.length === 0)
+            return;
+        let minX = points[0].x;
+        let maxX = points[0].x;
+        let minY = points[0].y;
+        let maxY = points[0].y;
+        for (const point of points) {
+            minX = Math.min(minX, point.x);
+            maxX = Math.max(maxX, point.x);
+            minY = Math.min(minY, point.y);
+            maxY = Math.max(maxY, point.y);
+        }
+        this.properties.startX = points[0].x;
+        this.properties.startY = points[0].y;
+        this.properties.endX = points[points.length - 1].x;
+        this.properties.endY = points[points.length - 1].y;
+        this.properties.x = minX;
+        this.properties.y = minY;
+        this.properties.width = maxX - minX;
+        this.properties.height = maxY - minY;
+    }
+
     resolveEndpoints() {
+        if (this.isFreehand()) {
+            this.resolveFreehandBounds();
+            return;
+        }
         const startShape = this.getAttachedShape("start");
         const endShape = this.getAttachedShape("end");
         const start = startShape ? startShape.getConnectorPointForRelativePosition(this.properties.startRelativeX, this.properties.startRelativeY) : { x: this.properties.startX, y: this.properties.startY };
@@ -224,7 +313,80 @@ class MindMapConnectorShape extends BaseShape {
         this.properties.height = Math.abs(end.y - start.y);
     }
 
+    beginFreehandStroke(point) {
+        this._isDrawingFreehandStroke = true;
+        this.transformShape({ freehandStrokes: this.properties.freehandStrokes.concat([[{ x: point.x, y: point.y }]]) });
+    }
+
+    extendFreehandStroke(point) {
+        const strokes = this.properties.freehandStrokes;
+        const current = strokes[strokes.length - 1];
+        const last = current[current.length - 1];
+        if (Math.hypot(point.x - last.x, point.y - last.y) < MindMapConnectorShape.freehandSampleDistance)
+            return;
+        const extended = strokes.slice(0, -1).concat([current.concat([{ x: point.x, y: point.y }])]);
+        this.transformShape({ freehandStrokes: extended });
+    }
+
+    endFreehandStroke() {
+        this._isDrawingFreehandStroke = false;
+        const strokes = this.properties.freehandStrokes;
+        const current = strokes[strokes.length - 1];
+        if (this.getStrokeLength(current) < this.getMinimumDrawLength()) {
+            this.transformShape({ freehandStrokes: strokes.slice(0, -1) });
+            return;
+        }
+        this.draw();
+    }
+
+    hasFreehandContent() {
+        return this.properties.freehandStrokes.length > 0;
+    }
+
+    getStrokeLength(stroke) {
+        let length = 0;
+        for (let index = 1; index < stroke.length; index++)
+            length += Math.hypot(stroke[index].x - stroke[index - 1].x, stroke[index].y - stroke[index - 1].y);
+        return length;
+    }
+
+    getAllFreehandPoints() {
+        return this.properties.freehandStrokes.flat();
+    }
+
+    formatCoordinate(value) {
+        return Math.round(value * 100) / 100;
+    }
+
+    getFreehandPathData() {
+        return this.properties.freehandStrokes.map(stroke => this.getStrokePathData(stroke)).join(" ");
+    }
+
+    getStrokePathData(points) {
+        const start = `M ${this.formatCoordinate(points[0].x)} ${this.formatCoordinate(points[0].y)}`;
+        if (points.length === 1)
+            return `${start} L ${this.formatCoordinate(points[0].x)} ${this.formatCoordinate(points[0].y)}`;
+        let pathData = start;
+        for (let index = 0; index < points.length - 1; index++)
+            pathData += this.getFreehandSegmentData(points, index);
+        return pathData;
+    }
+
+    getFreehandSegmentData(points, index) {
+        const previous = points[Math.max(index - 1, 0)];
+        const current = points[index];
+        const next = points[index + 1];
+        const following = points[Math.min(index + 2, points.length - 1)];
+        const firstControlX = current.x + (next.x - previous.x) / 6;
+        const firstControlY = current.y + (next.y - previous.y) / 6;
+        const secondControlX = next.x - (following.x - current.x) / 6;
+        const secondControlY = next.y - (following.y - current.y) / 6;
+        return ` C ${this.formatCoordinate(firstControlX)} ${this.formatCoordinate(firstControlY)}, ${this.formatCoordinate(secondControlX)} ${this.formatCoordinate(secondControlY)}, ${this.formatCoordinate(next.x)} ${this.formatCoordinate(next.y)}`;
+    }
+
     getPathData() {
+        if (this.isFreehand())
+            return this.getFreehandPathData();
         const startX = this.properties.startX;
         const startY = this.properties.startY;
         const endX = this.properties.endX;
@@ -348,7 +510,22 @@ class MindMapConnectorShape extends BaseShape {
         return element;
     }
 
+    getFreehandMoveTransform(point) {
+        return { freehandStrokes: this.properties.freehandStrokes.map(stroke => stroke.map(existing => ({ x: existing.x + point.dx, y: existing.y + point.dy }))) };
+    }
+
+    getFreehandHandles() {
+        return [{
+            tag: "path",
+            className: "handle move mdl-freehand-move",
+            getAttributes: () => ({ d: this.getPathData(), "stroke-width": Math.max(this.getEffectiveStrokeWidth() + 12, 18) }),
+            getTransform: point => this.getFreehandMoveTransform(point)
+        }];
+    }
+
     getHandles() {
+        if (this.isFreehand())
+            return this.getFreehandHandles();
         const gripRadius = 4;
         return [
             {
@@ -407,7 +584,7 @@ class MindMapConnectorShape extends BaseShape {
         return [{
             tag: "path",
             mode: "stroke",
-            strokeWidth: Math.max(1, this.properties.lineWidth - 1),
+            strokeWidth: Math.max(1, this.getEffectiveStrokeWidth() - 1),
             attributes: { d: this.getPathData() }
         }];
     }
@@ -430,25 +607,72 @@ class MindMapConnectorShape extends BaseShape {
 
     applyLineStyle() {
         if (this.properties.lineStyle === "dashed") {
-            this.path.setAttribute("stroke-dasharray", `${this.properties.lineWidth * 3} ${this.properties.lineWidth * 2}`);
+            const strokeWidth = this.getEffectiveStrokeWidth();
+            this.path.setAttribute("stroke-dasharray", `${strokeWidth * 3} ${strokeWidth * 2}`);
             return;
         }
         this.path.removeAttribute("stroke-dasharray");
+    }
+
+    getPencilFilterId() {
+        return `pencil-texture-${this.id}`;
+    }
+
+    buildPencilFilterMarkup() {
+        const margin = this.getEffectiveStrokeWidth() + 8;
+        const x = this.properties.x - margin;
+        const y = this.properties.y - margin;
+        const width = this.properties.width + margin * 2;
+        const height = this.properties.height + margin * 2;
+        return `<filter id="${this.getPencilFilterId()}" filterUnits="userSpaceOnUse" x="${x}" y="${y}" width="${width}" height="${height}">`
+            + `<feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="3" result="pencilNoise" />`
+            + `<feDisplacementMap in="SourceGraphic" in2="pencilNoise" scale="1.8" xChannelSelector="R" yChannelSelector="G" />`
+            + `</filter>`;
+    }
+
+    buildDefs() {
+        if (!this.isFreehand())
+            return this.buildMarkers();
+        if (!this.getPencilStyle().textured)
+            return "";
+        return this.buildPencilFilterMarkup();
+    }
+
+    applyPencilStyle() {
+        if (!this.isFreehand()) {
+            this.path.removeAttribute("stroke-linecap");
+            this.path.removeAttribute("stroke-linejoin");
+            this.path.removeAttribute("stroke-opacity");
+            this.path.removeAttribute("filter");
+            this.path.style.mixBlendMode = "";
+            return;
+        }
+        const style = this.getPencilStyle();
+        this.path.setAttribute("stroke-linecap", style.lineCap);
+        this.path.setAttribute("stroke-linejoin", "round");
+        this.path.setAttribute("stroke-opacity", style.strokeOpacity);
+        this.path.style.mixBlendMode = style.blendMode;
+        if (style.textured && this._isDrawingFreehandStroke !== true)
+            this.path.setAttribute("filter", `url(#${this.getPencilFilterId()})`);
+        else
+            this.path.removeAttribute("filter");
     }
 
     draw() {
         this.resolveEndpoints();
         super.draw();
         const pathData = this.getPathData();
-        this.defs.innerHTML = this.buildMarkers();
+        const strokeWidth = this.getEffectiveStrokeWidth();
+        this.defs.innerHTML = this.buildDefs();
         this.path.setAttribute("d", pathData);
-        this.path.setAttribute("stroke", this.getBorderColor());
-        this.path.setAttribute("stroke-width", this.properties.lineWidth);
+        this.path.setAttribute("stroke", this.getStrokeColor());
+        this.path.setAttribute("stroke-width", strokeWidth);
+        this.applyPencilStyle();
         this.applyLineStyle();
         this.applyMarkerForEnd("start", "marker-start");
         this.applyMarkerForEnd("end", "marker-end");
         this.hitPath.setAttribute("d", pathData);
-        this.hitPath.setAttribute("stroke-width", Math.max(this.properties.lineWidth + 10, 14));
+        this.hitPath.setAttribute("stroke-width", Math.max(strokeWidth + 10, 14));
         this.drawLabel();
         this.updateHandles();
     }
@@ -471,7 +695,7 @@ class MindMapConnectorShape extends BaseShape {
         const startY = this.properties.startY;
         const endX = this.properties.endX;
         const endY = this.properties.endY;
-        const points = [{ x: startX, y: startY }, { x: endX, y: endY }, this.getBendPoint(startX, startY, endX, endY)];
+        const points = this.getAnchorCandidatePoints(startX, startY, endX, endY);
         if (this.properties.text)
             points.push(this.getLabelPoint());
         const minX = Math.min(...points.map(point => point.x));
@@ -482,8 +706,14 @@ class MindMapConnectorShape extends BaseShape {
         return { centerX: anchorPoint.x, bottomY: anchorPoint.y };
     }
 
+    getAnchorCandidatePoints(startX, startY, endX, endY) {
+        if (this.isFreehand())
+            return [{ x: this.properties.x, y: this.properties.y }, { x: this.properties.x + this.properties.width, y: this.properties.y + this.properties.height }];
+        return [{ x: startX, y: startY }, { x: endX, y: endY }, this.getBendPoint(startX, startY, endX, endY)];
+    }
+
     drawLabel() {
-        const hasText = !!this.properties.text || this._isEditingText;
+        const hasText = !this.isFreehand() && (!!this.properties.text || this._isEditingText);
         if (!hasText) {
             this.labelForeignObject.setAttribute("width", 0);
             this.labelForeignObject.setAttribute("height", 0);

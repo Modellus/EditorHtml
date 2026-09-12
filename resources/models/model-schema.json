@@ -881,9 +881,32 @@
                 },
                 "routing": {
                   "type": "string",
-                  "enum": ["straight", "curved", "orthogonal"],
+                  "enum": ["straight", "curved", "orthogonal", "freehand"],
                   "default": "curved",
-                  "description": "Shape of the path drawn between the endpoints."
+                  "description": "Shape of the path drawn between the endpoints. \"freehand\" is the pencil: the path follows the recorded freehandStrokes instead of the endpoints, and the connector carries no tips, no bend handle and no attachment."
+                },
+                "pencilStyle": {
+                  "type": "string",
+                  "enum": ["pencil", "pen", "marker", "highlighter"],
+                  "default": "pencil",
+                  "description": "Tip the freehand stroke is drawn with. Each tip scales lineWidth and sets its own opacity and cap; the highlighter is wide, translucent and multiplies over what it covers. Ignored unless routing is \"freehand\"."
+                },
+                "freehandStrokes": {
+                  "type": "array",
+                  "default": [],
+                  "description": "The strokes of the pencil, in the order they were drawn. Each stroke is one press-drag-release, held as its points in canvas coordinates, and a smooth curve is fitted through each separately. The pencil goes on collecting strokes until Escape ends it, so one shape usually holds several. Ignored unless routing is \"freehand\".",
+                  "items": {
+                    "type": "array",
+                    "description": "One stroke: the points of a single drag.",
+                    "items": {
+                      "type": "object",
+                      "required": ["x", "y"],
+                      "properties": {
+                        "x": { "type": "number" },
+                        "y": { "type": "number" }
+                      }
+                    }
+                  }
                 },
                 "bendAlong": {
                   "type": "number",

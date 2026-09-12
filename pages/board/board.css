@@ -210,6 +210,12 @@ line.handle.move {
     fill: none;
 }
 
+path.handle.move {
+    stroke: transparent;
+    fill: none;
+    pointer-events: stroke;
+}
+
 .handle.tip {
     fill: white;
     stroke: #4039d7;

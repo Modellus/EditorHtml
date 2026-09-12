@@ -7,6 +7,7 @@ class ShapeDrawController {
         this.pendingShapeProperties = null;
         this.armedButtonId = null;
         this.drawnShape = null;
+        this.freehandShape = null;
         this.drawGesture = "box";
         this.drawStartPoint = null;
         this.activePointerId = null;
@@ -37,6 +38,7 @@ class ShapeDrawController {
     }
 
     cancel() {
+        this.finishFreehandShape();
         if (this.armedButtonId)
             document.getElementById(this.armedButtonId)?.classList.remove("mdl-draw-armed");
         this.pendingShapeType = null;
@@ -47,11 +49,29 @@ class ShapeDrawController {
     }
 
     onKeyDown(event) {
-        if (event.key === "Escape" && this.isArmed() && !this.drawnShape)
-            this.cancel();
+        if (event.key !== "Escape" || !this.isArmed() || this.drawnShape)
+            return;
+        event.preventDefault();
+        this.cancel();
+    }
+
+    finishFreehandShape() {
+        const shape = this.freehandShape;
+        this.freehandShape = null;
+        if (!shape)
+            return;
+        if (!shape.hasFreehandContent()) {
+            this.board.removeShape(shape);
+            return;
+        }
+        const command = new AddShapeCommand(this.board, shape);
+        this.shell.commands.invoker.record(command);
+        this.board.selectShape(shape);
     }
 
     getDrawStartProperties(point) {
+        if (this.drawGesture === "freehand")
+            return { freehandStrokes: [], startX: point.x, startY: point.y, endX: point.x, endY: point.y };
         if (this.drawGesture === "segment")
             return { startX: point.x, startY: point.y, endX: point.x, endY: point.y };
         return { x: point.x, y: point.y, width: 0, height: 0 };
@@ -69,8 +89,22 @@ class ShapeDrawController {
         const point = this.board.getMouseToSvgPoint(event);
         this.drawStartPoint = { x: point.x, y: point.y };
         this.activePointerId = event.pointerId;
+        this.hasDragged = false;
+        this.drawnShape = this.freehandShape ? this.continueFreehandShape(point) : this.createDrawnShape(point);
+        window.addEventListener("pointermove", this.onDrawPointerMove);
+        window.addEventListener("pointerup", this.onDrawPointerUp);
+        window.addEventListener("pointercancel", this.onDrawPointerUp);
+    }
+
+    continueFreehandShape(point) {
+        this.drawGesture = "freehand";
+        this.freehandShape.beginFreehandStroke(point);
+        return this.freehandShape;
+    }
+
+    createDrawnShape(point) {
         const shape = this.board.createShape(this.pendingShapeType, null);
-        this.drawGesture = shape.getDrawGesture();
+        this.drawGesture = shape.getDrawGesture(this.pendingShapeProperties);
         // Asked with the properties the shape is about to be handed, since a component is only the
         // object it was placed for once it carries that object's definition — and asked before the
         // draw gesture shrinks the shape, since every other shape answers with the size setDefaults
@@ -80,19 +114,19 @@ class ShapeDrawController {
             width: Number(minimumSize?.width) || 100,
             height: Number(minimumSize?.height) || 100
         };
-        this.hasDragged = false;
         const startProperties = Object.assign({ name: this.shell.commands.uniquifyShapeName(this.pendingShapeName) }, this.pendingShapeProperties, this.getDrawStartProperties(point));
         shape.setProperties(startProperties);
         if (this.drawGesture === "segment")
             this.attachSegmentEnd(shape, "start", point);
         shape.element.addEventListener("changed", e => this.shell.onShapeChanged(e));
         this.board.addShape(shape, false);
+        if (this.drawGesture === "freehand") {
+            this.freehandShape = shape;
+            shape.beginFreehandStroke(point);
+        }
         shape.draw();
         shape.update();
-        this.drawnShape = shape;
-        window.addEventListener("pointermove", this.onDrawPointerMove);
-        window.addEventListener("pointerup", this.onDrawPointerUp);
-        window.addEventListener("pointercancel", this.onDrawPointerUp);
+        return shape;
     }
 
     attachSegmentEnd(shape, end, point) {
@@ -111,6 +145,10 @@ class ShapeDrawController {
         const point = this.board.getMouseToSvgPoint(event);
         if (Math.hypot(point.x - this.drawStartPoint.x, point.y - this.drawStartPoint.y) > this.dragThreshold)
             this.hasDragged = true;
+        if (this.drawGesture === "freehand") {
+            this.drawnShape.extendFreehandStroke(point);
+            return;
+        }
         if (this.drawGesture === "segment") {
             this.drawnShape.transformShape({ endX: point.x, endY: point.y });
             const target = this.drawnShape.findAttachTargetAtPoint(point, this.drawnShape.properties.startShapeId);
@@ -139,13 +177,17 @@ class ShapeDrawController {
         this.drawnShape = null;
         this.drawStartPoint = null;
         this.activePointerId = null;
-        this.minimumDrawSize = null;
         this.hasDragged = false;
-        this.drawGesture = "box";
         this.board.pointerLocked = false;
-        this.cancel();
         if (!shape)
             return;
+        if (drawGesture === "freehand") {
+            shape.endFreehandStroke();
+            return;
+        }
+        this.minimumDrawSize = null;
+        this.drawGesture = "box";
+        this.cancel();
         // A plain click (no meaningful drag) creates nothing.
         if (!hasDragged) {
             this.board.removeShape(shape);
