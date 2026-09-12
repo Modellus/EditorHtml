@@ -1,0 +1,1108 @@
+{
+    "generatedFrom": "scripts/blocks/definitions/*.json",
+    "tools": [
+        {
+            "name": "add_calculator",
+            "componentType": "calculator",
+            "displayName": "Calculator",
+            "description": "Calculator whose working is held by the object itself: four functions on a narrow one, and a scientific pad of powers, roots, trigonometry and logarithms beside the digits once it is wide enough to hold one. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.\n\nPlace it when the reader is meant to work a number out by hand against the model instead of having the model work it out for them. termA to termD each name a variable whose value at the iteration on screen a key loads, and resultVariable names the variable the pad writes its answer into, so the object is both read from and written back to the model. Nothing needs naming for it to be a plain calculator.",
+            "capabilities": [
+                "interaction",
+                "textual",
+                "reads-model",
+                "writes-model",
+                "memory"
+            ],
+            "example": {
+                "name": "Calculator",
+                "parameters": {
+                    "termA": "x",
+                    "resultVariable": "error",
+                    "digits": 3
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Calculator\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "termA": {
+                                "type": "string",
+                                "description": "Model variable this key loads, read at the iteration on screen. A model term name, or a number written as text. Left out, it stays \"\"."
+                            },
+                            "termB": {
+                                "type": "string",
+                                "description": "Model variable this key loads, read at the iteration on screen. A model term name, or a number written as text. Left out, it stays \"\"."
+                            },
+                            "termC": {
+                                "type": "string",
+                                "description": "Model variable this key loads, read at the iteration on screen. A model term name, or a number written as text. Left out, it stays \"\"."
+                            },
+                            "termD": {
+                                "type": "string",
+                                "description": "Model variable this key loads, read at the iteration on screen. A model term name, or a number written as text. Left out, it stays \"\"."
+                            },
+                            "resultVariable": {
+                                "type": "string",
+                                "description": "Model variable the equals key writes the result into, at the iteration on screen. Left empty the calculator writes nothing. A model term name, or a number written as text. Left out, it stays \"\"."
+                            },
+                            "digits": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Result decimals Left out, it stays 2."
+                            },
+                            "scientific": {
+                                "type": "boolean",
+                                "description": "Puts the pad of function keys beside the digits: powers and roots, the trigonometric functions, the logarithms, π and e, and a second-function key that turns each of them into its inverse. The pad needs room of its own, so it is drawn only once the keypad is wide enough to take two more columns without the keys becoming too small to read — a narrow calculator stays the four-function one, and widening it is what brings the pad out. Left out, it stays true."
+                            },
+                            "angleUnit": {
+                                "type": "string",
+                                "enum": [
+                                    "radians",
+                                    "degrees"
+                                ],
+                                "description": "Which unit the trigonometric keys read an angle in, and give one back in. A model works in radians, so that is what the calculator starts in; degrees is for an angle read off a drawing or written on a page. Whichever is in force is named on the display, since the same number is two different angles under the two. Left out, it stays \"radians\"."
+                            },
+                            "showHistory": {
+                                "type": "boolean",
+                                "description": "Draws the list of completed operations down the side of the keypad. Left out, it stays true."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_circular_gauge",
+            "componentType": "circular-gauge",
+            "displayName": "Circular gauge",
+            "description": "Ring gauge that fills clockwise in proportion to a model variable.\n\nReach for it when one reading is wanted as a ring that fills, rather than as a number or a plotted line. valueVariable is the only wiring it needs; minimum and maximum frame what counts as empty and full, so set them to the range the term actually takes rather than leaving the default hundred.",
+            "capabilities": [
+                "radial",
+                "angular",
+                "reads-model"
+            ],
+            "example": {
+                "name": "Speed",
+                "parameters": {
+                    "valueVariable": "v",
+                    "minimum": 0,
+                    "maximum": 30,
+                    "unit": "m/s"
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Circular gauge\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "valueVariable": {
+                                "type": "string",
+                                "description": "Value A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "minimum": {
+                                "type": "number",
+                                "description": "Minimum Left out, it stays 0."
+                            },
+                            "maximum": {
+                                "type": "number",
+                                "description": "Maximum Left out, it stays 100."
+                            },
+                            "startAngle": {
+                                "type": "number",
+                                "description": "Start angle Left out, it stays 90."
+                            },
+                            "spanAngle": {
+                                "type": "number",
+                                "minimum": 1,
+                                "maximum": 360,
+                                "description": "Span Left out, it stays 360."
+                            },
+                            "digits": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Decimals Left out, it stays 0."
+                            },
+                            "unit": {
+                                "type": "string",
+                                "description": "What the reading is named in when the term it reads names nothing of its own. A term carrying a unit is read in that one, picked beside the term the way every unit on the board is, so this is what is left for a gauge standing at a plain number. Left out, it stays \"\"."
+                            },
+                            "showReadout": {
+                                "type": "boolean",
+                                "description": "Show readout Left out, it stays true."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_clock",
+            "componentType": "clock",
+            "displayName": "Clock",
+            "description": "Clock reading the hour, minute, second and millisecond a model gives it, or reading the model's own time as a count of seconds, shown either as a face with a hand for each or as a digital readout of the same time. The seconds and the milliseconds can each be left out, and what is left out goes from the face and from the readout alike. Run by its own keys it is a stopwatch: one key starts and holds it, one takes a lap, and one ends the run — and the laps it has taken are kept in a list of their own under the face.\n\nUse it for a model that keeps a time. With syncedWithPlayer true it reads the run's own independent variable as a count of seconds and needs no variables named at all, which is what to do when the user just wants a clock running with the simulation. Left off, each of hourVariable, minuteVariable, secondVariable and millisecondVariable names a term the model computes. showControls makes it a stopwatch the reader starts and laps.",
+            "capabilities": [
+                "radial",
+                "angular",
+                "reads-model",
+                "textual",
+                "interaction",
+                "memory"
+            ],
+            "example": {
+                "name": "Clock",
+                "parameters": {
+                    "syncedWithPlayer": true,
+                    "shownAs": "analogue"
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Clock\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "syncedWithPlayer": {
+                                "type": "boolean",
+                                "description": "Where the whole clock reads its time from: the terms the rows below name, or the model's own clock — the independent variable, whatever the model has called it — taken as a count of seconds. Synced, the four parts are worked out from it rather than named, so a model that never mentions an hour still keeps one and the hands move with the run rather than with anything the model was asked to write; the rows that name the parts leave the menu, since there is nothing left for them to name. Left off, each part names a term of its own and the clock is only as fast as the model keeps them. Left out, it stays false."
+                            },
+                            "hourVariable": {
+                                "type": "string",
+                                "description": "Model variable or number giving the hour. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "minuteVariable": {
+                                "type": "string",
+                                "description": "Model variable or number giving the minute. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "secondVariable": {
+                                "type": "string",
+                                "description": "Model variable or number giving the second. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "millisecondVariable": {
+                                "type": "string",
+                                "description": "Model variable or number giving the thousandth of a second. A thousand of them is one turn of the millisecond hand, and the three digits after the seconds in the readout. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "shownAs": {
+                                "type": "string",
+                                "enum": [
+                                    "analogue",
+                                    "digital"
+                                ],
+                                "description": "Whether the time is shown as a face with hands or as digits on a panel. It is chosen from a key of its own in the toolbar rather than from a row in the settings, since it decides which of the settings are worth offering at all: the face keeps the numbers, the ticks and the dragging, and the readout keeps none of them. Both read the same variables and both leave out whatever the seconds and the milliseconds are switched off for. Left out, it stays \"analogue\"."
+                            },
+                            "showControls": {
+                                "type": "boolean",
+                                "description": "Whether the clock carries the three keys that run it, in a strip of its own under the face or the panel: the first sets it counting real time from wherever it stands and holds it there when it is pressed again, the second takes a lap — the reading as it stands, kept in the lap list — and the third ends the run, clears the reading and forgets the laps. What it counts goes into the terms the four rows name — or into the numbers they hold, for a clock bound to nothing. A clock reading the model's own time is not counted by these keys, since the model is what moves it; its lap key still works. Left out, it stays false."
+                            },
+                            "showLaps": {
+                                "type": "boolean",
+                                "description": "Whether the readings the lap key has taken are listed under the keys, newest first, each as the time it was taken at. The list is what the lap key writes into and what the stop key empties. Left out, it stays false."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_compass",
+            "componentType": "compass",
+            "displayName": "Compass",
+            "description": "Compass rose with cardinal labels, a needle whose heading comes from a model variable and a rose that a second variable can turn. The needle and the rim of the rose can be dragged to write those variables back.\n\nPlace it when a model carries a heading and the reader should see it as a bearing against north. headingVariable turns the needle and rotationVariable turns the rose under it; both are written back when the reader drags them, so it doubles as the control for a heading the model reads.",
+            "capabilities": [
+                "radial",
+                "angular",
+                "reads-model",
+                "interaction",
+                "writes-model"
+            ],
+            "example": {
+                "name": "Compass",
+                "parameters": {
+                    "headingVariable": "heading",
+                    "showDegrees": true
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Compass\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "headingVariable": {
+                                "type": "string",
+                                "description": "Heading A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "rotationVariable": {
+                                "type": "string",
+                                "description": "Turns the rose, its ticks and its labels clockwise. The needle keeps its own heading. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "pointers": {
+                                "type": "string",
+                                "description": "Directions marked on the rim, one row each: a row points where its angle says, or where the pair it names points — how far east and how far north. An angle is measured from N and grows clockwise, so a marker stands where the tick for its direction stands and turns with the rose the way that tick does. Left out, it stays []."
+                            },
+                            "showDegrees": {
+                                "type": "boolean",
+                                "description": "Degrees Left out, it stays false."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_mechanical_wave",
+            "componentType": "mechanical-wave",
+            "displayName": "Mechanical wave",
+            "description": "A mechanical wave drawn as a chain of oscillators, each taking up the motion of the source as late as its distance from it. It repeats what a term of the model has been doing, one oscillator to each iteration of the run, or works its own wave out and hands the model the oscillator it is read at.\n\nUse it for a wave travelling through a medium: a chain of oscillators each taking up the motion of the one before it as late as its distance. Name wave to have it repeat what a term of the model has been doing, one oscillator to each row of the run; leave wave empty and it works its own wave out from amplitude, frequency, speed and damping and hands the model back the oscillator named at referenceIndex. orientation chooses transverse, longitudinal or radial.",
+            "capabilities": [
+                "reads-model",
+                "writes-model",
+                "oscillation"
+            ],
+            "example": {
+                "name": "Wave",
+                "parameters": {
+                    "amplitude": "A",
+                    "frequency": "f",
+                    "speed": "c",
+                    "orientation": "transverse"
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Mechanical wave\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "wave": {
+                                "type": "string",
+                                "description": "The model's part in the wave, named. A name the model works out for itself — y=A\\cdot\\sin\\left(\\omega\\cdot t\\right) — is the source the chain repeats: every iteration hands the first oscillator the value the term has just taken and moves the one before it along, so the chain is the last values of the term, oldest at the far end, travelling as the run goes. A name the model leaves free goes the other way: the object works its wave out from the amplitude, frequency, speed and damping below and hands the model what the reference oscillator is doing under that name, so it can be plotted, read and used in a definition like any other term. Left empty, the object keeps the wave to itself. A model term name, or a number written as text. Left out, it stays \"\"."
+                            },
+                            "amplitude": {
+                                "type": "string",
+                                "description": "Greatest displacement of an oscillator. A model term name, or a number written as text. Left out, it stays \"2\"."
+                            },
+                            "frequency": {
+                                "type": "string",
+                                "description": "Frequency A model term name, or a number written as text. Left out, it stays \"0.5\"."
+                            },
+                            "speed": {
+                                "type": "string",
+                                "description": "Propagation speed. A negative speed sends the wave the other way. A model term name, or a number written as text. Left out, it stays \"5\"."
+                            },
+                            "damping": {
+                                "type": "string",
+                                "description": "How much of its swing the wave loses over every model unit it travels, so an oscillator far from the source is carried less than one near it. At zero the wave reaches the far end undiminished; raised, the swing falls away as e^{-\\delta\\cdot x} with the distance x from the source, which is what makes a chain die out along its length and the outer rings of a ripple fade. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "length": {
+                                "type": "number",
+                                "minimum": 0.001,
+                                "description": "How long the chain is in model units, which is what the spacing between oscillators and the delay from one to the next follow from. A chain repeating a term of the model is spread over the run's own clock instead, one iteration to each oscillator. Left out, it stays 20."
+                            },
+                            "samples": {
+                                "type": "number",
+                                "minimum": 2,
+                                "maximum": 200,
+                                "description": "How many oscillators the chain is drawn as. Repeating a term of the model, it is also how many of the term's values the chain holds, and so how far back it reaches. Left out, it stays 30."
+                            },
+                            "orientation": {
+                                "type": "string",
+                                "enum": [
+                                    "transverse",
+                                    "longitudinal",
+                                    "radial"
+                                ],
+                                "description": "Which way an oscillator moves against the way the wave travels. Across it the chain rides up and down; along it the chain is squeezed and stretched into the compressions a sound wave carries. Both run along the width and swing in the height, so a wave taller than the body is cut off at its edge rather than drawn over the board. Radial turns the swing through the screen: an oscillator is a circle round a source in the middle, standing as far out as the wave has travelled to reach it, the way the chain stands further along the width the older it is — and what it is doing is painted rather than drawn, the wave's own colour where it is carried furthest out, the body behind it where it is carried furthest in, and half of each where it is not carried at all. The circles are as thick as the gap between them, so they meet edge to edge and the whole disc is covered from the source to the rim. Left out, it stays \"transverse\"."
+                            },
+                            "referenceIndex": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 200,
+                                "description": "The oscillator drawn in its own colour, so one of them can be followed. It is also the one the object reads: a wave handed to the model under a name the model leaves free is handed what this oscillator is doing. Zero marks none, and the first oscillator is read instead. The radial wave marks none of them: every circle in it is the wave's own colour mixed by how far it is carried, and one painted differently would read as a wave doing something the others are not. Left out, it stays 1."
+                            },
+                            "showArrows": {
+                                "type": "boolean",
+                                "description": "Velocity arrows Left out, it stays false."
+                            },
+                            "showAxes": {
+                                "type": "boolean",
+                                "description": "Draws and numbers the two axes the wave is drawn on, and leaves them room: displacement up the side, and across the bottom what the chain is spread over — its length in model units, or the run's own clock while it is repeating a term of the model. Left out, it stays false."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_mouse_tracker",
+            "componentType": "mouse-tracker",
+            "displayName": "Mouse tracker",
+            "description": "Records where the pointer goes across the plot, against a horizontal and a vertical axis. Every drag adds to what is already there, drawn as a line of its own, so several of them build one recording made of separate runs. A click records nothing: the plot is only written to by a gesture that travels. The run is measurements: name a variable for each axis and it takes the value of sample n at iteration n, so the model's own player replays the gesture and everything reading those variables moves with it. A variable the model works out for itself is read rather than written: the gesture says where the model's input now stands, the definitions say what comes out of it, and that is the value the line is drawn through and the value the run remembers, so a recording made against a definition is in the model's own coordinates. The marker showing the sample on screen can be any character from the catalogue, placed by its pivot point.\n\nPlace it when the reader is to supply the data by hand — drawing a curve with the pointer and having the model read it back. Each drag is recorded as a line of its own against the two axes, and xVariable and yVariable take the value of sample n at iteration n, so the recording becomes a pair of model terms. Set the axis ranges to the range the reader should draw in.",
+            "capabilities": [
+                "interaction",
+                "memory",
+                "linear",
+                "writes-model",
+                "textual"
+            ],
+            "example": {
+                "name": "Sketch",
+                "parameters": {
+                    "xVariable": "xDrawn",
+                    "yVariable": "yDrawn",
+                    "maximumX": 20,
+                    "maximumY": 5
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Mouse tracker\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "xVariable": {
+                                "type": "string",
+                                "description": "Model variable that takes the horizontal position of sample n at iteration n. Naming none the row holds the value itself: the recording stays with the object and the row reads the horizontal position the last gesture left it standing at. Turning on the eye beside the row stands the term and its value in the plot, along the axis it is measured against, in the badge and the figures every other term on the board is read in. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "yVariable": {
+                                "type": "string",
+                                "description": "Model variable that takes the vertical position of sample n at iteration n. Naming none the row holds the value itself, the way the horizontal one does. It carries the same eye, and is read at the top of the plot so the two readings never stand on one another. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "minimumX": {
+                                "type": "number",
+                                "description": "Minimum X Left out, it stays 0."
+                            },
+                            "maximumX": {
+                                "type": "number",
+                                "description": "Maximum X Left out, it stays 10."
+                            },
+                            "minimumY": {
+                                "type": "number",
+                                "description": "Minimum Y Left out, it stays 0."
+                            },
+                            "maximumY": {
+                                "type": "number",
+                                "description": "Maximum Y Left out, it stays 10."
+                            },
+                            "autoScale": {
+                                "type": "boolean",
+                                "description": "Fits both axes to the recording, with the margins a chart leaves around its data. Left out, it stays false."
+                            },
+                            "equalScales": {
+                                "type": "boolean",
+                                "description": "Makes one unit across measure the same as one unit up, which is what a trajectory needs. Left out, it stays false."
+                            },
+                            "showGrid": {
+                                "type": "boolean",
+                                "description": "Rules the plot at every tick of both axes. A sheet to draw a gesture on starts plain. Left out, it stays false."
+                            },
+                            "showTicks": {
+                                "type": "boolean",
+                                "description": "Marks and numbers both axes. Turned off the axes are bare lines, and each is still rescaled by pulling where its ticks stand. Left out, it stays false."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_orbit_system",
+            "componentType": "orbit-system",
+            "displayName": "Orbit system",
+            "description": "Central body with up to four orbiting bodies whose angular positions come from model variables or from simulation time and an orbital period.\n\nReach for it for a central body with up to four bodies going round it, when the point is the relative periods rather than a worked-out trajectory — a solar system, a moon, gears of a clockwork. timeVariable is usually the independent variable and each period is how long that body takes to come round. For an orbit the model itself integrates, use a Referential with bodies instead.",
+            "capabilities": [
+                "radial",
+                "angular",
+                "reads-model"
+            ],
+            "example": {
+                "name": "Orbits",
+                "parameters": {
+                    "timeVariable": "t",
+                    "bodyCount": 3,
+                    "period1": 1,
+                    "period2": 2,
+                    "period3": 4
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Orbit system\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "timeVariable": {
+                                "type": "string",
+                                "description": "Time A model term name, or a number written as text. Left out, it stays \"t\"."
+                            },
+                            "bodyCount": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 4,
+                                "description": "Orbiting bodies Left out, it stays 3."
+                            },
+                            "period1": {
+                                "type": "number",
+                                "minimum": 0.0001,
+                                "description": "Period 1 Left out, it stays 4."
+                            },
+                            "period2": {
+                                "type": "number",
+                                "minimum": 0.0001,
+                                "description": "Period 2 Left out, it stays 8."
+                            },
+                            "period3": {
+                                "type": "number",
+                                "minimum": 0.0001,
+                                "description": "Period 3 Left out, it stays 16."
+                            },
+                            "period4": {
+                                "type": "number",
+                                "minimum": 0.0001,
+                                "description": "Period 4 Left out, it stays 32."
+                            },
+                            "showOrbits": {
+                                "type": "boolean",
+                                "description": "Show orbit paths Left out, it stays true."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_oscilloscope",
+            "componentType": "oscilloscope",
+            "displayName": "Oscilloscope",
+            "description": "A screen the model's waves are read on. Each row of the list names a wave the model defined over element indices and draws it across a graticule, in a colour of its own, so as many of them as the reader names stand one over another. A row naming a term the model holds no elements of — one an object writes a point at a time — is read over the run instead, a point to each row: the trace fills the screen from the left as the run goes, and once the run has passed the right-hand edge the screen travels with it, so a term that was never a wave is drawn as the wave its points make and goes on being drawn where the model has got to. Resting the pointer on the screen stands a cursor on it and reads every trace where it crosses, and a mark left by a click measures the distance from there to the cursor — a wavelength taken crest to crest, and the wavenumber that follows from it.\n\nUse it to read waves the model holds over element indices — what a mechanical wave or a piano publishes — one trace over another on a single screen. waves names the terms to draw. A term the model holds no elements of is traced over the run instead, a point to each row, which is how to watch a single value the way an oscilloscope watches a signal.",
+            "capabilities": [
+                "reads-model",
+                "linear",
+                "textual",
+                "interaction"
+            ],
+            "example": {
+                "name": "Scope",
+                "parameters": {
+                    "waves": [
+                        "wave"
+                    ],
+                    "minimumY": -3,
+                    "maximumY": 3
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Oscilloscope\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "waves": {
+                                "type": "string",
+                                "description": "The waves on the screen, one row each, in the order they are drawn and each in a colour of its own. A row names something the model defined over element indices, as y\\left[i\\right]=... does, and the screen reads it element by element from the first. A row naming a term the model holds no elements of — one an object writes a point at a time, or a column of measurements — is read over the run instead: the rows of the run are laid across the screen from the left, and once the run has gone past the right-hand edge the screen follows it, the row it stands on at that edge and the rows behind it filling the screen back to the left. The run has not reached the rest of the screen yet, so it lies at rest there. Left out, it stays []."
+                            },
+                            "minimumX": {
+                                "type": "number",
+                                "description": "Minimum X Left out, it stays -5."
+                            },
+                            "maximumX": {
+                                "type": "number",
+                                "description": "Maximum X Left out, it stays 5."
+                            },
+                            "minimumY": {
+                                "type": "number",
+                                "description": "Minimum Y Left out, it stays -5."
+                            },
+                            "maximumY": {
+                                "type": "number",
+                                "description": "Maximum Y Left out, it stays 5."
+                            },
+                            "samples": {
+                                "type": "number",
+                                "minimum": 2,
+                                "maximum": 300,
+                                "description": "The most points across the screen a wave is read at. A window holding fewer elements than that is drawn element by element, so the trace is the wave's own values; a window holding more is stepped through, the way a screen zoomed out past its own record is. Waves share the reading between them, so adding one costs the others some of their points. Left out, it stays 200."
+                            },
+                            "showGrid": {
+                                "type": "boolean",
+                                "description": "Grid Left out, it stays true."
+                            },
+                            "showTicks": {
+                                "type": "boolean",
+                                "description": "Marks and numbers both axes. Turned off the screen is a bare graticule, and each axis is still rescaled by pulling where its ticks stand. Left out, it stays true."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_piano",
+            "componentType": "piano",
+            "displayName": "Piano",
+            "description": "A piano keyboard played with the pointer or with the computer keys, several notes at a time, that hands the model the sound of the chord it is holding, a point of it on every row of the run.\n\nPlace it when the model is about sound and the reader should play the notes: it hands the model the wave of whatever chord is being held, a point of it on every row of the run. wave names the term that wave is published under, which an Oscilloscope can then read.",
+            "capabilities": [
+                "writes-model",
+                "interaction",
+                "sound"
+            ],
+            "example": {
+                "name": "Piano",
+                "parameters": {
+                    "wave": "chord",
+                    "firstOctave": 4,
+                    "octaves": 2
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Piano\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "wave": {
+                                "type": "string",
+                                "description": "A name the model leaves free: the piano works out the sound of the chord it is holding and writes a point of it under that name on every row of the run, so the model reads it like any other term — plotted against time, read row by row, used in a definition. The name stands for one value, not for a wave: the wave is the shape its points make once the run has laid enough of them down. Every point is the sum, over every key being held, of its own sine. Left empty, the piano keeps its sound to itself. A model term name, or a number written as text. Left out, it stays \"\"."
+                            },
+                            "amplitude": {
+                                "type": "string",
+                                "description": "Amplitude of each note in the sum, so a chord of three notes reaches three times this far where they agree. A model term name, or a number written as text. Left out, it stays \"1\"."
+                            },
+                            "samples": {
+                                "type": "number",
+                                "minimum": 2,
+                                "maximum": 2000,
+                                "description": "How many samples the piano's window holds, and so, with the duration below, how far apart two of them stand. The run walks the window a sample to each iteration: after this many iterations it has covered the duration below, and it goes on along the same wave from there. Left out, it stays 30."
+                            },
+                            "duration": {
+                                "type": "number",
+                                "minimum": 0.001,
+                                "description": "Seconds of sound the samples span. Two hundredths of a second is about five cycles of middle C, which is enough of the wave to see its shape. Left out, it stays 0.02."
+                            },
+                            "firstOctave": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 8,
+                                "description": "Octave of the leftmost key. Four starts the keyboard at middle C. Left out, it stays 4."
+                            },
+                            "octaves": {
+                                "type": "number",
+                                "minimum": 1,
+                                "maximum": 4,
+                                "description": "Octaves Left out, it stays 2."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_protractor",
+            "componentType": "protractor",
+            "displayName": "Protractor",
+            "description": "A scale bent round a vertex to measure an angle against: a band of degrees numbered at every division, divided ten ways between one number and the next, standing on the arms it is read between. It is laid over whatever is being measured — a vector, a body's path, a drawing — and resting the pointer on it reads the angle from its zero. How far round it goes is its own, so the same object is a half circle, a quadrant or a whole dial, and the numbers the two ends read are its own too, so a protractor can be marked in degrees, in turns, or in whatever the model measures its angles in.\n\nLay it over something being measured — a vector, a body's path, a drawing — so the reader can read an angle off it by hand. It reads nothing from the model and writes nothing to it. startAngle and endAngle decide whether it is a half circle, a quadrant or a full round.",
+            "capabilities": [
+                "radial",
+                "angular",
+                "scale",
+                "interaction"
+            ],
+            "example": {
+                "name": "Protractor",
+                "parameters": {
+                    "startAngle": 0,
+                    "endAngle": 180,
+                    "angleUnit": "degrees"
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Protractor\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "startAngle": {
+                                "type": "number",
+                                "minimum": -360,
+                                "maximum": 360,
+                                "description": "The arm the scale is read from, measured anticlockwise from straight right, so a protractor lying the usual way up starts at nothing and its zero is its right-hand arm. Set in whatever the protractor is marked in. Left out, it stays 0."
+                            },
+                            "endAngle": {
+                                "type": "number",
+                                "minimum": -360,
+                                "maximum": 360,
+                                "description": "The arm the scale runs to, anticlockwise from the start angle and set in the same unit. A whole turn between the two closes the band into a dial and stands the vertex in the middle of the box; anything less stands it on the bottom edge, where a protractor's vertex belongs. An end that does not stand after the start leaves the protractor the half circle it is drawn as. Left out, it stays 180."
+                            },
+                            "angleUnit": {
+                                "type": "string",
+                                "enum": [
+                                    "degrees",
+                                    "radians"
+                                ],
+                                "description": "What the protractor is marked in. Degrees number the band the way a protractor is printed, one number every ten degrees, and its two angles are set in degrees. Radians number the same band in the fractions of π those angles are, one number every thirty, and its two angles are set in multiples of π — half a turn is 1, a whole turn is 2. Left out, it stays \"degrees\"."
+                            },
+                            "digits": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Decimals the angle under the pointer is read to. The numbers round the band follow it only when the divisions need them. Left out, it stays 0."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_rotating_vector",
+            "componentType": "rotating-vector",
+            "displayName": "Rotating vector",
+            "description": "Phasor arrow whose angle and length come from model variables, with an optional reference circle and projections. The arrow reaches the pointer that drags it: one drag both turns it and stretches it, writing the angle and the length back together, so where the reader leaves the tip is where the arrow points and how far it goes.\n\nUse it for a phasor: an arrow whose angle and length are two model variables, with the reference circle and the projections that show where a sine comes from. Dragging the tip writes both variables back, so it is also the control for an angle and a magnitude the model reads.",
+            "capabilities": [
+                "angular",
+                "linear",
+                "reads-model",
+                "vector",
+                "interaction",
+                "writes-model"
+            ],
+            "example": {
+                "name": "Phasor",
+                "parameters": {
+                    "angleVariable": "phase",
+                    "lengthVariable": "A",
+                    "showProjections": true
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Rotating vector\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "angleVariable": {
+                                "type": "string",
+                                "description": "Angle in degrees, measured counter-clockwise from the positive x axis. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "lengthVariable": {
+                                "type": "string",
+                                "description": "Length A model term name, or a number written as text. Left out, it stays \"1\"."
+                            },
+                            "lengthScale": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "Length scale Left out, it stays 1."
+                            },
+                            "showCircle": {
+                                "type": "boolean",
+                                "description": "Show reference circle Left out, it stays true."
+                            },
+                            "showProjections": {
+                                "type": "boolean",
+                                "description": "Show projections Left out, it stays false."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_ruler",
+            "componentType": "ruler",
+            "displayName": "Ruler",
+            "description": "A scale laid across the board to measure against: a body ruled from one end to the other, cut into as many numbered parts as it is asked for, with the space between each pair of numbers divided ten ways and the halfway mark drawn taller. Resting the pointer on it reads the value it stands at, and pulling one of the numbers stretches the scale under it the way a chart's axis is stretched, so the ruler is set against what it is measuring rather than typed in. Read logarithmically it is a slide rule instead: the decades are evenly spread, numbered 1, 10, 100, and each is divided by the marks for 2 to 9 standing where their logarithms put them.\n\nLay it across the board as a scale to measure against by hand. It reads nothing from the model and writes nothing to it: minimumX and maximumX are the ends of the scale it draws, and pulling a number stretches it the way a chart axis is stretched.",
+            "capabilities": [
+                "linear",
+                "scale",
+                "interaction"
+            ],
+            "example": {
+                "name": "Ruler",
+                "parameters": {
+                    "minimumX": 0,
+                    "maximumX": 10,
+                    "unit": "m"
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Ruler\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "minimumX": {
+                                "type": "number",
+                                "description": "What the left end of the scale reads. It is held still while a number is pulled, so the ruler stretches from that end. A logarithmic ruler starts above zero, since nothing below it has a logarithm: given no positive minimum it starts at 1, or a decade under its maximum when that is nearer zero. Left out, it stays 0."
+                            },
+                            "maximumX": {
+                                "type": "number",
+                                "description": "Maximum Left out, it stays 10."
+                            },
+                            "scaleType": {
+                                "type": "string",
+                                "enum": [
+                                    "linear",
+                                    "logarithmic"
+                                ],
+                                "description": "Whether a value stands where its size puts it or where its logarithm does. Read logarithmically, every decade takes the same width and is numbered at 1, 10, 100 and so on, with the marks for 2 to 9 crowding towards the top of each — the scale a slide rule is read on. Left out, it stays \"linear\"."
+                            },
+                            "majorTicks": {
+                                "type": "number",
+                                "minimum": 1,
+                                "maximum": 60,
+                                "description": "How many numbered parts the scale is cut into, counted from the minimum. Each part is divided ten ways by smaller marks of its own, with the halfway one drawn taller. Pulling a number holds the part it stands for and writes the count, so stretching the ruler gives more of the same divisions rather than the same number of bigger ones. A logarithmic ruler is cut into decades instead, so it numbers itself and this is left alone. Left out, it stays 10."
+                            },
+                            "unit": {
+                                "type": "string",
+                                "description": "What the ruler measures in, written after the value the pointer reads. The numbers along the scale stay bare, the way an axis writes its own. Left out, it stays \"\"."
+                            },
+                            "digits": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Decimals the value under the pointer is read to, on either scale. The numbers along the scale follow it only when they need decimals at all: a ruler cut into whole units is numbered in whole units however finely it reads, and a logarithmic one is numbered in whole decades unless it runs below 1. A number too big to read at those decimals, or too small to show in them, is written in scientific notation instead - 1.00e6, 1.00e-3 - so a scale running over decades still reads. Left out, it stays 2."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_speedometer",
+            "componentType": "speedometer",
+            "displayName": "Speedometer",
+            "description": "Sweeping dial with a scale, a needle bound to a model variable and a numeric readout.\n\nReach for it when one reading wants a sweeping dial with a needle and a scale — a speed, a rate, a pressure. valueVariable is the wiring; minimum and maximum frame the sweep, so set them to the range the term takes. Prefer the circular gauge when the reading is a proportion filling a ring rather than a needle against marks.",
+            "capabilities": [
+                "radial",
+                "angular",
+                "reads-model",
+                "scale",
+                "audible"
+            ],
+            "example": {
+                "name": "Speedometer",
+                "parameters": {
+                    "valueVariable": "v",
+                    "minimum": 0,
+                    "maximum": 120,
+                    "unit": "km/h"
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Speedometer\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "valueVariable": {
+                                "type": "string",
+                                "description": "Value A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "minimum": {
+                                "type": "number",
+                                "description": "Minimum Left out, it stays 0."
+                            },
+                            "maximum": {
+                                "type": "number",
+                                "description": "Maximum Left out, it stays 100."
+                            },
+                            "startAngle": {
+                                "type": "number",
+                                "description": "Start angle Left out, it stays 225."
+                            },
+                            "endAngle": {
+                                "type": "number",
+                                "description": "End angle Left out, it stays -45."
+                            },
+                            "majorTicks": {
+                                "type": "number",
+                                "minimum": 2,
+                                "maximum": 60,
+                                "description": "Major ticks Left out, it stays 9."
+                            },
+                            "minorPerMajor": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 20,
+                                "description": "Minor ticks per major Left out, it stays 4."
+                            },
+                            "digits": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Decimals Left out, it stays 0."
+                            },
+                            "unit": {
+                                "type": "string",
+                                "description": "What the reading is named in when the term it reads names nothing of its own. A term carrying a unit is read in that one, picked beside the term the way every unit on the board is, so this is what is left for a speedometer standing at a plain number. Left out, it stays \"\"."
+                            },
+                            "showReadout": {
+                                "type": "boolean",
+                                "description": "Show readout Left out, it stays true."
+                            },
+                            "sound": {
+                                "type": "string",
+                                "description": "A sound the speedometer makes as the needle moves — an engine note, most obviously. The clip is chosen from a file or from the catalogue's audios, and it is heard over the same two ends the dial is marked between, so a needle at rest is one end of the sound and a needle at full scale the other. Beside it stands the choice of what the speed does to the clip: heard as pitch it is played higher the faster the reading, and heard as volume it is played louder. It is heard only while the reading is changing, so a speedometer standing still is silent. Left out, it stays \"\"."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_steering_wheel",
+            "componentType": "steering-wheel",
+            "displayName": "Steering wheel",
+            "description": "The controls a vehicle is driven with: a wheel turned by a model variable, drawn as a car wheel, a motorbike handlebar or a ship's helm, and the accelerator and brake of that same vehicle under it. The wheel, the pedals, and the brake among the pedals, can each be left out. Dragging the wheel turns it and writes back what it reads; the accelerator and the brake each press a value of its own up from zero, both above zero and both pressed the same way, each read the way the wheel is — a term, or a pair laid down along the bearing the wheel is turned to, forwards for the accelerator and back the other way for the brake.\n\nPlace it when the reader is to drive the model: the wheel writes its angle into angleVariable as it is dragged, and the accelerator and the brake press their own values up from nothing into accelerationVariable and brakingVariable. wheelType draws it as a car wheel, a motorbike handlebar or a ship's helm. Any of the three controls can be left out.",
+            "capabilities": [
+                "radial",
+                "angular",
+                "linear",
+                "reads-model",
+                "scale",
+                "interaction",
+                "writes-model"
+            ],
+            "example": {
+                "name": "Controls",
+                "parameters": {
+                    "angleVariable": "steering",
+                    "accelerationVariable": "throttle",
+                    "showPedals": true
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Steering wheel\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "angleVariable": {
+                                "type": "string",
+                                "description": "The angle the wheel is turned to, anticlockwise in degrees, the way an angle is measured everywhere else in the model: turning left raises it and turning right lowers it, so a wheel held to the right reads a value below zero — or, as an orientation, how far across the pair reaches, which is a bearing and turns the other way, clockwise from straight up, the way a compass reads. Dragging the wheel points it at the pointer rather than turning it by however far the pointer travelled, and the angle is measured from straight up, so zero is at twelve o'clock and a whole turn is the whole of the range. It writes back whichever it reads: the angle, or the pair, which keeps its length and takes the direction it was turned to. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "accelerationVariable": {
+                                "type": "string",
+                                "description": "What the accelerator presses, resting at zero and pressed up as far as the maximum. It never goes below the rest it starts from — the accelerator is one way only — and a slide across the whole of the area that presses it covers the whole of that range. It is read the way the wheel above it is read: as an angle it is one term, and as an orientation a second selector appears beside it and the pair is pressed along the bearing the wheel is turned to, which is how far across and how far up the vehicle is being pushed. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "brakingVariable": {
+                                "type": "string",
+                                "description": "What the brake presses, resting at zero and pressed up as far as the brake's own maximum. It is pressed exactly as the accelerator is — sliding up presses it, sliding down eases it off, and neither pedal ever writes below the rest it starts from — so what the brake holds is how hard it is being stood on rather than an acceleration with a sign on it. Which way that braking pushes the model is the model's own business: read the two rows as a throttle to add and a brake to take away. It is its own — name the same thing on both rows and the two pedals press a single value between them, name two and the brake is kept apart from the throttle. Read as an orientation it is a pair like the accelerator's, laid down along the same bearing but the other way, so the pair still points back against the course the model is going on while the value it presses stays above zero. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "wheelType": {
+                                "type": "string",
+                                "enum": [
+                                    "car",
+                                    "motor bike",
+                                    "boat"
+                                ],
+                                "description": "Which vehicle is drawn, wheel and pedals alike: a car's three-spoke wheel over its brake and accelerator pedals, a motorbike's handlebar over its pair of hand levers, or a boat's eight-handled helm over its binnacle levers. Left out, it stays \"car\"."
+                            },
+                            "showWheel": {
+                                "type": "boolean",
+                                "description": "Whether the wheel is drawn. Turned off, the pedals have the whole box to themselves. Left out, it stays true."
+                            },
+                            "showPedals": {
+                                "type": "boolean",
+                                "description": "Whether the accelerator and the brake are drawn under the wheel. With both shown the box is split in two, the wheel above and the pedals below. Left out, it stays false."
+                            },
+                            "showBrake": {
+                                "type": "boolean",
+                                "description": "Whether the brake is drawn beside the accelerator. Switched off, the accelerator is the whole of the pedals and is pressed anywhere in them, and the brake takes its term, its own maximum and its colour away with it — which is the vehicle a model drives on one control alone. Left out, it stays true."
+                            },
+                            "maximum": {
+                                "type": "number",
+                                "description": "As far up as the accelerator presses what it holds, above zero — or, read as an orientation, how far forward along the bearing its pair may be pushed. Left out, it stays 100."
+                            },
+                            "brakeMaximum": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "As far as the brake presses what it holds, above zero — full braking. It is the accelerator's own kind of end, on the brake's own scale, so the two pedals can be given ranges of their own: the throttle a model has plenty of and the brake it has less of, or the other way about. Read as an orientation it is how far along the bearing the pair may be pushed back, which is the same end measured the other way. Left out, it stays 100."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        {
+            "name": "add_thermometer",
+            "componentType": "thermometer",
+            "displayName": "Thermometer",
+            "description": "A temperature read as the height of a column: a bulb, a stem the liquid rises up, and a scale beside it marked every so many degrees. A dashed line carries the top of the column across to the scale, so the reading is placed against the marks the way a chart places a point against its axes. The column can be dragged to write the temperature back, and the marks and their numbers are the sizes the board's own axes are drawn to, so the scale stretches as the object is resized rather than the writing on it.\n\nUse it for a temperature, or anything else read as the height of a column against a scale beside it. valueVariable is the wiring, minimum and maximum the ends of the scale, tickStep how often it is marked. Dragging the column writes the value back, so it is also how a reader sets a starting temperature.",
+            "capabilities": [
+                "linear",
+                "scale",
+                "reads-model",
+                "interaction",
+                "writes-model",
+                "audible"
+            ],
+            "example": {
+                "name": "Thermometer",
+                "parameters": {
+                    "valueVariable": "T",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "unit": "°C"
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Thermometer\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "valueVariable": {
+                                "type": "string",
+                                "description": "The term the column stands at. Turning on the eye beside the row stands the term and its value out past the scale, level with the top of the column, in the badge and the figures every other term on the board is read in. Dragging the column writes it back, so a thermometer reading a term the model lets you set is also how that temperature is given — and one reading a computed term is read-only, as every other drawing of a computed term is. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "minimum": {
+                                "type": "number",
+                                "description": "The temperature the bottom of the scale stands for, at the top of the bulb. A column at or below it shows a full bulb and an empty stem. Left out, it stays -20."
+                            },
+                            "maximum": {
+                                "type": "number",
+                                "description": "Maximum Left out, it stays 120."
+                            },
+                            "tickStep": {
+                                "type": "number",
+                                "minimum": 0,
+                                "description": "How many degrees there are between one numbered mark and the next, counted up from the minimum — the whole of the scale's marking, as the step is the whole of a slider's. A step the range does not divide evenly leaves the last part of the scale unmarked, the way an axis does. Between the numbered marks the scale is divided into five by smaller marks of its own. A step so fine that it would ask for more than thirty numbered marks is read as the finest that fits, and so is a step of nothing at all — which is how to let the object mark the scale itself. Left out, it stays 20."
+                            },
+                            "digits": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 6,
+                                "description": "Decimals the reading is written to. The numbers along the scale follow it only when the step needs them: a step in whole degrees is marked in whole degrees however finely the reading is given. Left out, it stays 1."
+                            },
+                            "unit": {
+                                "type": "string",
+                                "enum": [
+                                    "°C",
+                                    "°F"
+                                ],
+                                "description": "Which temperature scale the reading is named in when the term it reads names none of its own. A term carrying a unit is read in that one, chosen beside the term the way every unit on the board is, and this is what is left for a thermometer standing at a plain number. Either way it names the scale rather than converting it: the numbers themselves are the minimum and the maximum, so a thermometer switched to Fahrenheit is one whose model measures in Fahrenheit and whose ends are set to match. Left out, it stays \"°C\"."
+                            },
+                            "showReadout": {
+                                "type": "boolean",
+                                "description": "The reading in figures above the stem. The column says how hot at a glance; this says how hot exactly. Left out, it stays true."
+                            },
+                            "sound": {
+                                "type": "string",
+                                "description": "A sound the thermometer makes as the temperature moves. The clip is chosen from a file or from the catalogue's audios, and it is heard over the very ends the scale is marked between, so the coldest the thermometer can read is one end of the sound and the hottest the other. Beside it stands the choice of what the temperature does to the clip: heard as pitch it is played higher as the column rises, and heard as volume it is played louder. It is heard only while the temperature is changing, so a thermometer standing still is silent however long it stands there. Left out, it stays \"\"."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    ]
+}

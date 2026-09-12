@@ -421,16 +421,13 @@ class CasesTableShape extends BaseTableShape {
         const termName = row.termName;
         if (!termName)
             return false;
-        const calculator = this.board.calculator;
         const iteration = Math.max(1, Math.floor(Number(row.iteration) || 1));
         const caseNumber = Number(column.caseNumber);
         if (!Number.isFinite(caseNumber) || caseNumber < 1)
             return false;
         const roundedValue = this.roundTableCellValue(termName, numericValue);
-        if (!calculator.setUserInput(termName, roundedValue, iteration, caseNumber))
-            return false;
-        this.publishMomentChange(iteration);
-        return true;
+        const written = this.board.shell.setTermValues([{ term: termName, value: roundedValue, iteration: iteration, case: caseNumber }]);
+        return written.applied.length > 0;
     }
 
     // Every change to what a moment holds ends here. The shapes are told to read the model again,
@@ -438,12 +435,7 @@ class CasesTableShape extends BaseTableShape {
     // first moment, stopped: the run that went by cannot be reached, so the next one starts from
     // the moment as it now stands.
     publishMomentChange(...iterations) {
-        const calculator = this.board.calculator;
-        calculator.emit("iterate", { calculator: calculator });
-        if (!iterations.some(iteration => calculator.hasMomentElapsed(iteration)))
-            return false;
-        this.board.shell?.resetToFirstMoment?.();
-        return true;
+        return this.board.shell?.publishTermValueChanges(iterations) === true;
     }
 
     moveGroupIteration(fromIteration, toIteration) {
@@ -456,7 +448,7 @@ class CasesTableShape extends BaseTableShape {
             if (calculator.getUserInputIterations(terms[index]).includes(toIteration))
                 return false;
         }
-        let moved = false;
+        const moved = [];
         for (let index = 0; index < terms.length; index++) {
             const term = terms[index];
             for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
@@ -464,12 +456,12 @@ class CasesTableShape extends BaseTableShape {
                 if (value === undefined)
                     continue;
                 calculator.removeUserInput(term, fromIteration, caseNumber);
-                calculator.setUserInput(term, value, toIteration, caseNumber);
-                moved = true;
+                moved.push({ term: term, value: value, iteration: toIteration, case: caseNumber });
             }
         }
-        if (!moved)
+        if (moved.length === 0)
             return false;
+        this.board.shell.setTermValues(moved, false);
         const groupColors = { ...(this.properties.groupColors ?? {}) };
         if (groupColors[fromIteration] !== undefined) {
             groupColors[toIteration] = groupColors[fromIteration];
@@ -508,7 +500,7 @@ class CasesTableShape extends BaseTableShape {
     clearTermAtIteration(term, iteration, caseNumber) {
         const calculator = this.board.calculator;
         if (iteration <= 1)
-            return calculator.setUserInput(term, 0, iteration, caseNumber);
+            return this.board.shell.setTermValues([{ term: term, value: 0, iteration: iteration, case: caseNumber }], false).applied.length > 0;
         return calculator.removeUserInput(term, iteration, caseNumber);
     }
 
@@ -568,15 +560,15 @@ class CasesTableShape extends BaseTableShape {
             return false;
         const calculator = this.board.calculator;
         const casesCount = this.getCasesCount();
-        let swapped = false;
+        const swapped = [];
         for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
             const value = calculator.getUserInput(fromTerm, iteration, caseNumber);
             if (value === undefined)
                 continue;
             calculator.removeUserInput(fromTerm, iteration, caseNumber);
-            swapped = calculator.setUserInput(toTerm, value, iteration, caseNumber) || swapped;
+            swapped.push({ term: toTerm, value: value, iteration: iteration, case: caseNumber });
         }
-        if (!swapped)
+        if (this.board.shell.setTermValues(swapped, false).applied.length === 0)
             return false;
         this.publishMomentChange(iteration);
         this.refreshTableRows();
@@ -586,16 +578,16 @@ class CasesTableShape extends BaseTableShape {
     seedTermAtIteration(term, iteration) {
         const calculator = this.board.calculator;
         const casesCount = this.getCasesCount();
-        let seeded = false;
+        const seeded = [];
         for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++) {
             let value = calculator.system.getByNameOnIteration(iteration, term, caseNumber);
             if (!Number.isFinite(value))
                 value = calculator.system.getByNameOnIteration(1, term, caseNumber);
             if (!Number.isFinite(value))
                 value = 0;
-            seeded = calculator.setUserInput(term, value, iteration, caseNumber) || seeded;
+            seeded.push({ term: term, value: value, iteration: iteration, case: caseNumber });
         }
-        return seeded;
+        return this.board.shell.setTermValues(seeded, false).applied.length > 0;
     }
 
     clearFocusAndRefresh() {

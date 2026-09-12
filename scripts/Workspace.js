@@ -243,6 +243,117 @@ class Workspace {
         this.setPlayerUiState(false, setIcon);
     }
 
+    resetToFirstMoment() {
+        this.reparseAndCalculateWorkspace();
+    }
+
+    setTermValues(entries = [], publishChanges = true) {
+        const calculator = this.calculator;
+        if (!calculator)
+            return { applied: [], rejected: [], reset: false };
+        const applied = [];
+        const rejected = [];
+        const iterations = [];
+        for (const entry of entries ?? []) {
+            const termName = String(entry?.term ?? "");
+            const iteration = Math.max(1, Math.floor(Number(entry?.iteration) || 1));
+            const caseNumber = Math.floor(Number(entry?.case) || 1);
+            const value = Number(entry?.value);
+            const rejection = { term: termName, iteration: iteration, case: caseNumber, reason: "" };
+            if (!Number.isFinite(value))
+                rejection.reason = `"${entry?.value}" is not a number.`;
+            else if (!calculator.isTerm(termName))
+                rejection.reason = `The model has no term called "${termName}".`;
+            else if (!calculator.isUserInputTerm(termName))
+                rejection.reason = `"${termName}" is worked out by the model, so a value cannot be written into it.`;
+            else if (!calculator.setUserInput(termName, value, iteration, caseNumber))
+                rejection.reason = `Case ${caseNumber} is outside the ${calculator.normalizeCasesCount(this.properties?.casesCount)} the model runs.`;
+            if (rejection.reason !== "") {
+                rejected.push(rejection);
+                continue;
+            }
+            applied.push({ term: termName, value: value, iteration: iteration, case: caseNumber });
+            iterations.push(iteration);
+        }
+        if (applied.length === 0)
+            return { applied: applied, rejected: rejected, reset: false };
+        const reset = publishChanges ? this.publishTermValueChanges(iterations) : false;
+        return { applied: applied, rejected: rejected, reset: reset };
+    }
+
+    getValuesDigest(sampleSize = 8) {
+        const calculator = this.calculator;
+        if (!calculator)
+            return null;
+        const termNames = calculator.getTermsNames();
+        const casesCount = calculator.normalizeCasesCount(this.properties?.casesCount);
+        const lastIteration = calculator.getLastCalculatedIteration();
+        const sampledIterations = this.pickSampleIterations(lastIteration, sampleSize);
+        const cases = [];
+        for (let caseNumber = 1; caseNumber <= casesCount; caseNumber++)
+            cases.push({
+                case: caseNumber,
+                ranges: this.readTermRanges(termNames, lastIteration, caseNumber),
+                sample: this.readSampleRows(sampledIterations, caseNumber)
+            });
+        return { terms: termNames, iterations: lastIteration, casesCount: casesCount, sampledIterations: sampledIterations, cases: cases };
+    }
+
+    pickSampleIterations(lastIteration, sampleSize) {
+        if (lastIteration < 1)
+            return [];
+        const count = Math.min(Math.max(2, Math.floor(Number(sampleSize) || 8)), lastIteration);
+        if (count < 2)
+            return [1];
+        const step = (lastIteration - 1) / (count - 1);
+        const iterations = [];
+        for (let index = 0; index < count; index++)
+            iterations.push(Math.round(1 + index * step));
+        return Array.from(new Set(iterations));
+    }
+
+    readTermRanges(termNames, lastIteration, caseNumber) {
+        const ranges = {};
+        for (const termName of termNames) {
+            let minimum = Number.POSITIVE_INFINITY;
+            let maximum = Number.NEGATIVE_INFINITY;
+            let first = null;
+            let last = null;
+            for (let iteration = 1; iteration <= lastIteration; iteration++) {
+                const value = this.calculator.system.getByNameOnIteration(iteration, termName, caseNumber);
+                if (!Number.isFinite(value))
+                    continue;
+                if (value < minimum)
+                    minimum = value;
+                if (value > maximum)
+                    maximum = value;
+                if (first === null)
+                    first = value;
+                last = value;
+            }
+            if (first === null)
+                continue;
+            ranges[termName] = { minimum: minimum, maximum: maximum, first: first, last: last };
+        }
+        return ranges;
+    }
+
+    readSampleRows(iterations, caseNumber) {
+        return iterations.map(iteration => Object.assign({ iteration: iteration }, this.calculator.system.getIteration(iteration, caseNumber)));
+    }
+
+    publishTermValueChanges(iterations = []) {
+        const calculator = this.calculator;
+        if (!calculator)
+            return false;
+        if (iterations.some(iteration => calculator.hasMomentElapsed(iteration))) {
+            this.resetToFirstMoment();
+            return true;
+        }
+        calculator.calculate();
+        return false;
+    }
+
     serializeWorkspace(surfaceKey, serializeSurface) {
         const result = this.session ? this.session.serialize() : {};
         if (surfaceKey && typeof serializeSurface === "function")

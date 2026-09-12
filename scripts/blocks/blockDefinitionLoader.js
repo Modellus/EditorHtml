@@ -67,6 +67,7 @@ class BlockDefinitionLoader {
             writesNotation: document.writesNotation !== false,
             parameters: (document.parameters ?? []).map(parameter => BlockDefinitionLoader.normalizeParameter(parameter)),
             agentAccessible: document.agentAccessible !== false,
+            agentTool: document.agentTool ?? null,
             indexedSource: indexedSource,
             valueSource: valueSource,
             axisFit: axisFit,
@@ -232,6 +233,7 @@ class BlockDefinitionLoader {
         }
         if (document.root)
             BlockDefinitionLoader.findUnknownNames(document.root, declared, "root", problems);
+        BlockDefinitionLoader.checkAgentTool(document.agentTool, declared, problems);
         // The index a published wave is written over is a name of the declaration's own, bound by it
         // the way an assignment binds the index of `y\left[i\right]=...`, so it is declared here
         // rather than being reported as a name the definition never supplies.
@@ -262,6 +264,22 @@ class BlockDefinitionLoader {
     // A source that is the sum of many of the object's own things — one oscillator of a wave, one
     // note of a chord — says what it sums over and how many of them there are; the index it sums
     // over is bound by the declaration, like the element index is.
+    static checkAgentTool(agentTool, declared, problems) {
+        if (agentTool === undefined || agentTool === null)
+            return problems;
+        if (typeof agentTool.usage !== "string" || agentTool.usage.trim() === "")
+            problems.push("An agent tool needs a usage saying when the object is the one to reach for.");
+        for (const id of agentTool.parameters ?? []) {
+            if (!declared.has(id))
+                problems.push(`The agent tool offers "${id}", which the definition does not declare.`);
+        }
+        for (const id of Object.keys(agentTool.example?.parameters ?? {})) {
+            if (!declared.has(id))
+                problems.push(`The agent tool example sets "${id}", which the definition does not declare.`);
+        }
+        return problems;
+    }
+
     static checkSum(declaration, kind, problems) {
         const over = declaration.over;
         if (!over)

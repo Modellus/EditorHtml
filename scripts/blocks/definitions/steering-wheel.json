@@ -13,6 +13,28 @@
         "boat": "art/steering-wheel-boat.svg"
     },
     "preview": { "parameters": { "angleVariable": "28" } },
+    "agentTool": {
+        "usage": "Place it when the reader is to drive the model: the wheel writes its angle into angleVariable as it is dragged, and the accelerator and the brake press their own values up from nothing into accelerationVariable and brakingVariable. wheelType draws it as a car wheel, a motorbike handlebar or a ship's helm. Any of the three controls can be left out.",
+        "parameters": [
+            "angleVariable",
+            "accelerationVariable",
+            "brakingVariable",
+            "wheelType",
+            "showWheel",
+            "showPedals",
+            "showBrake",
+            "maximum",
+            "brakeMaximum"
+        ],
+        "example": {
+            "name": "Controls",
+            "parameters": {
+                "angleVariable": "steering",
+                "accelerationVariable": "throttle",
+                "showPedals": true
+            }
+        }
+    },
     "parameters": [
         { "id": "turnedBy", "label": "Turned by", "valueType": "string", "defaultValue": "angle", "enumValues": ["angle", "orientation"], "category": "model", "userEditable": false, "description": "Whether the row is read as an angle in degrees or as an orientation, which is a pair of values read as a direction. It is chosen from a key of its own in the toolbar rather than from the row it governs, and it says how the pedals are read as well, since they press what they press the same way the wheel is turned: read as an angle each presses a term of its own up from zero, read as an orientation each presses a pair of its own, laid down along the bearing the wheel is turned to — forwards for the accelerator and back the other way for the brake, though what each pedal holds is above zero either way." },
         { "id": "angleVariable", "label": "Turned by", "valueType": "variable", "defaultValue": "0", "category": "model", "unit": "deg", "modeParameter": "turnedBy", "pairedParameter": "angleUpVariable", "colorParameter": "markColor", "description": "The angle the wheel is turned to, anticlockwise in degrees, the way an angle is measured everywhere else in the model: turning left raises it and turning right lowers it, so a wheel held to the right reads a value below zero — or, as an orientation, how far across the pair reaches, which is a bearing and turns the other way, clockwise from straight up, the way a compass reads. Dragging the wheel points it at the pointer rather than turning it by however far the pointer travelled, and the angle is measured from straight up, so zero is at twelve o'clock and a whole turn is the whole of the range. It writes back whichever it reads: the angle, or the pair, which keeps its length and takes the direction it was turned to." },

@@ -8,6 +8,18 @@
     "tags": ["object", "thermometer", "temperature", "column", "scale", "meter", "sound"],
     "capabilities": ["linear", "scale", "reads-model", "interaction", "writes-model", "audible"],
     "preview": { "parameters": { "valueVariable": "62", "minimum": -50, "maximum": 150, "tickStep": 50 } },
+    "agentTool": {
+        "usage": "Use it for a temperature, or anything else read as the height of a column against a scale beside it. valueVariable is the wiring, minimum and maximum the ends of the scale, tickStep how often it is marked. Dragging the column writes the value back, so it is also how a reader sets a starting temperature.",
+        "example": {
+            "name": "Thermometer",
+            "parameters": {
+                "valueVariable": "T",
+                "minimum": 0,
+                "maximum": 100,
+                "unit": "\u00b0C"
+            }
+        }
+    },
     "parameters": [
         { "id": "valueVariable", "label": "Temperature", "valueType": "variable", "defaultValue": "0", "category": "model", "unitParameter": "unit", "colorParameter": "columnColor", "valueAnchor": { "node": "reading-anchor", "x": 0.5, "y": 0.5 }, "description": "The term the column stands at. Turning on the eye beside the row stands the term and its value out past the scale, level with the top of the column, in the badge and the figures every other term on the board is read in. Dragging the column writes it back, so a thermometer reading a term the model lets you set is also how that temperature is given — and one reading a computed term is read-only, as every other drawing of a computed term is." },
         { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": -20, "category": "scale", "description": "The temperature the bottom of the scale stands for, at the top of the bulb. A column at or below it shows a full bulb and an empty stem." },

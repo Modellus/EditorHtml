@@ -11,6 +11,16 @@
         "rose": "art/compass-rose.svg",
         "needle": "art/compass-needle.svg"
     },
+    "agentTool": {
+        "usage": "Place it when a model carries a heading and the reader should see it as a bearing against north. headingVariable turns the needle and rotationVariable turns the rose under it; both are written back when the reader drags them, so it doubles as the control for a heading the model reads.",
+        "example": {
+            "name": "Compass",
+            "parameters": {
+                "headingVariable": "heading",
+                "showDegrees": true
+            }
+        }
+    },
     "parameters": [
         { "id": "headingVariable", "label": "Heading", "valueType": "variable", "defaultValue": "0", "category": "model" },
         { "id": "rotationVariable", "label": "Rose", "valueType": "variable", "defaultValue": "0", "category": "model", "unit": "deg", "description": "Turns the rose, its ticks and its labels clockwise. The needle keeps its own heading." },

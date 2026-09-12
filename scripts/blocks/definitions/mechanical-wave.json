@@ -28,6 +28,31 @@
       "elementSize": 2.5
     }
   },
+  "agentTool": {
+      "usage": "Use it for a wave travelling through a medium: a chain of oscillators each taking up the motion of the one before it as late as its distance. Name wave to have it repeat what a term of the model has been doing, one oscillator to each row of the run; leave wave empty and it works its own wave out from amplitude, frequency, speed and damping and hands the model back the oscillator named at referenceIndex. orientation chooses transverse, longitudinal or radial.",
+      "parameters": [
+          "wave",
+          "amplitude",
+          "frequency",
+          "speed",
+          "damping",
+          "length",
+          "samples",
+          "orientation",
+          "referenceIndex",
+          "showArrows",
+          "showAxes"
+      ],
+      "example": {
+          "name": "Wave",
+          "parameters": {
+              "amplitude": "A",
+              "frequency": "f",
+              "speed": "c",
+              "orientation": "transverse"
+          }
+      }
+  },
   "parameters": [
     {
       "id": "wave",

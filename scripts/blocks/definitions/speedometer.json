@@ -8,6 +8,18 @@
     "tags": ["object", "gauge", "speed", "dial", "meter", "scale", "sound"],
     "capabilities": ["radial", "angular", "reads-model", "scale", "audible"],
     "preview": { "parameters": { "valueVariable": "64", "unit": "km/h" } },
+    "agentTool": {
+        "usage": "Reach for it when one reading wants a sweeping dial with a needle and a scale \u2014 a speed, a rate, a pressure. valueVariable is the wiring; minimum and maximum frame the sweep, so set them to the range the term takes. Prefer the circular gauge when the reading is a proportion filling a ring rather than a needle against marks.",
+        "example": {
+            "name": "Speedometer",
+            "parameters": {
+                "valueVariable": "v",
+                "minimum": 0,
+                "maximum": 120,
+                "unit": "km/h"
+            }
+        }
+    },
     "parameters": [
         { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model", "unitParameter": "unit" },
         { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": 0, "category": "scale" },

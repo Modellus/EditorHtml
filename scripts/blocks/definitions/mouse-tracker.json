@@ -141,6 +141,30 @@
             ]
         }
     },
+    "agentTool": {
+        "usage": "Place it when the reader is to supply the data by hand \u2014 drawing a curve with the pointer and having the model read it back. Each drag is recorded as a line of its own against the two axes, and xVariable and yVariable take the value of sample n at iteration n, so the recording becomes a pair of model terms. Set the axis ranges to the range the reader should draw in.",
+        "parameters": [
+            "xVariable",
+            "yVariable",
+            "minimumX",
+            "maximumX",
+            "minimumY",
+            "maximumY",
+            "autoScale",
+            "equalScales",
+            "showGrid",
+            "showTicks"
+        ],
+        "example": {
+            "name": "Sketch",
+            "parameters": {
+                "xVariable": "xDrawn",
+                "yVariable": "yDrawn",
+                "maximumX": 20,
+                "maximumY": 5
+            }
+        }
+    },
     "parameters": [
         {
             "id": "samples",

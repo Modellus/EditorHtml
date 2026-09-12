@@ -22,6 +22,29 @@
         "textual",
         "interaction"
     ],
+    "agentTool": {
+        "usage": "Use it to read waves the model holds over element indices \u2014 what a mechanical wave or a piano publishes \u2014 one trace over another on a single screen. waves names the terms to draw. A term the model holds no elements of is traced over the run instead, a point to each row, which is how to watch a single value the way an oscilloscope watches a signal.",
+        "parameters": [
+            "waves",
+            "minimumX",
+            "maximumX",
+            "minimumY",
+            "maximumY",
+            "samples",
+            "showGrid",
+            "showTicks"
+        ],
+        "example": {
+            "name": "Scope",
+            "parameters": {
+                "waves": [
+                    "wave"
+                ],
+                "minimumY": -3,
+                "maximumY": 3
+            }
+        }
+    },
     "parameters": [
         {
             "id": "waves",

@@ -18,6 +18,19 @@
         "angular",
         "reads-model"
     ],
+    "agentTool": {
+        "usage": "Reach for it for a central body with up to four bodies going round it, when the point is the relative periods rather than a worked-out trajectory \u2014 a solar system, a moon, gears of a clockwork. timeVariable is usually the independent variable and each period is how long that body takes to come round. For an orbit the model itself integrates, use a Referential with bodies instead.",
+        "example": {
+            "name": "Orbits",
+            "parameters": {
+                "timeVariable": "t",
+                "bodyCount": 3,
+                "period1": 1,
+                "period2": 2,
+                "period3": 4
+            }
+        }
+    },
     "parameters": [
         {
             "id": "timeVariable",

@@ -61,6 +61,21 @@ class Commands {
         return this.addComponentFromProperties(componentProperties);
     }
 
+    addObject(componentType, name, parameters = {}) {
+        const componentProperties = ComponentShape.createInstanceProperties(componentType, name);
+        const declared = new Set(BlockRegistry.getParameterDefinitions(componentType).map(parameter => parameter.id));
+        const ignored = [];
+        const applied = {};
+        for (const [id, value] of Object.entries(parameters ?? {})) {
+            if (declared.has(id))
+                applied[id] = value;
+            else
+                ignored.push(id);
+        }
+        const shape = this.addComponentFromProperties(Object.assign(componentProperties, applied));
+        return { name: shape.properties.name, ignored: ignored };
+    }
+
     addComponentFromDefinition(definition) {
         return this.addComponentFromProperties(ComponentShape.createDefinitionProperties(definition));
     }

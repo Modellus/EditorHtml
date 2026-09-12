@@ -47,6 +47,28 @@ BlockDefinitionLoader.registerAll([
                 ]
             }
         },
+        "agentTool": {
+            "usage": "Place it when the reader is meant to work a number out by hand against the model instead of having the model work it out for them. termA to termD each name a variable whose value at the iteration on screen a key loads, and resultVariable names the variable the pad writes its answer into, so the object is both read from and written back to the model. Nothing needs naming for it to be a plain calculator.",
+            "parameters": [
+                "termA",
+                "termB",
+                "termC",
+                "termD",
+                "resultVariable",
+                "digits",
+                "scientific",
+                "angleUnit",
+                "showHistory"
+            ],
+            "example": {
+                "name": "Calculator",
+                "parameters": {
+                    "termA": "x",
+                    "resultVariable": "error",
+                    "digits": 3
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "n",
@@ -3363,6 +3385,18 @@ BlockDefinitionLoader.registerAll([
                 "unit": "%"
             }
         },
+        "agentTool": {
+            "usage": "Reach for it when one reading is wanted as a ring that fills, rather than as a number or a plotted line. valueVariable is the only wiring it needs; minimum and maximum frame what counts as empty and full, so set them to the range the term actually takes rather than leaving the default hundred.",
+            "example": {
+                "name": "Speed",
+                "parameters": {
+                    "valueVariable": "v",
+                    "minimum": 0,
+                    "maximum": 30,
+                    "unit": "m/s"
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "valueVariable",
@@ -3703,6 +3737,26 @@ BlockDefinitionLoader.registerAll([
             "interaction",
             "memory"
         ],
+        "agentTool": {
+            "usage": "Use it for a model that keeps a time. With syncedWithPlayer true it reads the run's own independent variable as a count of seconds and needs no variables named at all, which is what to do when the user just wants a clock running with the simulation. Left off, each of hourVariable, minuteVariable, secondVariable and millisecondVariable names a term the model computes. showControls makes it a stopwatch the reader starts and laps.",
+            "parameters": [
+                "syncedWithPlayer",
+                "hourVariable",
+                "minuteVariable",
+                "secondVariable",
+                "millisecondVariable",
+                "shownAs",
+                "showControls",
+                "showLaps"
+            ],
+            "example": {
+                "name": "Clock",
+                "parameters": {
+                    "syncedWithPlayer": true,
+                    "shownAs": "analogue"
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "syncedWithPlayer",
@@ -5532,6 +5586,16 @@ BlockDefinitionLoader.registerAll([
             "rose": "art/compass-rose.svg",
             "needle": "art/compass-needle.svg"
         },
+        "agentTool": {
+            "usage": "Place it when a model carries a heading and the reader should see it as a bearing against north. headingVariable turns the needle and rotationVariable turns the rose under it; both are written back when the reader drags them, so it doubles as the control for a heading the model reads.",
+            "example": {
+                "name": "Compass",
+                "parameters": {
+                    "headingVariable": "heading",
+                    "showDegrees": true
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "headingVariable",
@@ -6064,6 +6128,31 @@ BlockDefinitionLoader.registerAll([
                 "samples": 60,
                 "showLine": true,
                 "elementSize": 2.5
+            }
+        },
+        "agentTool": {
+            "usage": "Use it for a wave travelling through a medium: a chain of oscillators each taking up the motion of the one before it as late as its distance. Name wave to have it repeat what a term of the model has been doing, one oscillator to each row of the run; leave wave empty and it works its own wave out from amplitude, frequency, speed and damping and hands the model back the oscillator named at referenceIndex. orientation chooses transverse, longitudinal or radial.",
+            "parameters": [
+                "wave",
+                "amplitude",
+                "frequency",
+                "speed",
+                "damping",
+                "length",
+                "samples",
+                "orientation",
+                "referenceIndex",
+                "showArrows",
+                "showAxes"
+            ],
+            "example": {
+                "name": "Wave",
+                "parameters": {
+                    "amplitude": "A",
+                    "frequency": "f",
+                    "speed": "c",
+                    "orientation": "transverse"
+                }
             }
         },
         "parameters": [
@@ -7585,6 +7674,30 @@ BlockDefinitionLoader.registerAll([
                 ]
             }
         },
+        "agentTool": {
+            "usage": "Place it when the reader is to supply the data by hand — drawing a curve with the pointer and having the model read it back. Each drag is recorded as a line of its own against the two axes, and xVariable and yVariable take the value of sample n at iteration n, so the recording becomes a pair of model terms. Set the axis ranges to the range the reader should draw in.",
+            "parameters": [
+                "xVariable",
+                "yVariable",
+                "minimumX",
+                "maximumX",
+                "minimumY",
+                "maximumY",
+                "autoScale",
+                "equalScales",
+                "showGrid",
+                "showTicks"
+            ],
+            "example": {
+                "name": "Sketch",
+                "parameters": {
+                    "xVariable": "xDrawn",
+                    "yVariable": "yDrawn",
+                    "maximumX": 20,
+                    "maximumY": 5
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "samples",
@@ -8726,6 +8839,19 @@ BlockDefinitionLoader.registerAll([
             "angular",
             "reads-model"
         ],
+        "agentTool": {
+            "usage": "Reach for it for a central body with up to four bodies going round it, when the point is the relative periods rather than a worked-out trajectory — a solar system, a moon, gears of a clockwork. timeVariable is usually the independent variable and each period is how long that body takes to come round. For an orbit the model itself integrates, use a Referential with bodies instead.",
+            "example": {
+                "name": "Orbits",
+                "parameters": {
+                    "timeVariable": "t",
+                    "bodyCount": 3,
+                    "period1": 1,
+                    "period2": 2,
+                    "period3": 4
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "timeVariable",
@@ -9212,6 +9338,29 @@ BlockDefinitionLoader.registerAll([
             "textual",
             "interaction"
         ],
+        "agentTool": {
+            "usage": "Use it to read waves the model holds over element indices — what a mechanical wave or a piano publishes — one trace over another on a single screen. waves names the terms to draw. A term the model holds no elements of is traced over the run instead, a point to each row, which is how to watch a single value the way an oscilloscope watches a signal.",
+            "parameters": [
+                "waves",
+                "minimumX",
+                "maximumX",
+                "minimumY",
+                "maximumY",
+                "samples",
+                "showGrid",
+                "showTicks"
+            ],
+            "example": {
+                "name": "Scope",
+                "parameters": {
+                    "waves": [
+                        "wave"
+                    ],
+                    "minimumY": -3,
+                    "maximumY": 3
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "waves",
@@ -10409,6 +10558,17 @@ BlockDefinitionLoader.registerAll([
                 "octaves": 1
             }
         },
+        "agentTool": {
+            "usage": "Place it when the model is about sound and the reader should play the notes: it hands the model the wave of whatever chord is being held, a point of it on every row of the run. wave names the term that wave is published under, which an Oscilloscope can then read.",
+            "example": {
+                "name": "Piano",
+                "parameters": {
+                    "wave": "chord",
+                    "firstOctave": 4,
+                    "octaves": 2
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "wave",
@@ -10608,6 +10768,17 @@ BlockDefinitionLoader.registerAll([
             "scale",
             "interaction"
         ],
+        "agentTool": {
+            "usage": "Lay it over something being measured — a vector, a body's path, a drawing — so the reader can read an angle off it by hand. It reads nothing from the model and writes nothing to it. startAngle and endAngle decide whether it is a half circle, a quadrant or a full round.",
+            "example": {
+                "name": "Protractor",
+                "parameters": {
+                    "startAngle": 0,
+                    "endAngle": 180,
+                    "angleUnit": "degrees"
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "startAngle",
@@ -11933,6 +12104,17 @@ BlockDefinitionLoader.registerAll([
                 "showProjections": true
             }
         },
+        "agentTool": {
+            "usage": "Use it for a phasor: an arrow whose angle and length are two model variables, with the reference circle and the projections that show where a sine comes from. Dragging the tip writes both variables back, so it is also the control for an angle and a magnitude the model reads.",
+            "example": {
+                "name": "Phasor",
+                "parameters": {
+                    "angleVariable": "phase",
+                    "lengthVariable": "A",
+                    "showProjections": true
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "angleVariable",
@@ -12372,6 +12554,17 @@ BlockDefinitionLoader.registerAll([
             "scale",
             "interaction"
         ],
+        "agentTool": {
+            "usage": "Lay it across the board as a scale to measure against by hand. It reads nothing from the model and writes nothing to it: minimumX and maximumX are the ends of the scale it draws, and pulling a number stretches it the way a chart axis is stretched.",
+            "example": {
+                "name": "Ruler",
+                "parameters": {
+                    "minimumX": 0,
+                    "maximumX": 10,
+                    "unit": "m"
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "minimumX",
@@ -13679,6 +13872,18 @@ BlockDefinitionLoader.registerAll([
                 "unit": "km/h"
             }
         },
+        "agentTool": {
+            "usage": "Reach for it when one reading wants a sweeping dial with a needle and a scale — a speed, a rate, a pressure. valueVariable is the wiring; minimum and maximum frame the sweep, so set them to the range the term takes. Prefer the circular gauge when the reading is a proportion filling a ring rather than a needle against marks.",
+            "example": {
+                "name": "Speedometer",
+                "parameters": {
+                    "valueVariable": "v",
+                    "minimum": 0,
+                    "maximum": 120,
+                    "unit": "km/h"
+                }
+            }
+        },
         "parameters": [
             {
                 "id": "valueVariable",
@@ -14260,6 +14465,28 @@ BlockDefinitionLoader.registerAll([
         "preview": {
             "parameters": {
                 "angleVariable": "28"
+            }
+        },
+        "agentTool": {
+            "usage": "Place it when the reader is to drive the model: the wheel writes its angle into angleVariable as it is dragged, and the accelerator and the brake press their own values up from nothing into accelerationVariable and brakingVariable. wheelType draws it as a car wheel, a motorbike handlebar or a ship's helm. Any of the three controls can be left out.",
+            "parameters": [
+                "angleVariable",
+                "accelerationVariable",
+                "brakingVariable",
+                "wheelType",
+                "showWheel",
+                "showPedals",
+                "showBrake",
+                "maximum",
+                "brakeMaximum"
+            ],
+            "example": {
+                "name": "Controls",
+                "parameters": {
+                    "angleVariable": "steering",
+                    "accelerationVariable": "throttle",
+                    "showPedals": true
+                }
             }
         },
         "parameters": [
@@ -16253,6 +16480,18 @@ BlockDefinitionLoader.registerAll([
                 "minimum": -50,
                 "maximum": 150,
                 "tickStep": 50
+            }
+        },
+        "agentTool": {
+            "usage": "Use it for a temperature, or anything else read as the height of a column against a scale beside it. valueVariable is the wiring, minimum and maximum the ends of the scale, tickStep how often it is marked. Dragging the column writes the value back, so it is also how a reader sets a starting temperature.",
+            "example": {
+                "name": "Thermometer",
+                "parameters": {
+                    "valueVariable": "T",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "unit": "°C"
+                }
             }
         },
         "parameters": [

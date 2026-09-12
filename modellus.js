@@ -27,7 +27,9 @@ var modellus = {
         execute: (toolName, input) => shell.blockTools.execute(toolName, input),
         getToolDefinitions: () => shell.blockTools.getToolDefinitions(),
         getCatalogue: () => BlockRegistry.toAgentCatalogue(),
+        getAgentToolDefinitions: () => BlockRegistry.toAgentToolDefinitions(),
         addComponent: (componentType, name) => shell.commands.addComponent(componentType, name),
+        addObject: (componentType, name, parameters) => shell.commands.addObject(componentType, name, parameters),
         inspect: name => shell.board.shapes.getByName(name)?.getInspectionReport() ?? null
     },
     file: {
@@ -41,6 +43,8 @@ var modellus = {
         openModel: model => shell.openModel(model),
         getModel: () => shell.getModel(),
         getValues: () => shell.getValues(),
+        getValuesDigest: sampleSize => shell.getValuesDigest(sampleSize),
+        setTermValues: entries => shell.setTermValues(entries),
         setProperties: properties => shell.commands.setProperties(properties),
         getProperties: () => shell.properties
     },
@@ -70,4 +74,16 @@ if (typeof BlockAgentTools !== "undefined") {
     for (const toolName of BlockAgentTools.toolNames)
         modellus.blocks.tools[toolName] = input => shell.blockTools.execute(toolName, input);
 }
+
+modellus.blocks.refreshObjectTools = () => {
+    const names = [];
+    for (const definition of BlockRegistry.toAgentToolDefinitions()) {
+        modellus.blocks.tools[definition.name] = input => shell.commands.addObject(definition.componentType, input?.name, input?.parameters);
+        names.push(definition.name);
+    }
+    return names;
+};
+
+if (typeof BlockRegistry !== "undefined")
+    modellus.blocks.refreshObjectTools();
 

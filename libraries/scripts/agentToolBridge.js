@@ -71,6 +71,8 @@
                 modellus_model_openModel: "modellus.model.openModel",
                 modellus_model_getModel: "modellus.model.getModel",
                 modellus_model_getValues: "modellus.model.getValues",
+                modellus_model_getValuesDigest: "modellus.model.getValuesDigest",
+                modellus_model_setTermValues: "modellus.model.setTermValues",
                 modellus_model_setProperties: "modellus.model.setProperties",
                 modellus_model_getProperties: "modellus.model.getProperties"
             };
@@ -140,6 +142,10 @@
                 return [];
             if (toolName === "modellus.model.getValues")
                 return [];
+            if (toolName === "modellus.model.getValuesDigest")
+                return [toolInput?.sampleSize];
+            if (toolName === "modellus.model.setTermValues")
+                return [toolInput?.values];
             if (toolName === "modellus.model.setProperties")
                 return [toolInput?.properties];
             if (toolName === "modellus.model.getProperties")

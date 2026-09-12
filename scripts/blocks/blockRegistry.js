@@ -75,6 +75,7 @@ class BuildingBlockRegistry {
             writesNotation: registration.writesNotation !== false,
             aliases: registration.aliases ?? [],
             agentAccessible: registration.agentAccessible !== false,
+            agentTool: registration.agentTool ?? null,
             deprecated: registration.deprecated === true,
             replacedBy: registration.replacedBy ?? null,
             create: registration.create ?? null,
@@ -231,6 +232,73 @@ class BuildingBlockRegistry {
         if (registration.supportedBehaviours === null)
             return true;
         return registration.supportedBehaviours.includes(behaviourType);
+    }
+
+    static agentToolExcludedCategories = ["style", "state"];
+
+    static agentToolValueTypes = { number: "number", boolean: "boolean" };
+
+    getAgentToolName(type) {
+        return `add_${String(type).replace(/-/g, "_")}`;
+    }
+
+    getAgentToolParameters(registration) {
+        const declared = new Map(registration.parameters.map(parameter => [parameter.id, parameter]));
+        const named = registration.agentTool?.parameters;
+        if (Array.isArray(named))
+            return named.map(id => declared.get(id)).filter(parameter => parameter !== undefined);
+        return registration.parameters.filter(parameter => parameter.agentAccessible !== false
+            && parameter.userEditable !== false
+            && !BuildingBlockRegistry.agentToolExcludedCategories.includes(parameter.category));
+    }
+
+    describeAgentToolParameter(parameter) {
+        const described = { type: BuildingBlockRegistry.agentToolValueTypes[parameter.valueType] ?? "string" };
+        if (Array.isArray(parameter.enumValues))
+            described.enum = parameter.enumValues;
+        if (parameter.minimum !== undefined)
+            described.minimum = parameter.minimum;
+        if (parameter.maximum !== undefined)
+            described.maximum = parameter.maximum;
+        const sentences = [(parameter.description ?? "") === "" ? parameter.label : parameter.description];
+        if (parameter.valueType === "variable")
+            sentences.push("A model term name, or a number written as text.");
+        if (parameter.valueType === "colour")
+            sentences.push("A hex colour, or a design token such as \"token:stroke.accent\".");
+        if (parameter.defaultValue !== undefined)
+            sentences.push(`Left out, it stays ${JSON.stringify(parameter.defaultValue)}.`);
+        described.description = sentences.filter(sentence => sentence !== "").join(" ");
+        return described;
+    }
+
+    buildAgentToolDefinition(registration) {
+        const parameters = this.getAgentToolParameters(registration);
+        const properties = {};
+        for (const parameter of parameters)
+            properties[parameter.id] = this.describeAgentToolParameter(parameter);
+        const usage = registration.agentTool?.usage ?? "";
+        return {
+            name: this.getAgentToolName(registration.type),
+            componentType: registration.type,
+            displayName: registration.displayName,
+            description: usage === "" ? registration.description : `${registration.description}\n\n${usage}`,
+            capabilities: registration.capabilities,
+            example: registration.agentTool?.example ?? null,
+            inputSchema: {
+                type: "object",
+                properties: {
+                    name: { type: "string", description: `Name for the object on the board. A name already taken is given a number. Defaults to "${registration.displayName}".` },
+                    parameters: { type: "object", properties: properties, additionalProperties: false, description: "The parameters to set when it is placed. Every one is optional." }
+                },
+                additionalProperties: false
+            }
+        };
+    }
+
+    toAgentToolDefinitions() {
+        return this.list("component", { agentAccessibleOnly: true })
+            .filter(registration => registration.agentTool !== null)
+            .map(registration => this.buildAgentToolDefinition(registration));
     }
 
     toAgentCatalogue() {

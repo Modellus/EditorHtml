@@ -9,6 +9,17 @@
     "writesNotation": false,
     "tags": ["object", "protractor", "angle", "scale", "measure", "ticks", "interaction"],
     "capabilities": ["radial", "angular", "scale", "interaction"],
+    "agentTool": {
+        "usage": "Lay it over something being measured \u2014 a vector, a body's path, a drawing \u2014 so the reader can read an angle off it by hand. It reads nothing from the model and writes nothing to it. startAngle and endAngle decide whether it is a half circle, a quadrant or a full round.",
+        "example": {
+            "name": "Protractor",
+            "parameters": {
+                "startAngle": 0,
+                "endAngle": 180,
+                "angleUnit": "degrees"
+            }
+        }
+    },
     "parameters": [
         { "id": "startAngle", "label": "Start angle", "valueType": "number", "defaultValue": 0, "unit": "deg", "minimum": -360, "maximum": 360, "category": "scale", "description": "The arm the scale is read from, measured anticlockwise from straight right, so a protractor lying the usual way up starts at nothing and its zero is its right-hand arm. Set in whatever the protractor is marked in.", "angleUnitParameter": "angleUnit" },
         { "id": "endAngle", "label": "End angle", "valueType": "number", "defaultValue": 180, "unit": "deg", "minimum": -360, "maximum": 360, "category": "scale", "angleUnitParameter": "angleUnit", "description": "The arm the scale runs to, anticlockwise from the start angle and set in the same unit. A whole turn between the two closes the band into a dial and stands the vertex in the middle of the box; anything less stands it on the bottom edge, where a protractor's vertex belongs. An end that does not stand after the start leaves the protractor the half circle it is drawn as." },

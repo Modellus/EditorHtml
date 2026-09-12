@@ -23,6 +23,17 @@
       "octaves": 1
     }
   },
+  "agentTool": {
+      "usage": "Place it when the model is about sound and the reader should play the notes: it hands the model the wave of whatever chord is being held, a point of it on every row of the run. wave names the term that wave is published under, which an Oscilloscope can then read.",
+      "example": {
+          "name": "Piano",
+          "parameters": {
+              "wave": "chord",
+              "firstOctave": 4,
+              "octaves": 2
+          }
+      }
+  },
   "parameters": [
     {
       "id": "wave",

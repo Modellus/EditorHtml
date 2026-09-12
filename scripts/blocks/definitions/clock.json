@@ -8,6 +8,26 @@
     "icon": "fa-light fa-clock",
     "tags": ["object", "clock", "time", "dial", "hands", "digital", "readout", "stopwatch", "lap"],
     "capabilities": ["radial", "angular", "reads-model", "textual", "interaction", "memory"],
+    "agentTool": {
+        "usage": "Use it for a model that keeps a time. With syncedWithPlayer true it reads the run's own independent variable as a count of seconds and needs no variables named at all, which is what to do when the user just wants a clock running with the simulation. Left off, each of hourVariable, minuteVariable, secondVariable and millisecondVariable names a term the model computes. showControls makes it a stopwatch the reader starts and laps.",
+        "parameters": [
+            "syncedWithPlayer",
+            "hourVariable",
+            "minuteVariable",
+            "secondVariable",
+            "millisecondVariable",
+            "shownAs",
+            "showControls",
+            "showLaps"
+        ],
+        "example": {
+            "name": "Clock",
+            "parameters": {
+                "syncedWithPlayer": true,
+                "shownAs": "analogue"
+            }
+        }
+    },
     "parameters": [
         { "id": "syncedWithPlayer", "label": "Use independent", "valueType": "boolean", "defaultValue": false, "category": "model", "description": "Where the whole clock reads its time from: the terms the rows below name, or the model's own clock — the independent variable, whatever the model has called it — taken as a count of seconds. Synced, the four parts are worked out from it rather than named, so a model that never mentions an hour still keeps one and the hands move with the run rather than with anything the model was asked to write; the rows that name the parts leave the menu, since there is nothing left for them to name. Left off, each part names a term of its own and the clock is only as fast as the model keeps them." },
         { "id": "hourVariable", "label": "Hour", "valueType": "variable", "defaultValue": "0", "category": "model", "disabledWhen": { "parameter": "syncedWithPlayer" }, "disabledTerm": "$independent", "colorParameter": "hourColor", "description": "Model variable or number giving the hour." },

@@ -8,6 +8,17 @@
     "tags": ["object", "vector", "phasor", "arrow", "rotation", "oscillation"],
     "capabilities": ["angular", "linear", "reads-model", "vector", "interaction", "writes-model"],
     "preview": { "parameters": { "angleVariable": "35", "lengthScale": 48, "showProjections": true } },
+    "agentTool": {
+        "usage": "Use it for a phasor: an arrow whose angle and length are two model variables, with the reference circle and the projections that show where a sine comes from. Dragging the tip writes both variables back, so it is also the control for an angle and a magnitude the model reads.",
+        "example": {
+            "name": "Phasor",
+            "parameters": {
+                "angleVariable": "phase",
+                "lengthVariable": "A",
+                "showProjections": true
+            }
+        }
+    },
     "parameters": [
         { "id": "angleVariable", "label": "Angle", "valueType": "variable", "defaultValue": "0", "category": "model", "description": "Angle in degrees, measured counter-clockwise from the positive x axis." },
         { "id": "lengthVariable", "label": "Length", "valueType": "variable", "defaultValue": "1", "category": "model" },

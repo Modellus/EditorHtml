@@ -8,6 +8,18 @@
     "tags": ["object", "gauge", "progress", "ring", "meter"],
     "capabilities": ["radial", "angular", "reads-model"],
     "preview": { "parameters": { "valueVariable": "68", "unit": "%" } },
+    "agentTool": {
+        "usage": "Reach for it when one reading is wanted as a ring that fills, rather than as a number or a plotted line. valueVariable is the only wiring it needs; minimum and maximum frame what counts as empty and full, so set them to the range the term actually takes rather than leaving the default hundred.",
+        "example": {
+            "name": "Speed",
+            "parameters": {
+                "valueVariable": "v",
+                "minimum": 0,
+                "maximum": 30,
+                "unit": "m/s"
+            }
+        }
+    },
     "parameters": [
         { "id": "valueVariable", "label": "Value", "valueType": "variable", "defaultValue": "0", "category": "model", "unitParameter": "unit" },
         { "id": "minimum", "label": "Minimum", "valueType": "number", "defaultValue": 0, "category": "scale" },

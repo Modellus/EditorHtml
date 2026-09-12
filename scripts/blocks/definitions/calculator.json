@@ -44,6 +44,28 @@
             ]
         }
     },
+    "agentTool": {
+        "usage": "Place it when the reader is meant to work a number out by hand against the model instead of having the model work it out for them. termA to termD each name a variable whose value at the iteration on screen a key loads, and resultVariable names the variable the pad writes its answer into, so the object is both read from and written back to the model. Nothing needs naming for it to be a plain calculator.",
+        "parameters": [
+            "termA",
+            "termB",
+            "termC",
+            "termD",
+            "resultVariable",
+            "digits",
+            "scientific",
+            "angleUnit",
+            "showHistory"
+        ],
+        "example": {
+            "name": "Calculator",
+            "parameters": {
+                "termA": "x",
+                "resultVariable": "error",
+                "digits": 3
+            }
+        }
+    },
     "parameters": [
         {
             "id": "n",

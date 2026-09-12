@@ -24,6 +24,17 @@
         "scale",
         "interaction"
     ],
+    "agentTool": {
+        "usage": "Lay it across the board as a scale to measure against by hand. It reads nothing from the model and writes nothing to it: minimumX and maximumX are the ends of the scale it draws, and pulling a number stretches it the way a chart axis is stretched.",
+        "example": {
+            "name": "Ruler",
+            "parameters": {
+                "minimumX": 0,
+                "maximumX": 10,
+                "unit": "m"
+            }
+        }
+    },
     "parameters": [
         {
             "id": "minimumX",
