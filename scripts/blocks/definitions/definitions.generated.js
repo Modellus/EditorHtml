@@ -6074,7 +6074,7 @@ BlockDefinitionLoader.registerAll([
                 "valueType": "variable",
                 "defaultValue": "",
                 "category": "model",
-                "description": "The model's part in the wave, named. A name the model works out for itself — y=A\\cdot\\sin\\left(\\omega\\cdot t\\right) — is the source the chain repeats: every iteration hands the first oscillator the value the term has just taken and moves the one before it along, so the chain is the last values of the term, oldest at the far end, travelling as the run goes. A name the model leaves free goes the other way: the object works its wave out from the amplitude, frequency, speed and phase below and hands the model what the reference oscillator is doing under that name, so it can be plotted, read and used in a definition like any other term. Left empty, the object keeps the wave to itself."
+                "description": "The model's part in the wave, named. A name the model works out for itself — y=A\\cdot\\sin\\left(\\omega\\cdot t\\right) — is the source the chain repeats: every iteration hands the first oscillator the value the term has just taken and moves the one before it along, so the chain is the last values of the term, oldest at the far end, travelling as the run goes. A name the model leaves free goes the other way: the object works its wave out from the amplitude, frequency, speed and damping below and hands the model what the reference oscillator is doing under that name, so it can be plotted, read and used in a definition like any other term. Left empty, the object keeps the wave to itself."
             },
             {
                 "id": "amplitude",
@@ -6110,18 +6110,6 @@ BlockDefinitionLoader.registerAll([
                     "parameter": "wave",
                     "modelDefines": false
                 }
-            },
-            {
-                "id": "phase",
-                "label": "Initial phase",
-                "valueType": "variable",
-                "defaultValue": "0",
-                "category": "model",
-                "visibleWhen": {
-                    "parameter": "wave",
-                    "modelDefines": false
-                },
-                "description": "Phase of the first oscillator at the start of the run, in radians. At zero it stands at rest and swings from there, which is where a chain at rest starts."
             },
             {
                 "id": "damping",
@@ -6214,7 +6202,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "elementSize",
-                "label": "Element size",
+                "label": "Oscillator size",
                 "valueType": "number",
                 "defaultValue": 4,
                 "category": "display",
@@ -6356,13 +6344,6 @@ BlockDefinitionLoader.registerAll([
                 "id": "spd",
                 "value": {
                     "parameter": "speed",
-                    "as": "number"
-                }
-            },
-            {
-                "id": "ph",
-                "value": {
-                    "parameter": "phase",
                     "as": "number"
                 }
             },
@@ -6639,7 +6620,7 @@ BlockDefinitionLoader.registerAll([
                                                 }
                                             },
                                             "otherwise": {
-                                                "formula": "amp\\cdot e^{-damp\\cdot el\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
+                                                "formula": "amp\\cdot e^{-damp\\cdot el\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
                                                 "inputs": {
                                                     "el": {
                                                         "parameter": "$index"
@@ -6688,7 +6669,7 @@ BlockDefinitionLoader.registerAll([
                                                 }
                                             },
                                             "otherwise": {
-                                                "formula": "amp\\cdot e^{-damp\\cdot el\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
+                                                "formula": "amp\\cdot e^{-damp\\cdot el\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
                                                 "inputs": {
                                                     "el": {
                                                         "formula": "i+1",
@@ -6762,7 +6743,7 @@ BlockDefinitionLoader.registerAll([
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                             "inputs": {
                                                 "i": {
                                                     "parameter": "$index"
@@ -6780,13 +6761,13 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y2": {
-                                    "formula": "\\left(zeroY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale",
+                                    "formula": "\\left(zeroY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                             "inputs": {
                                                 "i": {
                                                     "parameter": "$index"
@@ -6864,13 +6845,13 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y1": {
-                                    "formula": "\\left(zeroY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale",
+                                    "formula": "\\left(zeroY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                             "inputs": {
                                                 "i": {
                                                     "parameter": "$index"
@@ -6888,13 +6869,13 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y2": {
-                                    "formula": "\\left(\\left(zeroY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+                                    "formula": "\\left(\\left(zeroY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                             "inputs": {
                                                 "i": {
                                                     "parameter": "$index"
@@ -6972,13 +6953,13 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y1": {
-                                    "formula": "\\left(zeroY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale",
+                                    "formula": "\\left(zeroY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                             "inputs": {
                                                 "i": {
                                                     "parameter": "$index"
@@ -6996,13 +6977,13 @@ BlockDefinitionLoader.registerAll([
                                     }
                                 },
                                 "y2": {
-                                    "formula": "\\left(\\left(zeroY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
+                                    "formula": "\\left(\\left(zeroY-d\\cdot ppy\\right)-\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot ppy\\cdot arrowScale\\right)+sign\\left(amp\\cdot omega\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\cos\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)\\right)\\cdot headSize",
                                     "inputs": {
                                         "i": {
                                             "parameter": "$index"
                                         },
                                         "d": {
-                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
+                                            "formula": "amp\\cdot e^{-damp\\cdot i\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-i\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(i\\cdot delay-t\\right)\\right)\\right)",
                                             "inputs": {
                                                 "i": {
                                                     "parameter": "$index"
@@ -7095,7 +7076,7 @@ BlockDefinitionLoader.registerAll([
                                                 }
                                             },
                                             "otherwise": {
-                                                "formula": "amp\\cdot e^{-damp\\cdot el\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
+                                                "formula": "amp\\cdot e^{-damp\\cdot el\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
                                                 "inputs": {
                                                     "el": {
                                                         "parameter": "$index"
@@ -7184,7 +7165,7 @@ BlockDefinitionLoader.registerAll([
                                                 }
                                             },
                                             "otherwise": {
-                                                "formula": "amp\\cdot e^{-damp\\cdot el\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
+                                                "formula": "amp\\cdot e^{-damp\\cdot el\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
                                                 "inputs": {
                                                     "el": {
                                                         "parameter": "$index"
@@ -7296,7 +7277,7 @@ BlockDefinitionLoader.registerAll([
                                                 }
                                             },
                                             "otherwise": {
-                                                "formula": "amp\\cdot e^{-damp\\cdot el\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)+ph\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
+                                                "formula": "amp\\cdot e^{-damp\\cdot el\\cdot spacing}\\cdot\\sin\\left(omega\\cdot\\left(t-el\\cdot delay\\right)\\right)\\cdot\\left(1-wf\\cdot\\max\\left(0,sign\\left(el\\cdot delay-t\\right)\\right)\\right)",
                                                 "inputs": {
                                                     "el": {
                                                         "parameter": "$index"
@@ -7377,7 +7358,7 @@ BlockDefinitionLoader.registerAll([
                 "parameter": "wave"
             },
             "whenNameIsFree": true,
-            "formula": "A\\cdot e^{-b\\cdot\\frac{\\left(r-1\\right)\\cdot L}{N-1}}\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(t-\\frac{\\left(r-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}\\right)+p\\right)\\cdot\\left(1-g\\cdot\\max\\left(0,sign\\left(\\frac{\\left(r-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}-t\\right)\\right)\\right)",
+            "formula": "A\\cdot e^{-b\\cdot\\frac{\\left(r-1\\right)\\cdot L}{N-1}}\\cdot\\sin\\left(2\\cdot\\pi\\cdot f\\cdot\\left(t-\\frac{\\left(r-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}\\right)\\right)\\cdot\\left(1-g\\cdot\\max\\left(0,sign\\left(\\frac{\\left(r-1\\right)\\cdot L}{\\left(N-1\\right)\\cdot v}-t\\right)\\right)\\right)",
             "inputs": {
                 "A": {
                     "parameter": "amplitude"
@@ -7387,9 +7368,6 @@ BlockDefinitionLoader.registerAll([
                 },
                 "v": {
                     "parameter": "speed"
-                },
-                "p": {
-                    "parameter": "phase"
                 },
                 "b": {
                     "formula": "\\max\\left(0,damping\\right)"

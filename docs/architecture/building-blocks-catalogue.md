@@ -842,7 +842,6 @@ Capabilities: `reads-model`, `writes-model`, `oscillation`
 | `amplitude` | variable | "2" |  |
 | `frequency` | variable | "0.5" |  |
 | `speed` | variable | "5" |  |
-| `phase` | variable | "0" |  |
 | `damping` | variable | "0" |  |
 | `length` | number | 20 | min 0.001 |
 | `autoScale` | boolean | true |  |
