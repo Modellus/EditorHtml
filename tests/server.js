@@ -19,17 +19,22 @@ const port = Number(process.argv[2]) || 8432;
 
 // Every CDN URL a served page asks for, and the file under the repo that answers it. A pattern
 // is matched against the whole tag URL, so the query a Google font sheet carries is covered too.
+//
+// The ones under libraries/ are there because the offline build downloads them for the desktop
+// target. The rest are wanted by nothing but a test run, and they sit under tests/ so that
+// changing one neither reaches the installers nor sets them building: a push touching libraries/
+// rebuilds all three, and package.json leaves tests/ out of what they carry.
 const localAssets = [
     [/https:\/\/cdn3\.devexpress\.com\/jslib\/[^"']*\/js\/dx\.all\.js/g, "/libraries/scripts/dx.all.js"],
     [/https:\/\/cdn3\.devexpress\.com\/jslib\/[^"']*\/css\/dx\.[^"']*\.css/g, "/libraries/css/1dx.fluent.blue.light.compact.css"],
     [/https:\/\/cdn\.jsdelivr\.net\/npm\/katex@[^"']*\/katex\.min\.js/g, "/libraries/scripts/katex.min.js"],
     [/https:\/\/cdn\.jsdelivr\.net\/npm\/katex@[^"']*\/katex\.min\.css/g, "/libraries/css/katex.min.css"],
-    [/https:\/\/cdn\.jsdelivr\.net\/npm\/mathjax@[^"']*\/tex-svg\.js/g, "/libraries/scripts/tex-svg.js"],
-    [/https:\/\/cdn\.jsdelivr\.net\/npm\/bootstrap@[^"']*\/css\/bootstrap\.min\.css/g, "/libraries/css/bootstrap.min.css"],
-    [/https:\/\/cdn\.jsdelivr\.net\/npm\/bootstrap@[^"']*\/js\/bootstrap\.bundle\.min\.js/g, "/libraries/scripts/bootstrap.bundle.min.js"],
-    [/https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/exceljs\/[^"']*\/exceljs\.min\.js/g, "/libraries/scripts/exceljs.min.js"],
-    [/https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/FileSaver\.js\/[^"']*\/FileSaver\.min\.js/g, "/libraries/scripts/FileSaver.min.js"],
-    [/https:\/\/fonts\.googleapis\.com\/css2\?[^"']*/g, "/libraries/css/google-fonts.css"]
+    [/https:\/\/fonts\.googleapis\.com\/css2\?[^"']*/g, "/libraries/css/google-fonts.css"],
+    [/https:\/\/cdn\.jsdelivr\.net\/npm\/mathjax@[^"']*\/tex-svg\.js/g, "/tests/vendor/tex-svg.js"],
+    [/https:\/\/cdn\.jsdelivr\.net\/npm\/bootstrap@[^"']*\/css\/bootstrap\.min\.css/g, "/tests/vendor/bootstrap.min.css"],
+    [/https:\/\/cdn\.jsdelivr\.net\/npm\/bootstrap@[^"']*\/js\/bootstrap\.bundle\.min\.js/g, "/tests/vendor/bootstrap.bundle.min.js"],
+    [/https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/exceljs\/[^"']*\/exceljs\.min\.js/g, "/tests/vendor/exceljs.min.js"],
+    [/https:\/\/cdnjs\.cloudflare\.com\/ajax\/libs\/FileSaver\.js\/[^"']*\/FileSaver\.min\.js/g, "/tests/vendor/FileSaver.min.js"]
 ];
 
 const contentTypes = {
