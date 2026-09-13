@@ -361,17 +361,22 @@ test.describe('steering wheel component', () => {
         await page.waitForTimeout(400);
         await page.locator('.shape-context-toolbar.visible .mdl-component-settings-selector').click();
         await page.waitForTimeout(500);
+        // A menu that has been closed leaves its keys standing in the page, so only the group that is
+        // on screen is read: reading the last of them all compares whichever menu was opened first
+        // with itself, and passes while saying nothing.
         const readGroup = () => page.evaluate(() => {
-            const groups = Array.from(document.querySelectorAll('.mdl-pill-group:not(.mdl-notation-group)'));
-            const group = groups[groups.length - 1];
-            const icon = group.querySelector('.dx-icon');
+            const group = Array.from(document.querySelectorAll('.mdl-pill-group:not(.mdl-notation-group)'))
+                .filter(candidate => candidate.offsetParent !== null).pop();
+            const pill = group.querySelector('.mdl-pill');
             return {
-                outlined: group.classList.contains('dx-buttongroup-mode-outlined'),
-                smallIcon: group.classList.contains('mdl-small-icon'),
-                background: getComputedStyle(group).backgroundColor,
-                iconSize: getComputedStyle(icon).fontSize,
-                iconWeight: getComputedStyle(icon).fontWeight,
-                pill: !!group.querySelector('.mdl-pill')
+                dressing: {
+                    outlined: group.classList.contains('dx-buttongroup-mode-outlined'),
+                    background: getComputedStyle(group).backgroundColor,
+                    borderWidth: getComputedStyle(group).borderTopWidth,
+                    borderRadius: getComputedStyle(group).borderRadius,
+                    pillWidth: pill ? getComputedStyle(pill).width : null
+                },
+                icons: group.querySelectorAll('.dx-icon').length
             };
         });
         const wheel = await readGroup();
@@ -380,8 +385,13 @@ test.describe('steering wheel component', () => {
         await page.click('#independentDropDown');
         await page.waitForTimeout(700);
         const player = await readGroup();
-        expect(wheel).toEqual(player);
-        expect(wheel.background).toBe('rgba(0, 0, 0, 0)');
+        // A definition naming icons for its choice gets the icons and one asking for the names in so
+        // many words gets those, so the two are never made of the same thing. What they share is how
+        // they are dressed: outlined, painting nothing, and carrying the same sliding pill.
+        expect(wheel.icons).toBeGreaterThan(0);
+        expect(player.icons).toBe(0);
+        expect(wheel.dressing).toEqual(player.dressing);
+        expect(wheel.dressing.background).toBe('rgba(0, 0, 0, 0)');
     });
 
     test('the chip carries the colour of the mark, and every part of it sits on one line', async ({ page }) => {

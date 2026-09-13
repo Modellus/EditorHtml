@@ -14,7 +14,9 @@ module.exports = defineConfig({
         headless: true,
     },
     webServer: {
-        command: 'npx http-server . -p 8432 -c-1 --silent',
+        // tests/server.js serves the repo and answers the pages' CDN links from the copies
+        // vendored under libraries/, so a run never waits on the public internet.
+        command: 'node tests/server.js 8432',
         port: 8432,
         reuseExistingServer: true,
     },

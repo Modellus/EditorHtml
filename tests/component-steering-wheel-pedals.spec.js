@@ -325,14 +325,16 @@ test.describe('the pedals of the steering wheel', () => {
         // The wheel's own row comes first, and it is left where it was: only the pedals move, and each
         // moves the row that is its own.
         expect((await readToolbar()).map(Number)).toEqual([0, 0, 0]);
+        // The toolbar is anchored under the shape, so it is closed for the length of a gesture and
+        // put back when the gesture ends: what it reads is asked for once the pedal has been let go,
+        // which is where a key that failed to follow the press would still be reading nothing.
         const points = await pressPoints(page);
         await slide(page, points.accelerator, 120, 200);
-        expect((await readToolbar()).map(Number)).toEqual([0, 50, 0]);
         await release(page, 300);
         expect((await readToolbar()).map(Number)).toEqual([0, 50, 0]);
         await slide(page, points.brake, 48, 200);
-        expect((await readToolbar()).map(Number)).toEqual([0, 50, 20]);
         await release(page, 300);
+        expect((await readToolbar()).map(Number)).toEqual([0, 50, 20]);
     });
 
     // The wheel and the pedals are two halves of one object, and either can be left out. With both
