@@ -1,5 +1,5 @@
 class BlockBindings {
-    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "opaque", "termUnit", "element", "past", "defines", "swing", "termsRow", "termsCount"];
+    static kinds = ["constant", "parameter", "variable", "expression", "formula", "token", "format", "choose", "concat", "contrast", "direction", "memory", "memoryCount", "independent", "model", "opaque", "termUnit", "termName", "element", "past", "defines", "swing", "termsRow", "termsCount"];
 
     static isBinding(value) {
         if (value === null || typeof value !== "object" || Array.isArray(value))
@@ -28,6 +28,13 @@ class BlockBindings {
     // is how far the run has got, "name" is the term that holds it.
     static independent(field = "value") {
         return { independent: field };
+    }
+
+    // Something the model itself is set to rather than something it holds. The angle unit is the one
+    // asked for so far: every angle the model keeps is in it, so a drawing turning a term into a
+    // picture has to know which it is being handed.
+    static model(field) {
+        return { model: field };
     }
 
     // One element of a name. `now` says which element index the row the run stands on is drawn at, for
@@ -214,6 +221,8 @@ class BlockBindings {
             return this.resolveVariable(binding, context, fallbackValue);
         if (kind === "independent")
             return this.resolveIndependent(binding, fallbackValue);
+        if (kind === "model")
+            return this.resolveModel(binding, fallbackValue);
         if (kind === "element")
             return this.resolveElement(binding, context, fallbackValue);
         if (kind === "past")
@@ -244,6 +253,8 @@ class BlockBindings {
             return BlockMemory.count(BlockMemory.read(context.parameters, binding.memoryCount));
         if (kind === "termUnit")
             return this.resolveTermUnit(binding, context, fallbackValue);
+        if (kind === "termName")
+            return this.resolveTermName(binding, context, fallbackValue);
         if (kind === "termsRow")
             return this.resolveTermsRow(binding, context, fallbackValue);
         if (kind === "termsCount")
@@ -364,6 +375,18 @@ class BlockBindings {
         if (!this.calculator?.isTerm(String(termName)))
             return fallbackValue;
         return this.calculator.getTermUnit(String(termName)) ?? fallbackValue;
+    }
+
+    // What a row is called, for a drawing to write beside the thing the row stands for. A part of a
+    // construction is named by the term the reader put on it — the horizontal reach of a point is
+    // written `x` only until the reader calls it something — so the fallback is the name the part
+    // goes by when no row names it. A row holding a plain number names nothing: it is a value the
+    // object stands at, so the part keeps the name it was born with.
+    resolveTermName(binding, context, fallbackValue) {
+        const termName = String(this.resolve(binding.termName, context, "") ?? "").trim();
+        if (termName === "" || Number.isFinite(Number(termName)))
+            return this.resolve(binding.otherwise, context, fallbackValue);
+        return Utils.getDisplayedTerm(termName, this.calculator?.system);
     }
 
     resolveVariable(binding, context, fallbackValue) {
@@ -493,6 +516,18 @@ class BlockBindings {
         }
         const value = Number(this.calculator?.getIndependentValue?.());
         return Number.isFinite(value) ? value : fallbackValue;
+    }
+
+    // What the model is set to. "angleUnit" is its name — "radians" or "degrees" — and
+    // "radiansPerAngle" is how many radians one of its angles is worth, which is what a drawing
+    // multiplies a term by to turn it into a picture.
+    resolveModel(binding, fallbackValue) {
+        const angleUnit = this.calculator?.properties?.angleUnit === "degrees" ? "degrees" : "radians";
+        if (binding.model === "angleUnit")
+            return angleUnit;
+        if (binding.model === "radiansPerAngle")
+            return angleUnit === "degrees" ? Math.PI / 180 : 1;
+        return fallbackValue;
     }
 
     resolveExpression(binding, context, fallbackValue) {
@@ -727,6 +762,8 @@ class BlockBindings {
             return { variables: [], parameters: [binding.termsCount] };
         if (kind === "independent")
             return { variables: [String(this.calculator?.properties?.independent?.name ?? "")].filter(name => name !== ""), parameters: [] };
+        if (kind === "model")
+            return { variables: [], parameters: [] };
         if (kind === "element") {
             const termDependencies = this.getBindingDependencies(binding.element);
             const indexDependencies = this.getBindingDependencies(binding.index);

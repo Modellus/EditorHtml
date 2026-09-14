@@ -458,6 +458,37 @@ Capabilities: `interaction`
 | `originPixel` | number | 0 |  |
 | `lengthPixels` | number | 0 | min 0 |
 
+### `drag-circle-point` — Drag a point round a circle
+
+Drags a point round a circle and writes back everything the circle is read for at once: the angle the point stands at, how far out it stands, how far across and how far up it is, the tangent of that angle and the length of the arc it has swept. Each of them goes into the term its row names, or into the object's own parameter when that row holds a plain number instead, and a row the model works out for itself is left alone — so a circle whose angle a definition gives is still dragged where it writes the point. Asking for a number of divisions makes the angle land on one of them: the point follows the pointer while it is held and lands on the nearest division, exactly, the moment it is let go. The whole drag is one edit.
+
+Capabilities: `interaction`, `angular`, `writes-model`
+
+| Property | Type | Default | Range |
+| --- | --- | --- | --- |
+| `centerX` | number | 0 |  |
+| `centerY` | number | 0 |  |
+| `pixelsPerUnit` | number | 1 |  |
+| `unitsPerTurn` | number | 360 |  |
+| `angleVariable` | variable | "" |  |
+| `angleProperty` | string | "" |  |
+| `radiusVariable` | variable | "" |  |
+| `radiusProperty` | string | "" |  |
+| `stretch` | boolean | false |  |
+| `minimumRadius` | number | null |  |
+| `maximumRadius` | number | null |  |
+| `xVariable` | variable | "" |  |
+| `xProperty` | string | "" |  |
+| `yVariable` | variable | "" |  |
+| `yProperty` | string | "" |  |
+| `tangentVariable` | variable | "" |  |
+| `tangentProperty` | string | "" |  |
+| `arcVariable` | variable | "" |  |
+| `arcProperty` | string | "" |  |
+| `snapDivisions` | number | 0 | min 0, max 360 |
+| `hoverFill` | colour | "none" |  |
+| `hoverOpacity` | number | 0.15 | min 0, max 1 |
+
 ### `drag-rotate` — Drag rotate
 
 Lets the user turn the node around an anchor point by dragging it. The variable moves by the angle the pointer travels, so the grabbed point follows the pointer instead of jumping to it, which is what a rose, a bezel or a dial ring needs.
@@ -1349,6 +1380,43 @@ Capabilities: `radial`, `angular`, `scale`
 | `majorEvery` | number | 0 | min 0 |
 | `majorLength` | number | 12 | min 0 |
 | `majorWidth` | number | 2 | min 0 |
+
+### `trigonometric-circle` — Trigonometric circle
+
+Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is written by the drag — so the same object shows a model turning a circle and lets a reader turn one for the model. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it.
+
+Capabilities: `radial`, `angular`, `reads-model`, `interaction`, `writes-model`, `textual`
+
+| Parameter | Type | Default | Range |
+| --- | --- | --- | --- |
+| `angleVariable` | variable | "0.9" |  |
+| `radiusVariable` | variable | "1" |  |
+| `pointXVariable` | variable | "0" |  |
+| `pointYVariable` | variable | "0" |  |
+| `tangentVariable` | variable | "0" |  |
+| `arcVariable` | variable | "0" |  |
+| `angleUnit` | string | "radians" | radians \| degrees |
+| `snapDivisions` | number | 0 | min 0, max 360 |
+| `dragRadius` | boolean | false |  |
+| `showGrid` | boolean | true |  |
+| `showAxes` | boolean | true |  |
+| `showAngle` | boolean | true |  |
+| `showRadius` | boolean | true |  |
+| `showSine` | boolean | true |  |
+| `showCosine` | boolean | true |  |
+| `showTangent` | boolean | false |  |
+| `showArc` | boolean | false |  |
+| `backgroundColor` | colour | "none" |  |
+| `circleColor` | colour | "token:stroke.default" |  |
+| `axisColor` | colour | "token:axis.color" |  |
+| `gridColor` | colour | "token:grid.color" |  |
+| `labelColor` | colour | "token:text.secondary" |  |
+| `radiusColor` | colour | "token:stroke.accent" |  |
+| `angleColor` | colour | "#00695c" |  |
+| `sineColor` | colour | "token:stroke.warning" |  |
+| `cosineColor` | colour | "#2f9e44" |  |
+| `tangentColor` | colour | "#6a1b9a" |  |
+| `arcColor` | colour | "#f08c02" |  |
 
 ## Example: clock bound to model variables
 

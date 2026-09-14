@@ -24,6 +24,7 @@ class BlockCompiler {
         const startedAt = Date.now();
         const compilation = {
             nodes: [],
+            componentFrame: null,
             diagnostics: [],
             stats: { nodeCount: 0, maxDepth: 0, componentsUsed: [], blocksUsed: [], durationMs: 0 },
             context: this.createRootContext(definition, context)
@@ -207,6 +208,13 @@ class BlockCompiler {
             return [];
         }
         const parameters = this.resolveComponentParameters(node, registration, compilation, context, path);
+        // The frame the object itself was drawn from, with every local worked out onto it. A row read
+        // off the drawing rather than written into it holds whatever it was last given, which is not
+        // what the drawing shows until something writes it, so the reading beside the drawing is
+        // taken from here instead. Only the object's own frame is kept: a part inside it is drawn
+        // from the same numbers.
+        if (context.componentDepth === 0)
+            compilation.componentFrame = parameters;
         const componentContext = this.createChildContext(context, {
             parameters: parameters,
             componentStack: context.componentStack.concat([registration.type]),

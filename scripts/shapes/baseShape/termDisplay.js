@@ -150,6 +150,9 @@
             anchor: anchor,
             caseNumber: this.getCaseIndicatorNumber(entry),
             color: entry.color ?? null,
+            valueLatex: labelData?.valueLatex ?? "",
+            iconGlyph: labelData?.iconGlyph ?? "",
+            iconMirrored: labelData?.iconMirrored === true,
             isMissingTerm: labelData?.isMissingTerm === true
         };
     }
@@ -187,10 +190,10 @@
             else
                 labelGroup.appendChild(caseIconGroup);
         }
-        let labelText = labelGroup.children[2];
-        if (!labelText || labelText.tagName?.toLowerCase() != "text") {
-            if (labelText)
-                labelGroup.removeChild(labelText);
+        // The reading is found by what it is rather than by where it sits, because the mark of a
+        // measure is only there for the readings that carry one.
+        let labelText = labelGroup.querySelector(":scope > text.shape-term-label");
+        if (!labelText) {
             labelText = this.board.createSvgElement("text");
             labelText.setAttribute("class", "shape-term-label");
             labelGroup.appendChild(labelText);
@@ -204,20 +207,39 @@
         return TermDisplay._labelFontSize;
     }
 
-    getCaseIconLayout(label, labelText) {
+    // A case badge stands outside whatever else is written to the left of the reading, so a reading
+    // carrying the mark of its measure is numbered beyond the mark rather than on top of it.
+    getCaseIconLayout(label, labelText, measureIconLeft = null) {
         const iconSize = this.getLabelFontSize(labelText);
         const gap = Utils.caseIconGap;
         const y = label.y - iconSize / 2;
+        const textX = Number(labelText?.getAttribute("x")) || label.x;
         if (!label.caseNumber)
-            return { visible: false, iconSize: iconSize, iconX: 0, iconY: y, textX: label.x };
+            return { visible: false, iconSize: iconSize, iconX: 0, iconY: y, textX: textX };
+        // With a mark already standing at the left, the badge steps outside it rather than over it.
         if (label.anchor == "start")
-            return { visible: true, iconSize: iconSize, iconX: label.x, iconY: y, textX: label.x + iconSize + gap };
-        let labelLeft = label.x;
+            return measureIconLeft === null
+                ? { visible: true, iconSize: iconSize, iconX: label.x, iconY: y, textX: textX + iconSize + gap }
+                : { visible: true, iconSize: iconSize, iconX: measureIconLeft - gap - iconSize, iconY: y, textX: textX };
+        let labelLeft = textX;
         if (labelText?.getBBox)
             try {
                 labelLeft = labelText.getBBox().x;
             } catch (_) {}
-        return { visible: true, iconSize: iconSize, iconX: labelLeft - gap - iconSize, iconY: y, textX: label.x };
+        if (measureIconLeft !== null)
+            labelLeft = Math.min(labelLeft, measureIconLeft);
+        return { visible: true, iconSize: iconSize, iconX: labelLeft - gap - iconSize, iconY: y, textX: textX };
+    }
+
+    // The mark stands where the name would, immediately left of the reading, and the reading is moved
+    // half the mark's width along so the pill stays centred on the point it is anchored to. Drawing
+    // the mark itself belongs to Utils, beside the rest of what a term label is made of, so any shape
+    // marking a reading that has no name marks it the same way.
+    getIconShiftedTextX(label, iconSize) {
+        if (!label.iconGlyph || label.anchor == "end")
+            return label.x;
+        const gap = Utils.caseIconGap;
+        return label.x + (label.anchor == "start" ? iconSize + gap : (iconSize + gap) / 2);
     }
 
     getCaseIconBounds(layout) {
@@ -230,8 +252,34 @@
         Utils.applyCaseIconSvg(caseIconGroup, layout.iconX, layout.iconY, layout.iconSize, layout.visible ? caseNumber : null);
     }
 
+    // A value that is mathematics is typeset beside the reading rather than written into it, so the
+    // text opens on the name and the equals sign and stops there, and the fraction follows it.
     setLabelText(labelText, label) {
-        Utils.setTermValueTextContent(labelText, label?.termText ?? "", label?.valueText ?? label?.text ?? "", label?.unitText ?? "");
+        const valueText = label?.valueLatex ? "" : (label?.valueText ?? label?.text ?? "");
+        if (label?.iconGlyph) {
+            labelText.innerHTML = Utils.buildIconReadingTextHtml(label?.valueLatex ? "" : (label?.valueText ?? ""), label?.unitText ?? "");
+            return;
+        }
+        Utils.setTermValueTextContent(labelText, label?.termText ?? "", valueText, label?.unitText ?? "");
+    }
+
+    // The mathematics stands to the right of the text, so the reading is moved along to make room for
+    // it and the pill stays where it was anchored.
+    getMathRoomShift(label, mathBox) {
+        if (!mathBox || label.anchor == "start")
+            return 0;
+        const room = mathBox.width + Utils.caseIconGap;
+        return label.anchor == "end" ? -room : -room / 2;
+    }
+
+    getLabelTextRight(labelText) {
+        if (labelText?.getBBox)
+            try {
+                const bounds = labelText.getBBox();
+                if (bounds.width > 0)
+                    return bounds.x + bounds.width;
+            } catch (_) {}
+        return Number(labelText?.getAttribute("x")) || 0;
     }
 
     getLabelAnchor() {
@@ -456,10 +504,26 @@
             labelText.setAttribute("dominant-baseline", "central");
             labelText.setAttribute("fill", labelContrastColor);
             this.setLabelText(labelText, label);
-            const iconLayout = this.getCaseIconLayout(label, labelText);
+            const iconSize = this.getLabelFontSize(labelText);
+            const mathBox = Utils.getMathMarkupBox(label.valueLatex, iconSize);
+            labelText.setAttribute("x", this.getIconShiftedTextX(label, iconSize) + this.getMathRoomShift(label, mathBox));
+            const markBounds = Utils.applyTermLabelIcon(
+                labelElements.group,
+                labelText,
+                { glyph: label.iconGlyph, mirrored: label.iconMirrored },
+                { x: label.iconGlyph && label.anchor == "start" ? label.x : null, y: label.y, size: iconSize },
+                labelContrastColor,
+                () => this.shape.draw?.());
+            const iconLayout = this.getCaseIconLayout(label, labelText, markBounds ? markBounds.x : null);
             labelText.setAttribute("x", iconLayout.textX);
             this.applyCaseIcon(labelElements.caseIconGroup, label.caseNumber, iconLayout);
-            this.applyLabelBackground(labelElements.backgroundRect, labelText, labelColor, label.anchor, this.getCaseIconBounds(iconLayout));
+            const mathBounds = Utils.applyTermLabelMath(
+                labelElements.group,
+                label.valueLatex,
+                { x: this.getLabelTextRight(labelText) + Utils.caseIconGap, y: label.y, size: iconSize },
+                labelContrastColor);
+            const extraBounds = Utils.unionLabelBounds(Utils.unionLabelBounds(this.getCaseIconBounds(iconLayout), markBounds), mathBounds);
+            this.applyLabelBackground(labelElements.backgroundRect, labelText, labelColor, label.anchor, extraBounds);
             this.applyLabelRotation(labelElements.group, label.x, label.y);
         }
     }

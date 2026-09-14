@@ -143,6 +143,41 @@ var BlockBehaviours = {
     });
 
     registry.register({
+        type: "drag-circle-point",
+        category: "behaviour",
+        displayName: "Drag a point round a circle",
+        description: "Drags a point round a circle and writes back everything the circle is read for at once: the angle the point stands at, how far out it stands, how far across and how far up it is, the tangent of that angle and the length of the arc it has swept. Each of them goes into the term its row names, or into the object's own parameter when that row holds a plain number instead, and a row the model works out for itself is left alone — so a circle whose angle a definition gives is still dragged where it writes the point. Asking for a number of divisions makes the angle land on one of them: the point follows the pointer while it is held and lands on the nearest division, exactly, the moment it is let go. The whole drag is one edit.",
+        tags: ["interaction", "angle", "circle", "trigonometry", "input", "writes-model"],
+        capabilities: ["interaction", "angular", "writes-model"],
+        inputSchema: {
+            properties: {
+                centerX: { valueType: "number", defaultValue: 0, label: "Centre X" },
+                centerY: { valueType: "number", defaultValue: 0, label: "Centre Y" },
+                pixelsPerUnit: { valueType: "number", defaultValue: 1, label: "Pixels per unit", description: "How many pixels one unit of the radius covers, so the circle is stretched in the units it is drawn in rather than in pixels." },
+                unitsPerTurn: { valueType: "number", defaultValue: 360, label: "Units in a whole turn", description: "What a whole turn is worth in the units the angle is written in: 360 for degrees, and two π for radians." },
+                angleVariable: { valueType: "variable", defaultValue: "", label: "Angle", bindable: false },
+                angleProperty: { valueType: "string", defaultValue: "", label: "Angle property", description: "Property written when the angle row holds a plain number instead of naming a model term." },
+                radiusVariable: { valueType: "variable", defaultValue: "", label: "Radius", bindable: false },
+                radiusProperty: { valueType: "string", defaultValue: "", label: "Radius property" },
+                stretch: { valueType: "boolean", defaultValue: false, label: "Stretch the radius", description: "Whether the drag writes the radius as well: how far the pointer stands from the centre, in the units the circle is drawn in. Left off the circle keeps the radius it has and the drag only turns the point round it." },
+                minimumRadius: { valueType: "number", defaultValue: null, label: "Minimum radius" },
+                maximumRadius: { valueType: "number", defaultValue: null, label: "Maximum radius" },
+                xVariable: { valueType: "variable", defaultValue: "", label: "Across", bindable: false, description: "How far across the centre the point stands, the radius times the cosine of the angle." },
+                xProperty: { valueType: "string", defaultValue: "", label: "Across property" },
+                yVariable: { valueType: "variable", defaultValue: "", label: "Up", bindable: false, description: "How far up the centre the point stands, the radius times the sine of the angle." },
+                yProperty: { valueType: "string", defaultValue: "", label: "Up property" },
+                tangentVariable: { valueType: "variable", defaultValue: "", label: "Tangent", bindable: false, description: "The tangent of the angle. A quarter turn stands the point where the tangent line is never met, so nothing is written there and the row keeps what it held." },
+                tangentProperty: { valueType: "string", defaultValue: "", label: "Tangent property" },
+                arcVariable: { valueType: "variable", defaultValue: "", label: "Arc", bindable: false, description: "The length of the arc swept from the zero direction, the radius times the angle in radians." },
+                arcProperty: { valueType: "string", defaultValue: "", label: "Arc property" },
+                snapDivisions: { valueType: "number", defaultValue: 0, minimum: 0, maximum: 360, label: "Snap to divisions", description: "How many equal parts of the circle a dragged angle lands on: twelve steps it every thirty degrees and eight every forty-five. The point follows the pointer while it is held and lands on the nearest part when it is let go. Left at nothing the angle is wherever the pointer put it." },
+                hoverFill: { valueType: "colour", defaultValue: "none", label: "Hover fill", description: "Colour the node takes while the pointer rests on it, so an otherwise invisible grab area shows itself." },
+                hoverOpacity: { valueType: "number", defaultValue: 0.15, minimum: 0, maximum: 1, label: "Hover opacity" }
+            }
+        }
+    });
+
+    registry.register({
         type: "clickable",
         category: "behaviour",
         displayName: "Clickable",

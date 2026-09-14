@@ -103,36 +103,7 @@ function formatPiTickValue(value) {
     if (Math.abs(value) < 1e-10)
         return "0";
     const ratio = value / Math.PI;
-    const sign = ratio < 0 ? "-" : "";
-    const absoluteRatio = Math.abs(ratio);
-    let match = null;
-    for (let denominator = 1; denominator <= 12; denominator++) {
-        const numerator = Math.round(absoluteRatio * denominator);
-        if (numerator === 0)
-            continue;
-        if (Math.abs(absoluteRatio - numerator / denominator) < 1e-6) {
-            match = { numerator: numerator, denominator: denominator };
-            break;
-        }
-    }
-    if (!match)
-        return `${formatAxisTickValue(ratio)}π`;
-    const divisor = greatestCommonDivisor(match.numerator, match.denominator);
-    const numerator = match.numerator / divisor;
-    const denominator = match.denominator / divisor;
-    const numeratorText = numerator === 1 ? "π" : `${numerator}π`;
-    return denominator === 1 ? `${sign}${numeratorText}` : `${sign}${numeratorText}/${denominator}`;
-}
-
-function greatestCommonDivisor(a, b) {
-    let x = Math.abs(a);
-    let y = Math.abs(b);
-    while (y) {
-        const temp = y;
-        y = x % y;
-        x = temp;
-    }
-    return x || 1;
+    return Utils.formatPiPortionText(ratio) ?? `${formatAxisTickValue(ratio)}\u03c0`;
 }
 
 function minorTickDivisions(majorSpacingPixels, minimumSpacingPixels = 5) {

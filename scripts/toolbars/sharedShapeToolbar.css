@@ -485,6 +485,13 @@ math-field {
     overflow: hidden;
 }
 
+/* The mark a value is counted in — π for a portion of a turn, º for a degree — stands a space after
+   the number rather than against it, so the two are read apart at a glance. */
+.mdl-term-chip .mdl-term-editor-value-suffix {
+    flex: none;
+    margin-left: 1px;
+}
+
 /* The unit follows the name behind a faded slash, the way a term carries its unit on a label or a
    readout everywhere else here, so it can never be mistaken for a second name. */
 .mdl-term-chip__unit {

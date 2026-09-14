@@ -507,7 +507,7 @@
         </table>
         <h2 id="behaviours">Behaviours</h2>
         <p>What the reader can do to a node, and what that writes. Listed on the node under <code>behaviours</code>.</p>
-        <p class="block-index"><a href="#block-clickable">clickable</a> <a href="#block-drag-angle">drag-angle</a> <a href="#block-drag-axis-tick">drag-axis-tick</a> <a href="#block-drag-rotate">drag-rotate</a> <a href="#block-draggable">draggable</a> <a href="#block-follow-pointer">follow-pointer</a> <a href="#block-forget">forget</a> <a href="#block-hoverable">hoverable</a> <a href="#block-keep-time">keep-time</a> <a href="#block-play-note">play-note</a> <a href="#block-press-and-slide">press-and-slide</a> <a href="#block-remember">remember</a> <a href="#block-resizable">resizable</a> <a href="#block-respond-to-simulation">respond-to-simulation</a> <a href="#block-rotatable">rotatable</a> <a href="#block-selectable">selectable</a> <a href="#block-tooltip">tooltip</a> <a href="#block-track-pointer">track-pointer</a></p>
+        <p class="block-index"><a href="#block-clickable">clickable</a> <a href="#block-drag-angle">drag-angle</a> <a href="#block-drag-axis-tick">drag-axis-tick</a> <a href="#block-drag-circle-point">drag-circle-point</a> <a href="#block-drag-rotate">drag-rotate</a> <a href="#block-draggable">draggable</a> <a href="#block-follow-pointer">follow-pointer</a> <a href="#block-forget">forget</a> <a href="#block-hoverable">hoverable</a> <a href="#block-keep-time">keep-time</a> <a href="#block-play-note">play-note</a> <a href="#block-press-and-slide">press-and-slide</a> <a href="#block-remember">remember</a> <a href="#block-resizable">resizable</a> <a href="#block-respond-to-simulation">respond-to-simulation</a> <a href="#block-rotatable">rotatable</a> <a href="#block-selectable">selectable</a> <a href="#block-tooltip">tooltip</a> <a href="#block-track-pointer">track-pointer</a></p>
         <h3 id="block-clickable"><code>clickable</code> — Clickable</h3>
         <p>Writes a value into a model variable or into a component parameter when the node is clicked. The value is a binding like any other, so a key can write what the model or the object itself currently holds rather than only a constant.</p>
         <p class="block-meta">Capabilities: <code>interaction</code> <code>writes-model</code></p>
@@ -562,6 +562,36 @@
                 <tr><td><code>stepValue</code></td><td>number</td><td><code>0</code></td><td></td></tr>
                 <tr><td><code>originPixel</code></td><td>number</td><td><code>0</code></td><td></td></tr>
                 <tr><td><code>lengthPixels</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-drag-circle-point"><code>drag-circle-point</code> — Drag a point round a circle</h3>
+        <p>Drags a point round a circle and writes back everything the circle is read for at once: the angle the point stands at, how far out it stands, how far across and how far up it is, the tangent of that angle and the length of the arc it has swept. Each of them goes into the term its row names, or into the object's own parameter when that row holds a plain number instead, and a row the model works out for itself is left alone — so a circle whose angle a definition gives is still dragged where it writes the point. Asking for a number of divisions makes the angle land on one of them: the point follows the pointer while it is held and lands on the nearest division, exactly, the moment it is let go. The whole drag is one edit.</p>
+        <p class="block-meta">Capabilities: <code>interaction</code> <code>angular</code> <code>writes-model</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>centerX</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
+                <tr><td><code>pixelsPerUnit</code></td><td>number</td><td><code>1</code></td><td></td></tr>
+                <tr><td><code>unitsPerTurn</code></td><td>number</td><td><code>360</code></td><td></td></tr>
+                <tr><td><code>angleVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>angleProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>radiusVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>radiusProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>stretch</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>minimumRadius</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>maximumRadius</code></td><td>number</td><td><code>null</code></td><td></td></tr>
+                <tr><td><code>xVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>xProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>yVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>yProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>tangentVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>tangentProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>arcVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>arcProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>snapDivisions</code></td><td>number</td><td><code>0</code></td><td>min 0, max 360</td></tr>
+                <tr><td><code>hoverFill</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>hoverOpacity</code></td><td>number</td><td><code>0.15</code></td><td>min 0, max 1</td></tr>
             </tbody>
         </table>
         <h3 id="block-drag-rotate"><code>drag-rotate</code> — Drag rotate</h3>
@@ -739,7 +769,7 @@
         </table>
         <h2 id="components">Components</h2>
         <p>Ready-made assemblies. A node names one as its <code>type</code> and sets these under <code>parameters</code>.</p>
-        <p class="block-index"><a href="#block-calculator">calculator</a> <a href="#block-circular-gauge">circular-gauge</a> <a href="#block-clock">clock</a> <a href="#block-compass">compass</a> <a href="#block-dial-face">dial-face</a> <a href="#block-key-cap">key-cap</a> <a href="#block-label-ring">label-ring</a> <a href="#block-mechanical-wave">mechanical-wave</a> <a href="#block-memory-list">memory-list</a> <a href="#block-memory-trace">memory-trace</a> <a href="#block-mouse-tracker">mouse-tracker</a> <a href="#block-orbit-system">orbit-system</a> <a href="#block-oscilloscope">oscilloscope</a> <a href="#block-piano">piano</a> <a href="#block-piano-keyboard">piano-keyboard</a> <a href="#block-plot-axes">plot-axes</a> <a href="#block-plot-crosshair">plot-crosshair</a> <a href="#block-plot-grid">plot-grid</a> <a href="#block-pointer-hand">pointer-hand</a> <a href="#block-pointer-ring">pointer-ring</a> <a href="#block-protractor">protractor</a> <a href="#block-rotating-vector">rotating-vector</a> <a href="#block-ruler">ruler</a> <a href="#block-seven-segment-display">seven-segment-display</a> <a href="#block-speedometer">speedometer</a> <a href="#block-steering-wheel">steering-wheel</a> <a href="#block-thermometer">thermometer</a> <a href="#block-tick-ring">tick-ring</a></p>
+        <p class="block-index"><a href="#block-calculator">calculator</a> <a href="#block-circular-gauge">circular-gauge</a> <a href="#block-clock">clock</a> <a href="#block-compass">compass</a> <a href="#block-dial-face">dial-face</a> <a href="#block-key-cap">key-cap</a> <a href="#block-label-ring">label-ring</a> <a href="#block-mechanical-wave">mechanical-wave</a> <a href="#block-memory-list">memory-list</a> <a href="#block-memory-trace">memory-trace</a> <a href="#block-mouse-tracker">mouse-tracker</a> <a href="#block-orbit-system">orbit-system</a> <a href="#block-oscilloscope">oscilloscope</a> <a href="#block-piano">piano</a> <a href="#block-piano-keyboard">piano-keyboard</a> <a href="#block-plot-axes">plot-axes</a> <a href="#block-plot-crosshair">plot-crosshair</a> <a href="#block-plot-grid">plot-grid</a> <a href="#block-pointer-hand">pointer-hand</a> <a href="#block-pointer-ring">pointer-ring</a> <a href="#block-protractor">protractor</a> <a href="#block-rotating-vector">rotating-vector</a> <a href="#block-ruler">ruler</a> <a href="#block-seven-segment-display">seven-segment-display</a> <a href="#block-speedometer">speedometer</a> <a href="#block-steering-wheel">steering-wheel</a> <a href="#block-thermometer">thermometer</a> <a href="#block-tick-ring">tick-ring</a> <a href="#block-trigonometric-circle">trigonometric-circle</a></p>
         <h3 id="block-calculator"><code>calculator</code> — Calculator</h3>
         <p>Calculator whose working is held by the object itself: four functions on a narrow one, and a scientific pad of powers, roots, trigonometry and logarithms beside the digits once it is wide enough to hold one. Term keys load the value a model variable has at the iteration on screen, the result can be written back into a model variable, and every completed operation is kept in a history the object remembers and can be read back from.</p>
         <p class="block-meta">Capabilities: <code>interaction</code> <code>textual</code> <code>reads-model</code> <code>writes-model</code> <code>memory</code></p>
@@ -1402,6 +1432,42 @@
                 <tr><td><code>majorEvery</code></td><td>number</td><td><code>0</code></td><td>min 0</td></tr>
                 <tr><td><code>majorLength</code></td><td>number</td><td><code>12</code></td><td>min 0</td></tr>
                 <tr><td><code>majorWidth</code></td><td>number</td><td><code>2</code></td><td>min 0</td></tr>
+            </tbody>
+        </table>
+        <h3 id="block-trigonometric-circle"><code>trigonometric-circle</code> — Trigonometric circle</h3>
+        <p>Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is written by the drag — so the same object shows a model turning a circle and lets a reader turn one for the model. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it.</p>
+        <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>reads-model</code> <code>interaction</code> <code>writes-model</code> <code>textual</code></p>
+        <table class="docs-table">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
+            <tbody>
+                <tr><td><code>angleVariable</code></td><td>variable</td><td><code>"0.9"</code></td><td></td></tr>
+                <tr><td><code>radiusVariable</code></td><td>variable</td><td><code>"1"</code></td><td></td></tr>
+                <tr><td><code>pointXVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>pointYVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>tangentVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>arcVariable</code></td><td>variable</td><td><code>"0"</code></td><td></td></tr>
+                <tr><td><code>angleUnit</code></td><td>string</td><td><code>"radians"</code></td><td>radians | degrees</td></tr>
+                <tr><td><code>snapDivisions</code></td><td>number</td><td><code>0</code></td><td>min 0, max 360</td></tr>
+                <tr><td><code>dragRadius</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>showGrid</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>showAxes</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>showAngle</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>showRadius</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>showSine</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>showCosine</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>showTangent</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>showArc</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
+                <tr><td><code>backgroundColor</code></td><td>colour</td><td><code>"none"</code></td><td></td></tr>
+                <tr><td><code>circleColor</code></td><td>colour</td><td><code>"token:stroke.default"</code></td><td></td></tr>
+                <tr><td><code>axisColor</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
+                <tr><td><code>gridColor</code></td><td>colour</td><td><code>"token:grid.color"</code></td><td></td></tr>
+                <tr><td><code>labelColor</code></td><td>colour</td><td><code>"token:text.secondary"</code></td><td></td></tr>
+                <tr><td><code>radiusColor</code></td><td>colour</td><td><code>"token:stroke.accent"</code></td><td></td></tr>
+                <tr><td><code>angleColor</code></td><td>colour</td><td><code>"#00695c"</code></td><td></td></tr>
+                <tr><td><code>sineColor</code></td><td>colour</td><td><code>"token:stroke.warning"</code></td><td></td></tr>
+                <tr><td><code>cosineColor</code></td><td>colour</td><td><code>"#2f9e44"</code></td><td></td></tr>
+                <tr><td><code>tangentColor</code></td><td>colour</td><td><code>"#6a1b9a"</code></td><td></td></tr>
+                <tr><td><code>arcColor</code></td><td>colour</td><td><code>"#f08c02"</code></td><td></td></tr>
             </tbody>
         </table>
         <h2 id="tokens">Design tokens</h2>

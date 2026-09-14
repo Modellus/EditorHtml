@@ -730,6 +730,160 @@ class Utils {
         return `<tspan font-family="'${Utils.escapeXmlText(iconFontFamily)}'" font-weight="900" dominant-baseline="central">${Utils.escapeXmlText(iconGlyph)}</tspan><tspan font-family="Katex_Main" dominant-baseline="central"> ${Utils.escapeXmlText(valueText)}</tspan>`;
     }
 
+    // A reading whose row holds no name to write: the mark of what it measures stands where the name
+    // would, in an element of its own so it can be mirrored, and the text opens on the equals sign it
+    // would have followed.
+    static buildIconReadingTextHtml(valueText, unitText = "") {
+        const unitHtml = Utils.buildTermUnitsTextHtml(unitText, { followsValue: true });
+        return `<tspan font-family="Katex_Main" data-term-value dominant-baseline="central"> = ${Utils.escapeXmlText(valueText)}</tspan>${unitHtml}`;
+    }
+
+    // Mathematics typeset once and kept. Turning latex into markup and measuring what it comes to costs
+    // far more than a label redrawn every frame can afford, and the portions a reader meets are a short
+    // list — a half of π, a third, a quarter — so each is typeset the first time it is asked for and
+    // handed out from memory ever after. The size is part of the key, because the same fraction at a
+    // different size is a different box.
+    static mathMarkupBoxes = new Map();
+
+    static getMathMarkupBox(latex, fontSize) {
+        const text = String(latex ?? "");
+        const size = Number(fontSize);
+        if (text === "" || !Number.isFinite(size) || typeof MathLive === "undefined")
+            return null;
+        const key = `${Math.round(size * 100)}|${text}`;
+        if (Utils.mathMarkupBoxes.has(key))
+            return Utils.mathMarkupBoxes.get(key);
+        const host = document.createElement("div");
+        host.style.cssText = `position:absolute;visibility:hidden;left:-9999px;top:0;white-space:nowrap;font-size:${size}px;`;
+        host.innerHTML = MathLive.convertLatexToMarkup(text);
+        document.body.appendChild(host);
+        const bounds = host.getBoundingClientRect();
+        const box = { markup: host.innerHTML, width: bounds.width, height: bounds.height };
+        document.body.removeChild(host);
+        Utils.mathMarkupBoxes.set(key, box);
+        return box;
+    }
+
+    static termLabelMathClass = "shape-term-label-math";
+
+    static removeTermLabelMath(labelGroup) {
+        const host = labelGroup?.querySelector(`:scope > foreignObject.${Utils.termLabelMathClass}`);
+        if (host)
+            host.parentNode.removeChild(host);
+        return null;
+    }
+
+    // A reading whose value is mathematics — a portion of π, a fraction — carries it typeset rather
+    // than spelt out in characters. It stands in a box of its own beside the text, since a fraction is
+    // two lines where a piece of text is one, and the box is the size the mathematics was measured at
+    // when it was first typeset. What comes back is where it stands, for the plate to be drawn round.
+    static applyTermLabelMath(labelGroup, latex, layout, color) {
+        const box = Utils.getMathMarkupBox(latex, layout?.size);
+        if (!labelGroup || !box)
+            return Utils.removeTermLabelMath(labelGroup);
+        let host = labelGroup.querySelector(`:scope > foreignObject.${Utils.termLabelMathClass}`);
+        if (!host) {
+            host = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+            host.setAttribute("class", Utils.termLabelMathClass);
+            host.setAttribute("overflow", "visible");
+            host.setAttribute("pointer-events", "none");
+            host.appendChild(document.createElementNS("http://www.w3.org/1999/xhtml", "div"));
+            labelGroup.appendChild(host);
+        }
+        const bounds = { x: Number(layout.x), y: Number(layout.y) - box.height / 2, width: box.width, height: box.height };
+        host.setAttribute("x", bounds.x);
+        host.setAttribute("y", bounds.y);
+        host.setAttribute("width", box.width);
+        host.setAttribute("height", box.height);
+        const content = host.firstChild;
+        if (content.dataset.latex !== String(latex)) {
+            content.innerHTML = box.markup;
+            content.dataset.latex = String(latex);
+        }
+        content.style.cssText = `display:flex;align-items:center;height:${box.height}px;color:${color};font-size:${Number(layout.size)}px;white-space:nowrap;`;
+        return bounds;
+    }
+
+    static termLabelIconClass = "shape-term-label-icon";
+    static termLabelIconFontFamily = "Font Awesome 7 Pro";
+
+    // Where the mark lands is only known once the reading has been written and measured, so the left
+    // edge is read back off the text rather than guessed at from where it was anchored.
+    static getTermLabelTextLeft(labelText) {
+        if (labelText?.getBBox)
+            try {
+                const bounds = labelText.getBBox();
+                if (bounds.width > 0)
+                    return bounds.x;
+            } catch (_) {}
+        return Number(labelText?.getAttribute("x")) || 0;
+    }
+
+    static removeTermLabelIcon(labelGroup) {
+        const iconText = labelGroup?.querySelector(`:scope > text.${Utils.termLabelIconClass}`);
+        if (iconText)
+            iconText.parentNode.removeChild(iconText);
+        return null;
+    }
+
+    // A reading whose row holds no name to write is told apart by the mark of what it measures,
+    // standing where the name would and written in the same ink as the value it belongs to. The mark
+    // is an element of its own rather than a tspan of the reading, because a tspan carries no
+    // transform and a cosine is told from a sine by the same glyph mirrored. An `x` of null asks for
+    // it to be put immediately left of whatever the reading actually occupies.
+    //
+    // The box it took is handed back, so the plate behind the reading can be fitted around both; a
+    // reading with no mark carries no element for one, since an empty text would be measured as part
+    // of every label on the board that never wanted a mark at all.
+    static applyTermLabelIcon(labelGroup, labelText, icon, layout, color, onIconFontLoaded = null) {
+        const glyph = String(icon?.glyph ?? "");
+        if (!labelGroup || glyph === "")
+            return Utils.removeTermLabelIcon(labelGroup);
+        const size = Number(layout?.size) || 10;
+        const y = Number(layout?.y) || 0;
+        const x = layout?.x == null ? Utils.getTermLabelTextLeft(labelText) - Utils.caseIconGap - size : Number(layout.x);
+        let iconText = labelGroup.querySelector(`:scope > text.${Utils.termLabelIconClass}`);
+        if (!iconText) {
+            iconText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            iconText.setAttribute("class", Utils.termLabelIconClass);
+            labelGroup.insertBefore(iconText, labelText ?? null);
+        }
+        iconText.setAttribute("x", x);
+        iconText.setAttribute("y", y);
+        iconText.setAttribute("font-size", size);
+        iconText.setAttribute("font-family", `'${Utils.termLabelIconFontFamily}'`);
+        iconText.setAttribute("font-weight", "900");
+        iconText.setAttribute("dominant-baseline", "central");
+        iconText.setAttribute("text-anchor", "start");
+        iconText.setAttribute("fill", color);
+        // Mirrored about the line the reading is written on, so the glyph keeps its place in the pill.
+        if (icon?.mirrored)
+            iconText.setAttribute("transform", `translate(0 ${2 * y}) scale(1 -1)`);
+        else
+            iconText.removeAttribute("transform");
+        if (iconText.textContent != glyph)
+            iconText.textContent = glyph;
+        Utils.ensureIconFontLoaded(Utils.termLabelIconFontFamily, onIconFontLoaded);
+        return { x: x, y: y - size / 2, width: size, height: size };
+    }
+
+    // The smallest box holding both, for a plate that has to cover a mark and a badge as well as the
+    // reading between them.
+    static unionLabelBounds(first, second) {
+        if (!first)
+            return second ?? null;
+        if (!second)
+            return first;
+        const left = Math.min(first.x, second.x);
+        const top = Math.min(first.y, second.y);
+        return {
+            x: left,
+            y: top,
+            width: Math.max(first.x + first.width, second.x + second.width) - left,
+            height: Math.max(first.y + first.height, second.y + second.height) - top
+        };
+    }
+
     static setIconValueTextContent(textElement, iconGlyph, iconFontFamily, valueText) {
         textElement.innerHTML = Utils.buildIconValueTextHtml(iconGlyph, iconFontFamily, valueText);
     }
@@ -909,10 +1063,11 @@ class Utils {
             .replace(/[ℝℤℕℚ\u{1D539}]/gu, symbol => Utils.builtinDomainLatex[symbol] ?? symbol);
     }
 
-    static buildReadOnlyMathFieldMarkup(mathText, styleText = "") {
+    static buildReadOnlyMathFieldMarkup(mathText, styleText = "", classNames = "") {
         const normalizedStyle = String(styleText ?? "").trim();
         const styleAttribute = normalizedStyle === "" ? "" : ` style=\"${normalizedStyle}\"`;
-        return `<math-field read-only class=\"form-math-field\"${styleAttribute}>${Utils.formatMathTermName(mathText)}</math-field>`;
+        const classAttribute = `form-math-field${String(classNames ?? "").trim() === "" ? "" : ` ${String(classNames).trim()}`}`;
+        return `<math-field read-only class=\"${classAttribute}\"${styleAttribute}>${Utils.formatMathTermName(mathText)}</math-field>`;
     }
 
     static formatMathExpression(text) {
@@ -1038,6 +1193,47 @@ class Utils {
         return Number.isFinite(value) ? value : text;
     }
 
+    // The small fraction a number is, when it is one: a half, a third, two thirds. It is how an angle
+    // in radians is read — the well known ones are portions of a turn rather than the decimals they
+    // come out as — and how a scale numbered in π finds the tick it is standing on. Nothing is
+    // returned for a number that is not a simple fraction, so the caller writes the decimal instead.
+    static findSimpleFraction(value, largestDenominator = 12, tolerance = 1e-6) {
+        if (!Number.isFinite(value))
+            return null;
+        const sign = value < 0 ? -1 : 1;
+        const magnitude = Math.abs(value);
+        for (let denominator = 1; denominator <= largestDenominator; denominator++) {
+            const numerator = Math.round(magnitude * denominator);
+            if (numerator === 0)
+                continue;
+            if (Math.abs(magnitude - numerator / denominator) >= tolerance)
+                continue;
+            const divisor = Utils.greatestCommonDivisor(numerator, denominator);
+            return { numerator: sign * numerator / divisor, denominator: denominator / divisor };
+        }
+        return null;
+    }
+
+    // The same fraction written out: "1/2", "2/3", or the whole number when it is one. A number that
+    // is no simple fraction is written as itself, rounded the way every number on the board is.
+    static formatFractionText(value, largestDenominator = 12) {
+        const fraction = Utils.findSimpleFraction(value, largestDenominator);
+        if (!fraction)
+            return String(Utils.roundToPrecision(Number(value), 3));
+        return fraction.denominator === 1 ? String(fraction.numerator) : `${fraction.numerator}/${fraction.denominator}`;
+    }
+
+    static greatestCommonDivisor(first, second) {
+        let left = Math.abs(first);
+        let right = Math.abs(second);
+        while (right) {
+            const remainder = left % right;
+            left = right;
+            right = remainder;
+        }
+        return left || 1;
+    }
+
     static roundToPrecision(value, precision) {
         const factor = 10 ** precision;
         return Math.round(value * factor) / factor;
@@ -1139,6 +1335,81 @@ class Utils {
             return NaN;
         const mantissa = match[1] ?? `${match[2]}1`;
         return Number(`${mantissa}e${match[3] ?? match[4]}`);
+    }
+
+    // A number written as the portion of π it is: π/2, 2π/3, 3π. Nothing is written for a number that
+    // is no portion a reader knows, so the caller writes the decimal in whatever way it writes its
+    // own numbers — a scale numbered in π writes 0.286π, a reading beside a drawing writes 0.286 π.
+    static formatPiPortionText(portion, symbol = "\u03c0") {
+        const fraction = Utils.findSimpleFraction(portion);
+        if (!fraction)
+            return null;
+        const sign = fraction.numerator < 0 ? "-" : "";
+        const numerator = Math.abs(fraction.numerator);
+        const head = `${sign}${numerator === 1 ? "" : numerator}${symbol}`;
+        return fraction.denominator === 1 ? head : `${head}/${fraction.denominator}`;
+    }
+
+    // The same portion read back from what was typed in its place: π/2 and \frac{\pi}{2} and 0.5π are
+    // all a half of π, and a number with no π in it is the number itself. It is how a row written in
+    // portions of π takes what the reader writes over it.
+    static parsePiText(value) {
+        const text = String(value ?? "").trim()
+            .replace(/\\(?:d|t)?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, "($1)/($2)")
+            .replace(/\\pi|\\Pi/g, "\u03c0")
+            .replace(/[{}\s]/g, "");
+        if (!text.includes("\u03c0"))
+            return Utils.parseFractionText(text);
+        const match = /^\(?([+-]?(?:\d+\.?\d*|\.\d+)?)\)?\u03c0\)?(?:\/\(?([+-]?(?:\d+\.?\d*|\.\d+))\)?)?$/.exec(text);
+        if (!match)
+            return NaN;
+        const numerator = match[1] === "" || match[1] === "+" ? 1 : (match[1] === "-" ? -1 : Number(match[1]));
+        const denominator = match[2] === undefined ? 1 : Number(match[2]);
+        if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0)
+            return NaN;
+        return numerator * Math.PI / denominator;
+    }
+
+    // A portion written as mathematics rather than as characters, for a surface that can typeset it: a
+    // half of π is \\frac{\\pi}{2}, written the way it is written by hand rather than spelt with a slash.
+    // A portion of nothing in particular — no symbol — is the fraction alone, so the same writer serves
+    // a row counted in π and one counted in halves and thirds of a plain unit. A portion that is no
+    // simple fraction is the decimal it is. Hand what comes back to buildReadOnlyMathFieldMarkup and
+    // any shape has the fraction typeset.
+    static formatPortionLatex(portion, symbol = "\\pi", digits = 6) {
+        const value = Number(portion);
+        if (!Number.isFinite(value))
+            return "";
+        if (Math.abs(value) < 1e-10)
+            return "0";
+        const fraction = Utils.findSimpleFraction(value);
+        if (!fraction)
+            return `${Utils.roundToPrecision(value, digits)}${symbol}`;
+        const sign = fraction.numerator < 0 ? "-" : "";
+        const numerator = Math.abs(fraction.numerator);
+        const head = symbol === "" ? String(numerator) : `${numerator === 1 ? "" : numerator}${symbol}`;
+        return fraction.denominator === 1 ? `${sign}${head}` : `${sign}\\frac{${head}}{${fraction.denominator}}`;
+    }
+
+    // A fraction as it is written and as it is typed: "1/2", "\\frac{1}{2}", or a plain number, which
+    // is a fraction over one. It is how a row written in portions of something reads back what was
+    // put in its place, so a half typed as a half is a half.
+    static fractionTextPattern = /^([+-]?(?:\d+\.?\d*|\.\d+))\s*\/\s*([+-]?(?:\d+\.?\d*|\.\d+))$/;
+    static fractionLatexPattern = /^\\(?:d|t)?frac\s*\{([^{}]+)\}\s*\{([^{}]+)\}$/;
+
+    static parseFractionText(value) {
+        const plain = Utils.parseNumericText(value);
+        if (Number.isFinite(plain))
+            return plain;
+        const text = String(value ?? "").trim();
+        const match = Utils.fractionLatexPattern.exec(text) ?? Utils.fractionTextPattern.exec(text);
+        if (!match)
+            return NaN;
+        const numerator = Utils.parseNumericText(match[1]);
+        const denominator = Utils.parseNumericText(match[2]);
+        if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0)
+            return NaN;
+        return numerator / denominator;
     }
 
     // How a number is written back into a field: the shortest text that reads as the same number,

@@ -1103,6 +1103,97 @@
                 },
                 "additionalProperties": false
             }
+        },
+        {
+            "name": "add_trigonometric_circle",
+            "componentType": "trigonometric-circle",
+            "displayName": "Trigonometric circle",
+            "description": "Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is written by the drag — so the same object shows a model turning a circle and lets a reader turn one for the model. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it.\n\nUse it wherever a model turns something round a circle, or wherever a reader should be able to. Naming a term the model works out on angleVariable turns the point with the run; naming a pair on pointXVariable and pointYVariable places the point directly and the angle and the radius are read off it instead. Every row the model leaves free is written by dragging the point, so the same object is the control for an angle, a radius, a pair of coordinates, a tangent and an arc length at once. radiusVariable at one makes it the trigonometric circle, where the projections read the cosine and the sine themselves. snapDivisions makes a dragged angle land on a whole number of parts of the circle when the point is let go — twelve for every thirty degrees, each read as the portion of π it is.",
+            "capabilities": [
+                "radial",
+                "angular",
+                "reads-model",
+                "interaction",
+                "writes-model",
+                "textual"
+            ],
+            "example": {
+                "name": "Trigonometric circle",
+                "parameters": {
+                    "angleVariable": "theta",
+                    "pointXVariable": "x",
+                    "pointYVariable": "y",
+                    "showTangent": true,
+                    "snapDivisions": 12
+                }
+            },
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name for the object on the board. A name already taken is given a number. Defaults to \"Trigonometric circle\"."
+                    },
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "angleVariable": {
+                                "type": "string",
+                                "description": "The angle the point stands at, measured from the positive horizontal axis and growing anticlockwise. A term the model works out for itself turns the point; a term the model leaves free, or a plain number, is written by dragging the point. It is held in the unit the model is set to, whichever the object is marked in, so changing the mark changes how the angle is written and never where the point is. A model term name, or a number written as text. Left out, it stays \"0.9\"."
+                            },
+                            "radiusVariable": {
+                                "type": "string",
+                                "description": "How far the point stands from the centre. Left at one the circle is the trigonometric circle, where the two projections read the cosine and the sine themselves rather than multiples of them. A model term name, or a number written as text. Left out, it stays \"1\"."
+                            },
+                            "pointXVariable": {
+                                "type": "string",
+                                "description": "How far across the point stands — the radius times the cosine of the angle, and the cosine itself on a circle of radius one. Named together with the row below it, the pair places the point and the angle is read off it. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "pointYVariable": {
+                                "type": "string",
+                                "description": "How far up the point stands — the radius times the sine of the angle, and the sine itself on a circle of radius one. Named together with the row above it, the pair places the point and the angle is read off it. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "tangentVariable": {
+                                "type": "string",
+                                "description": "The tangent of the angle, read on the line standing at the radius. A term the model works out for itself places the point where its tangent says, which is a half turn short of telling the whole story, so it is read only where neither the pair nor the angle is the model's own. A quarter turn has no tangent at all: nothing is written there and the row keeps what it held. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "arcVariable": {
+                                "type": "string",
+                                "description": "The length of the arc swept from the zero direction, the radius times the angle in radians. A term the model works out for itself places the point where that length reaches — the last of the four ways the point can be placed, and so read only where the pair, the angle and the tangent are all left free. Every other row it names is written by the drag. A model term name, or a number written as text. Left out, it stays \"0\"."
+                            },
+                            "angleUnit": {
+                                "type": "string",
+                                "enum": [
+                                    "radians",
+                                    "degrees"
+                                ],
+                                "description": "How the angle is written. Radians are written as the portion of π they are, the way a scale numbered in π is numbered, so a quarter turn is π/2; degrees are numbers of degrees with the degree mark after them, so a quarter turn is 90 º. It says nothing about what the angle is — that is the model's to say — so changing it leaves the point where it stands. Only the angle is affected: the arc is a length, and the sine, the cosine and the tangent are numbers. Left out, it stays \"radians\"."
+                            },
+                            "snapDivisions": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 360,
+                                "description": "How many equal parts of the circle a dragged angle lands on: four steps it a quarter turn at a time, six every sixth of a turn, twelve every thirty degrees and twenty-four every fifteen. The point follows the pointer while it is held and lands on the nearest part the moment it is let go, so nothing is fighting the reader on the way. It lands there exactly, so a third of a turn reads π/3. Left at nothing the point stays wherever the pointer took it. Left out, it stays 0."
+                            },
+                            "dragRadius": {
+                                "type": "boolean",
+                                "description": "Whether dragging the point stretches the circle as well as turning it. Left off the radius is whatever the row above it says and the drag only turns. Left out, it stays false."
+                            },
+                            "showTangent": {
+                                "type": "boolean",
+                                "description": "The tangent: the line standing square to the radius where it meets the circle, drawn down to the horizontal axis, with the right triangle it closes shaded under it. A point standing straight up or straight down has no tangent. Left out, it stays false."
+                            },
+                            "showArc": {
+                                "type": "boolean",
+                                "description": "The arc the point has swept along the circle, whose length is the radius times the angle in radians. Left out, it stays false."
+                            }
+                        },
+                        "additionalProperties": false,
+                        "description": "The parameters to set when it is placed. Every one is optional."
+                    }
+                },
+                "additionalProperties": false
+            }
         }
     ]
 }

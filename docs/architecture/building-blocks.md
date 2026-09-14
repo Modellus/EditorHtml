@@ -19,14 +19,15 @@ Five layers, one registry, no runtime code evaluation.
 Primitives   circle, rect, ellipse, line, polyline, polygon, arc, ring, path, text, image, group
 Modifiers    translate, rotate, scale, mirror, opacity, visibility, stroke, fill, z-order, repeat
 Behaviours   selectable, draggable, resizable, rotatable, hoverable, tooltip, drag-angle,
-             drag-rotate, drag-axis-tick, follow-pointer, clickable, press-and-slide,
-             play-note, keep-time, remember, forget, track-pointer, …
+             drag-rotate, drag-circle-point, drag-axis-tick, follow-pointer, clickable,
+             press-and-slide, play-note, keep-time, remember, forget, track-pointer, …
 Bindings     constant | parameter | variable | expression | formula | token | format | memory
 Components   dial-face, tick-ring, label-ring, pointer-hand, pointer-ring, seven-segment-display,
              piano-keyboard, plot-grid, plot-axes, plot-crosshair, memory-list, memory-trace,
              analogue-clock, compass, speedometer,
              circular-gauge, rotating-vector, orbit-system, steering-wheel,
-             thermometer, calculator, mouse-tracker, piano, + custom components
+             thermometer, calculator, mouse-tracker, piano, trigonometric-circle,
+             + custom components
 ```
 
 ### How a drawing is made
@@ -737,6 +738,8 @@ Bindings:
 | `{ memory: "history", row: <binding>, field: "x", from: "end" }` | a memory: the whole list, one row, or one field of it |
 | `{ memoryCount: "history" }` | how many rows a memory holds |
 | `{ termUnit: { parameter: "valueVariable" } }` | what the term a parameter names is measured in, as the model holds it |
+| `{ termName: { parameter: "angleVariable" }, otherwise: "θ" }` | what the term a parameter names is called; `otherwise` is the name the part goes by while no row names it |
+| `{ model: "radiansPerAngle" }` | how many radians one of the model's own angles is worth, so a drawing can turn an angle a term holds into a picture whichever unit the model counts angles in; `"angleUnit"` is the name of that unit |
 
 Expressions are parsed by `Modellus.Parser` (the same engine that runs the model) into a
 `Branch` and evaluated with `branch.calculate(values)`. There is no `eval`, no `new Function`,

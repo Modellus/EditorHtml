@@ -524,6 +524,10 @@ var ComponentShapeToolbarMixin = {
             // for that input, so the row writes the unit there rather than inventing a property the
             // object does not know. One declaring none offers no unit to a plain number.
             valueUnitProperty: parameter.unitParameter ?? "",
+            // A row written in a unit the object chooses spells a plain value in that unit — an angle
+            // kept in radians reads as the multiple of π it is — and reads back what is typed in its
+            // place the same way. What the row holds never changes.
+            valueWriting: () => this.getComponentRowWriting(parameter),
             // A parameter the object publishes under invites a name of the reader's own: the wave it
             // draws becomes that term, so a name the model has never held is the point of the row
             // rather than a term that has gone missing.

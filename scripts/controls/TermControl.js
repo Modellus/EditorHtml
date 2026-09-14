@@ -399,6 +399,7 @@ class TermControl {
             mode: TermControl.createBaseShapeModeSelection(baseShape, formInstance, modeProperty, options.modeItems ?? [], options.modePairValue ?? "", () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl)),
             colorSelection: TermControl.createBaseShapeTermColorSelection(baseShape, options.colorProperty ?? ""),
             units: TermControl.createTermUnitsSelection(baseShape.board, TermControl.createBaseShapeValueUnitsSelection(baseShape, options.valueUnitProperty === undefined ? TermControl.getValueUnitProperty(term) : options.valueUnitProperty)),
+            valueWriting: options.valueWriting ?? null,
             extraTerm: TermControl.createBaseShapeExtraTermSelection(baseShape, formInstance, extraTermProperty, normalizeCustomValue, () => TermControl.syncBaseShapeTermControl(baseShape, formInstance, term, caseProperty, termControl), options.showExtraTerm ?? null),
             getTermItems: () => TermControl.getBaseShapeTermSelectItems(baseShape, term, normalizeCustomValue),
             getBoard: () => baseShape.board,
@@ -1535,6 +1536,68 @@ class TermControl {
 
     // A plain number is not mathematics to typeset: it is shown as text in the player's own
     // start value font, so a value reads the same wherever the reader meets it.
+    // A row may be written in a unit the surface chooses rather than in the one it stores: an angle
+    // the model keeps in radians is written as the portion of π it is — π/2, 2π/3, the ones a reader
+    // knows by heart — and read back the same way, so a half typed as a half is a half. What is
+    // stored never changes, only how the row spells it, so the mark a row wears can never move it.
+    getPlainValueWriting(value) {
+        const writing = this.options.valueWriting?.() ?? null;
+        const factor = Number(writing?.modelUnitsPerWritten);
+        if (!writing || !Number.isFinite(factor) || factor === 0)
+            return null;
+        if (TermControl.isPlainValue(value))
+            return writing;
+        return writing.style === "pi" && Number.isFinite(Utils.parsePiText(value)) ? writing : null;
+    }
+
+    // What the row's value comes to in the unit it is written in, and NaN where the row is written in
+    // no unit of its own.
+    getWrittenPlainValue(value) {
+        const text = this.normalizeTermValue(value);
+        const writing = this.getPlainValueWriting(text);
+        if (!writing)
+            return NaN;
+        return Utils.parsePiText(text) / Number(writing.modelUnitsPerWritten);
+    }
+
+    writePlainValue(value) {
+        const text = this.normalizeTermValue(value);
+        const writing = this.getPlainValueWriting(text);
+        if (!writing)
+            return text;
+        const written = this.getWrittenPlainValue(text);
+        if (writing.style !== "pi")
+            return String(Utils.roundToPrecision(written, 6));
+        if (Math.abs(written) < 1e-10)
+            return "0";
+        return Utils.formatPiPortionText(written) ?? `${Utils.roundToPrecision(written, 6)} \u03c0`;
+    }
+
+    // The same value as mathematics, for the surfaces that can typeset it: a portion of π is the
+    // fraction it is, written the way it is written by hand rather than spelt with a slash. Nothing is
+    // returned where the value is no mathematics — a number of degrees is a number, written as one.
+    writePlainValueLatex(value) {
+        const writing = this.getPlainValueWriting(this.normalizeTermValue(value));
+        if (writing?.style !== "pi")
+            return "";
+        return Utils.formatPortionLatex(this.getWrittenPlainValue(value));
+    }
+
+    readPlainValue(text) {
+        const typed = String(text ?? "").trim();
+        const writing = this.getPlainValueWriting(typed);
+        if (!writing)
+            return typed;
+        // What is typed is an angle — π/2, or a number of radians — and a row written in portions of π
+        // holds portions, so the angle typed in its place is counted in them before it is stored.
+        const written = writing.style === "pi" ? Utils.parsePiText(typed) / Math.PI : Utils.parseFractionText(typed);
+        return String(Utils.roundToPrecision(written * Number(writing.modelUnitsPerWritten), 10));
+    }
+
+    getPlainValueSuffix(value) {
+        return String(this.getPlainValueWriting(value)?.suffix ?? "");
+    }
+
     static isPlainValue(value) {
         const text = TermControl.normalizeTermValue(value);
         if (typeof text !== "string" || text.trim() === "")
@@ -1556,10 +1619,11 @@ class TermControl {
     // inside it. What is typed goes the way the list's own choice goes, so a value and a term are
     // written into the model by the same hand.
     commitTypedTermValue(item, index, value, onChanged, onCustomItemCreating, component) {
+        const written = this.readPlainValue(value);
         if (onCustomItemCreating)
-            onCustomItemCreating({ text: value, customItem: null, item: item, index: index, component: component });
+            onCustomItemCreating({ text: written, customItem: null, item: item, index: index, component: component });
         else
-            onChanged(value);
+            onChanged(written);
     }
 
     // The chip is what the field wears at rest. It is taken off the moment the field is focused, so
@@ -1717,7 +1781,7 @@ class TermControl {
         if (text === "")
             return "";
         if (TermControl.isPlainValue(text))
-            return text;
+            return this.writePlainValueLatex(text) || this.writePlainValue(text);
         return Utils.formatMathTermName(Utils.getDisplayedTerm(text, system));
     }
 
@@ -1817,9 +1881,23 @@ class TermControl {
         if (displayedText === "")
             return;
         if (TermControl.isPlainValue(selectedValue)) {
-            const valueText = String(selectedValue).trim();
-            if (Utils.numericTextPattern.test(valueText))
-                return chip.append(TermControl.createPlainValueLabel(valueText, "mdl-term-editor-value"));
+            const valueText = this.writePlainValue(selectedValue);
+            const suffix = this.getPlainValueSuffix(selectedValue);
+            // A value that is mathematics is typeset rather than spelt out in characters, so a portion
+            // of π stands on the row as the fraction it is.
+            const valueLatex = this.writePlainValueLatex(selectedValue);
+            if (valueLatex !== "") {
+                chip.append(Utils.buildReadOnlyMathFieldMarkup(valueLatex, "height:auto;width:auto;display:inline-block", "mdl-term-editor-math-field mdl-term-editor-value-field"));
+                return chip;
+            }
+            if (this.getPlainValueWriting(selectedValue) || Utils.numericTextPattern.test(valueText)) {
+                chip.append(TermControl.createPlainValueLabel(valueText, "mdl-term-editor-value"));
+                // Drawn rather than typed, so it cannot be edited away and the row goes on holding
+                // what it always held.
+                if (suffix !== "")
+                    chip.append(TermControl.createPlainValueLabel(suffix, "mdl-term-editor-value-suffix"));
+                return chip;
+            }
             // A value written in scientific notation is mathematics, and is typeset as it was written.
             chip.append("<math-field read-only class='form-math-field mdl-term-editor-math-field mdl-term-editor-value-field' style='height:auto;width:auto;display:inline-block'></math-field>");
             return Utils.writeMathField(chip.find(".mdl-term-editor-math-field").last()[0], valueText);

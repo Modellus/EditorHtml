@@ -605,6 +605,87 @@ class ComponentShape extends BaseShape {
         return this.getComponentCompiler().bindings.definesTerm(name, this.getCompilationContext());
     }
 
+    // A row read off the drawing rather than written into it — how far across the point of a circle
+    // stands, the tangent of the angle it is at — holds whatever it was last given, which is not what
+    // the drawing shows until a drag or the model writes it. A definition names the local carrying the
+    // value it drew, and that is what the reading says, so the number and the picture cannot disagree.
+    //
+    // A row holding a plain number has no name to write in front of that value. The definition names
+    // the mark the measure goes by instead, so a reading is told apart by what it measures rather than
+    // standing as a bare number; `valueIconMirrored` writes that mark the other way up, which is how a
+    // cosine wears the sine's wave reversed.
+    getTermEntryDisplayValue(entry) {
+        const parameter = this.getComponentParameter(entry.term);
+        const local = String(parameter?.valueLocal ?? "");
+        const termName = String(this.properties[entry.term] ?? "");
+        if (local === "" || termName === "")
+            return null;
+        const value = Number(this.lastCompilation?.componentFrame?.[local]);
+        if (!Number.isFinite(value))
+            return null;
+        const namesTerm = this.namesTerm(termName);
+        const termText = namesTerm ? this.formatTermForDisplay(termName) : "";
+        const writing = this.getComponentRowWriting(parameter);
+        const valueText = writing ? this.writeComponentRowValue(value, writing, termName) : this.formatModelValue(value, termName);
+        const valueLatex = writing ? this.writeComponentRowValueLatex(value, writing) : "";
+        const unitText = writing ? "" : this.getTermUnitText(termName, entry.term);
+        const iconGlyph = namesTerm ? "" : String(parameter.valueIcon ?? "");
+        return {
+            termText: termText,
+            valueText: valueText,
+            valueLatex: valueLatex,
+            unitText: unitText,
+            iconGlyph: iconGlyph,
+            iconMirrored: iconGlyph !== "" && parameter.valueIconMirrored === true,
+            text: Utils.buildTermValueText(termText, valueText, unitText)
+        };
+    }
+
+    // How a row is written, when a choice of the object's own says so: an angle is written as the
+    // portion of π it is, or as a number of degrees with the mark after it. What the row holds is an
+    // angle in the unit the model keeps its angles in, so the two are put together here — how many of
+    // the model's own units one written unit is worth — and the choice can never move what is held.
+    getComponentRowWriting(parameter) {
+        const chooser = this.getComponentParameter(parameter?.angleUnitParameter ?? "");
+        if (!chooser?.choiceWriting)
+            return null;
+        const writing = chooser.choiceWriting[String(this.properties[chooser.id] ?? "")] ?? null;
+        const radiansPerWritten = Number(writing?.radiansPer);
+        if (!writing || !Number.isFinite(radiansPerWritten) || radiansPerWritten === 0)
+            return null;
+        return Object.assign({ modelUnitsPerWritten: radiansPerWritten / this.getModelRadiansPerAngle() }, writing);
+    }
+
+    getModelRadiansPerAngle() {
+        return this.board.calculator?.properties?.angleUnit === "degrees" ? Math.PI / 180 : 1;
+    }
+
+    // The value the drawing worked out is an angle in radians, whatever the model is set to, so the
+    // written number is that angle counted in written units: portions of π, or degrees. A portion is
+    // written the way a scale numbered in π is — π/2, 2π/3 — where it is one a reader knows, and as
+    // the decimal portion with π a space after it where it is not. A degree carries its mark the same
+    // way, a space after the number, so the two are read apart.
+    writeComponentRowValue(value, writing, termName) {
+        const written = Number(value) / Number(writing.radiansPer);
+        const suffix = String(writing.suffix ?? "");
+        if (writing.style !== "pi")
+            return `${this.formatModelValue(written, termName)} ${suffix}`.trim();
+        if (Math.abs(written) < 1e-10)
+            return "0";
+        return Utils.formatPiPortionText(written) ?? `${Utils.roundToPrecision(written, 3)} \u03c0`;
+    }
+
+    // The same value as mathematics, for the reading to carry typeset rather than spelt out: a portion
+    // of π is the fraction it is. Nothing is written where the value is no mathematics — a number of
+    // degrees is a number, and is written as one.
+    writeComponentRowValueLatex(value, writing) {
+        if (writing.style !== "pi")
+            return "";
+        // Three places is what a scale numbered in π writes a portion to, and what a reading standing
+        // beside a drawing has room for; the row in the toolbar, which is edited, keeps more.
+        return Utils.formatPortionLatex(Number(value) / Number(writing.radiansPer), "\\pi", 3);
+    }
+
     getTermEntryLabelPosition(entry) {
         const anchor = this.getComponentParameter(entry.term)?.valueAnchor;
         if (!anchor)
@@ -684,6 +765,8 @@ class ComponentShape extends BaseShape {
             this.attachDragAngleBehaviour(element, behaviour.input, false);
         if (behaviour.type === "drag-rotate")
             this.attachDragAngleBehaviour(element, behaviour.input, true);
+        if (behaviour.type === "drag-circle-point")
+            this.attachCirclePointDragBehaviour(element, behaviour.input);
         if (behaviour.type === "clickable")
             this.attachClickableBehaviour(element, behaviour.input);
         if (behaviour.type === "press-and-slide")
@@ -2066,6 +2149,192 @@ class ComponentShape extends BaseShape {
         if (this._angleDragRecordsUndo)
             this.dragEnd();
         this._angleDragRecordsUndo = false;
+    }
+
+    // A point dragged round a circle. Where the pointer stands says the angle, and how far out it
+    // stands says the radius when the drag is allowed to stretch one; everything else the circle is
+    // read for follows from that pair and is written beside it, so the reader turns one thing and
+    // the model is handed the whole reading rather than an angle to work the rest out from.
+    attachCirclePointDragBehaviour(element, input) {
+        if (!this.isCirclePointDragAllowed(input)) {
+            this.markWriteLocked(element, { variable: input.angleVariable });
+            return;
+        }
+        element.style.cursor = "grab";
+        element.setAttribute("pointer-events", "all");
+        element.addEventListener("pointerdown", event => this.onCirclePointDragStart(event, input));
+        this.attachAngleDragHover(element, input);
+    }
+
+    isCirclePointDragAllowed(input) {
+        if (!this.isInteractable() || this.isLocked())
+            return false;
+        return this.getCirclePointDragWrites(input).length > 0;
+    }
+
+    // The readings are asked for one at a time, the way the two halves of a turning-and-stretching
+    // drag are: a circle whose angle the model works out for itself is still dragged where it writes
+    // the point, and only one that can write nothing at all refuses the pointer.
+    getCirclePointDragWrites(input) {
+        return this.getCirclePointDragReadings(input).filter(reading => this.isDragHalfAllowed(reading.variable, reading.property));
+    }
+
+    getCirclePointDragReadings(input) {
+        const readings = [
+            { name: "angle", variable: input.angleVariable, property: input.angleProperty },
+            { name: "x", variable: input.xVariable, property: input.xProperty },
+            { name: "y", variable: input.yVariable, property: input.yProperty },
+            { name: "tangent", variable: input.tangentVariable, property: input.tangentProperty },
+            { name: "arc", variable: input.arcVariable, property: input.arcProperty }
+        ];
+        // A circle that is not stretched by the drag reads its radius rather than writing it, so the
+        // row naming it is not one of the readings the gesture is offered for.
+        if (input.stretch === true)
+            readings.push({ name: "radius", variable: input.radiusVariable, property: input.radiusProperty });
+        return readings;
+    }
+
+    onCirclePointDragStart(event, input) {
+        // Asked again here because the model can stop letting a variable be written between the
+        // moment the listener went on and the moment the pointer comes down.
+        const writes = this.getCirclePointDragWrites(input);
+        if (writes.length === 0)
+            return;
+        event.preventDefault();
+        this.selectFromGrab();
+        this.board.pointerLocked = true;
+        this._circlePointWrites = writes;
+        this._circlePointRecordsUndo = writes.some(reading => this.isDragHalfPropertyWrite(reading.variable, reading.property));
+        if (this._circlePointRecordsUndo)
+            this.dragStart();
+        this._circlePointMove = moveEvent => this.onCirclePointDragMove(moveEvent, input);
+        this._circlePointEnd = () => this.onCirclePointDragEnd();
+        window.addEventListener("pointermove", this._circlePointMove);
+        window.addEventListener("pointerup", this._circlePointEnd);
+        window.addEventListener("pointercancel", this._circlePointEnd);
+        this.onCirclePointDragMove(event, input);
+    }
+
+    onCirclePointDragMove(event, input) {
+        const point = this.getComponentLocalPoint(event);
+        const across = point.x - Number(input.centerX);
+        const up = Number(input.centerY) - point.y;
+        const distance = Math.hypot(across, up);
+        // The centre points nowhere, so a pointer resting on it leaves the circle where it stood.
+        if (distance < 2)
+            return;
+        // The point follows the pointer while it is held, so a reader setting an angle is never
+        // fighting the parts the object was asked to land on. Where it lands is settled when it is let
+        // go, and what the pointer last said is kept for that.
+        this._circlePointAngle = Math.atan2(up, across);
+        this._circlePointRadius = this.readCirclePointRadius(input, distance);
+        this._circlePointInput = input;
+        this.writeCirclePointReadings(input, this._circlePointAngle, this._circlePointRadius);
+    }
+
+    // A whole turn cut into as many equal parts as the object asks for, so a dragged angle lands on
+    // one of them. Asked for none, the angle stays wherever the pointer put it.
+    snapCircleAngle(angleRadians, input) {
+        if (!this.snapsCircleAngle(input))
+            return angleRadians;
+        const step = Math.PI * 2 / Math.round(Number(input.snapDivisions));
+        return Math.round(angleRadians / step) * step;
+    }
+
+    snapsCircleAngle(input) {
+        const divisions = Math.round(Number(input.snapDivisions));
+        return Number.isFinite(divisions) && divisions >= 1;
+    }
+
+    readCirclePointRadius(input, distance) {
+        const pixelsPerUnit = Number(input.pixelsPerUnit);
+        // A circle drawn at no scale at all reaches nowhere in particular, so there is no radius the
+        // pointer could be read as: the drag turns the point and writes no radius rather than an
+        // infinity.
+        if (input.stretch !== true || !Number.isFinite(pixelsPerUnit) || pixelsPerUnit === 0)
+            return this.readDragHalf(input.radiusVariable);
+        return this.clampDragValue(distance / pixelsPerUnit, { minimum: input.minimumRadius, maximum: input.maximumRadius });
+    }
+
+    // The readings are written together and the model is worked through once, rather than once per
+    // reading: a drag writes on every pointer move, and a model run six times over on each of them
+    // would be the whole cost of the object.
+    writeCirclePointReadings(input, angleRadians, radius, exactAngle = false) {
+        const turn = Math.PI * 2;
+        const wrapped = ((angleRadians % turn) + turn) % turn;
+        const unitsPerTurn = Number(input.unitsPerTurn) || 360;
+        const cosine = Math.cos(wrapped);
+        const sine = Math.sin(wrapped);
+        // An angle the object landed on a part of the circle is that part exactly. Rounding it the way
+        // every other dragged value is rounded would leave a third of a turn holding 1.05 rather than
+        // the third it is, and a reading written in portions of π could no longer say which part it is.
+        this.writeCirclePointReading("angle", wrapped * unitsPerTurn / turn, exactAngle);
+        this.writeCirclePointReading("radius", radius);
+        this.writeCirclePointReading("x", radius * cosine);
+        this.writeCirclePointReading("y", radius * sine);
+        this.writeCirclePointReading("arc", radius * wrapped);
+        // A quarter turn stands the point where the tangent line is never met. There is no number to
+        // write there, so the row keeps what it held rather than being handed one the reader would
+        // have to read as an infinity.
+        if (Math.abs(cosine) > 1e-9)
+            this.writeCirclePointReading("tangent", sine / cosine);
+        this.board.calculator.calculate();
+        this.board.markDirty(this);
+    }
+
+    writeCirclePointReading(name, value, exact = false) {
+        const reading = this._circlePointWrites.find(entry => entry.name === name);
+        if (!reading)
+            return;
+        const calculator = this.board.calculator;
+        const rounded = this.roundCirclePointReading(reading, value, exact);
+        const variable = String(reading.variable ?? "");
+        if (calculator.isTerm(variable)) {
+            calculator.setTermValue(variable, rounded, calculator.getIteration(), this.getTermCaseNumber("caseNumber"));
+            return;
+        }
+        this.setProperty(this.getBehaviourProperty({ property: reading.property }), rounded);
+    }
+
+    // A dragged value is a round number as the reader reads it, so a reading written in a unit of its
+    // own is rounded in that unit rather than in the one it is held in: an angle read in portions of π
+    // is rounded to a round portion, which is what makes a drag to the top of the circle read π/2
+    // rather than 0.5π. One the object landed on a part of the circle is that part exactly, and is not
+    // rounded at all — a third of a turn rounded to a couple of places is no longer a third.
+    roundCirclePointReading(reading, value, exact) {
+        if (exact)
+            return Number(Number(value).toPrecision(12));
+        const precision = this.board.calculator.getPrecision();
+        const writing = this.getComponentRowWriting(this.getComponentParameter(String(reading.property ?? "")));
+        const factor = Number(writing?.modelUnitsPerWritten);
+        if (!Number.isFinite(factor) || factor === 0)
+            return Utils.roundToPrecision(value, precision);
+        return Number((Utils.roundToPrecision(value / factor, precision) * factor).toPrecision(12));
+    }
+
+    // Let go over a circle asked for a number of parts, the angle lands on the nearest of them, and
+    // lands on it exactly: a part of a turn rounded to a couple of places is no longer that part.
+    settleCirclePointDrag() {
+        const input = this._circlePointInput;
+        if (!input || !this.snapsCircleAngle(input) || !Number.isFinite(this._circlePointAngle))
+            return;
+        this.writeCirclePointReadings(input, this.snapCircleAngle(this._circlePointAngle, input), this._circlePointRadius, true);
+    }
+
+    onCirclePointDragEnd() {
+        this.settleCirclePointDrag();
+        this._circlePointInput = null;
+        this._circlePointAngle = NaN;
+        window.removeEventListener("pointermove", this._circlePointMove);
+        window.removeEventListener("pointerup", this._circlePointEnd);
+        window.removeEventListener("pointercancel", this._circlePointEnd);
+        this._circlePointMove = null;
+        this._circlePointEnd = null;
+        this._circlePointWrites = [];
+        this.board.pointerLocked = false;
+        if (this._circlePointRecordsUndo)
+            this.dragEnd();
+        this._circlePointRecordsUndo = false;
     }
 
     // A drag target reads and writes the same place: a model term when the property names one, and

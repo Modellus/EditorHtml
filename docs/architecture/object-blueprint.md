@@ -130,6 +130,12 @@ term the object reads carries it, chosen beside the term itself, and `{ "termUni
 definition asks for it. A unit parameter of the object's own is what is left for an object reading a
 plain number rather than a term.
 
+A part of a drawing is named the same way. `{ "termName": { "parameter": "angleVariable" } }` is what
+the reader called the row, spelt the way the board spells it everywhere else, and `otherwise` is the
+name the part goes by in the mathematics until a row names it — a wedge is `θ` only until it is
+`theta`. A name written into a definition is a name the reader cannot change, so a part standing for
+a row should never carry one.
+
 ### Identity
 
 `type` is `^[a-z][a-z0-9-]{2,48}$` and must not be a type the editor already ships: a document naming
@@ -151,7 +157,8 @@ Each is `{ id, label, valueType, defaultValue, category }` plus any of `descript
 `maximum`, `enumValues`, `enumIcons`, `unit`, `unitParameter`, `required`, `bindable`, `agentAccessible`,
 `userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`, `modeParameter`,
 `pairedField`, `modeField`, `valueParameter`, `minimumParameter`, `maximumParameter`, `toolbarKey`,
-`toolbarTooltip`, `valueAnchor`, `visibleWhen`.
+`toolbarTooltip`, `angleUnitParameter`, `valueAnchor`, `valueIcon`, `valueIconMirrored`, `valueLocal`,
+`visibleWhen`.
 
 `valueType` is one of `number`, `string`, `boolean`, `colour`, `variable`, `terms`, `expression`,
 `memory`, `character`, `audio`, `object`.
@@ -216,6 +223,51 @@ term they press over the pedal that presses it. Add a **`node`** — `{ "node": 
 part wherever the drawing puts it rather than where the box it was first drawn in happened to be; a
 node the object is not drawing places nothing. A row without an anchor has nowhere to draw a label,
 so it is not offered the eye.
+
+A row read **off** the drawing rather than written into it — how far across the point of a circle
+stands, the tangent of the angle it is at — holds whatever it was last given, which is not what the
+drawing shows until a gesture or the model writes it. Name a **`valueLocal`** and the label reads
+that local instead of the row: the number beside a projection is then the projection, and the two
+can never disagree. The row itself is untouched, so what a drag writes and what a file carries are
+still the row's own.
+
+A row holding a plain number has no name to write in front of that value. **`valueIcon`** is the mark
+the measure goes by, written where the name would stand — an angle, a wave for a sine, the chart's
+ruler for a tangent — so a reading is told apart by what it measures rather than standing as a bare
+number. **`valueIconMirrored`** writes that mark the other way up, which is how a cosine wears the
+sine's wave reversed; a name the reader gives the row always wins over the mark.
+
+A row may be **written in a unit the reader chooses** while holding the same thing throughout.
+**`angleUnitParameter`** names the choice, and that choice carries a **`choiceWriting`** map saying
+what each of its values writes:
+
+```json
+{ "id": "angleUnit", "valueType": "string", "enumValues": ["radians", "degrees"],
+  "choiceWriting": {
+      "radians": { "suffix": "", "style": "pi", "radiansPer": 3.141592653589793 },
+      "degrees": { "suffix": "º", "radiansPer": 0.017453292519943295 } } }
+```
+
+`radiansPer` is how many radians one written unit is worth — π for a row written in portions of π,
+π/180 for one written in degrees — so what the reader reads is the angle counted in those, and a
+`suffix` is the mark that follows it a space after the number. `style: "pi"` writes that count the way
+a scale numbered in π is numbered — `π/2`, `2π/3` where it is a portion a reader knows, `0.286 π`
+where it is not — and reads a portion typed in its place back, `π/2` and `\frac{\pi}{2}` and `0.5π`
+alike. On the row it is **typeset** rather than spelt out in characters, standing there as the fraction
+it is: `Utils.formatPortionLatex` writes any portion as mathematics and
+`Utils.buildReadOnlyMathFieldMarkup` puts it on a read-only field, so any shape can do the same. On the
+drawing the same fraction is typeset in a box beside the reading: `Utils.getMathMarkupBox` typesets a
+piece of mathematics once and keeps what it measured, and `Utils.applyTermLabelMath` stands it beside
+the label and hands back its bounds for the plate — the portions a reader meets are a short list, so a
+label redrawn every frame pays the cost of typesetting none of them twice.
+
+A row written this way is **rounded in the unit it is read in** when a drag writes it, so a
+drag to the top of the circle is a round portion rather than a round number of radians.
+
+What a row holds is an angle in the unit **the model** counts angles in, which is what
+`{ "model": "radiansPerAngle" }` hands the drawing, so the choice says how the angle is written and
+never what it is: changing it leaves the point exactly where it stands, whether the row holds a number
+of its own or names a term of the model's.
 
 A sixth is a key of its own in the toolbar. A `string` parameter with `enumValues` and `enumIcons` may
 declare **`"toolbarKey": true`**, and it is chosen from the same key the angle-or-orientation choice
@@ -343,6 +395,7 @@ why an ordinary object clips with a `clip-box` instead.
 | `clickable` | a click writes a model variable or one of the object's own parameters |
 | `press-and-slide` | the reader holds the node: pressing keeps the value where it is, sliding up raises it by `unitsPerPixel` a pixel and down lowers it, and letting go walks it back to `restValue` by `returnStep` every `intervalMs` (zero leaves it where it was released). What a pedal or a throttle needs — and the press, the slide and the fall back are one undo entry. Naming a `verticalVariable` as well presses a pair rather than a number: what it reads is the length of that pair, and what it writes is that pair laid down again at the length it was pressed to, along the direction it already pointed in |
 | `drag-angle` | dragging a hand around a centre points it at the pointer and writes the angle back, measured from `offsetDegrees` — zero straight up when that is left at nothing. `signed` reads that angle the short way round so one side of zero comes out below it, which is what a wheel wants; left off it runs from nothing to a whole turn, which is what a bearing wants. Naming a `verticalVariable` as well writes a pair: it keeps the length it had and takes the direction it was pointed at. Naming a `lengthVariable` instead makes the node reach the pointer rather than only point at it: how far the pointer stands from the anchor is written as the length, divided by `pixelsPerUnit` and held between `minimumLength` and `maximumLength`, so one drag both turns the thing and stretches it. The two halves are asked for one at a time, so an arrow the model gives a length to is still turned by hand |
+| `drag-circle-point` | a point is dragged round a circle and everything the circle is read for is written at once: the angle, the radius the pointer stands at when `stretch` says the drag may write one, how far across and how far up the point is, the tangent and the length of the arc. Each names a variable and a property, so a row holding a plain number is written on the object itself; each is asked for on its own, so a circle whose angle the model works out is still dragged where it writes the point; and `snapDivisions` makes the angle land on a whole part of the circle — the point follows the pointer while it is held and lands on the nearest part, exactly, when it is let go. The readings are written together and the model is worked through once, and the whole drag is one undo entry |
 | `drag-rotate` | dragging a rim or a bezel turns it by the angle travelled, not to the pointer. Naming a `verticalVariable` as well writes a pair rather than a number: the pair keeps its length and takes the angle it was turned to, which is how an object driven by a direction stays draggable |
 | `keep-time` | a key runs a clock: `play` sets it counting real time from wherever it stands, `pause` holds it, and `stop` ends the run and clears it. The four parts of the reading — hours, minutes, seconds, thousandths — are named a variable and a property each, so a clock bound to nothing counts in its own numbers, and the whole run is one undo entry. It counts on a clock of its own, so it goes on counting while the player stands still; name a `runningParameter` and the drawing can show which key it is on |
 | `drag-axis-tick` | an axis tick rescales the axis. `scale: "logarithmic"` places the ticks by the logarithm of their value and writes the far end as a power of ten, so a decade under the pointer stays under it; naming a `countProperty` and a `stepValue` makes the drag hold the step and write the new count, which is what an axis numbered by its divisions rather than by its step needs |
@@ -366,7 +419,7 @@ Do not redraw what one of these already draws.
 | a reading spelled out in lamps, the way a digital clock shows one | `seven-segment-display` |
 | **anything cartesian** | `plot-grid`, `plot-axes`, `plot-crosshair` |
 | a memory shown as a list or a path | `memory-list`, `memory-trace` |
-| a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `calculator`, `mouse-tracker`, `thermometer`, `ruler`, `protractor` |
+| a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `calculator`, `mouse-tracker`, `thermometer`, `ruler`, `protractor`, `trigonometric-circle` |
 
 An axis drawn as three lines and some text is the mistake the mouse tracker was built out of: the plot
 components carry the board's nice ticks, minor ticks, label gaps measured in tick fonts, and the drag
@@ -391,7 +444,9 @@ handles that rescale an axis.
 | `{ "memory": "history", "row": …, "field": "x", "from": "end" }` | a memory, a row, or a field |
 | `{ "memoryCount": "history" }` | how many rows it holds |
 | `{ "termUnit": { "parameter": "valueVariable" } }` | what the term a parameter names is measured in, as the model holds it |
+| `{ "termName": { "parameter": "angleVariable" }, "otherwise": "θ" }` | what the term a parameter names is called, spelt the way the board spells it; `otherwise` is the name the part goes by while no row names it |
 | `{ "independent": "step" }` | how much of the independent one row of the run is worth, which is what an object reading a term row by row measures its drawing in; `"value"` and `"name"` are the other two |
+| `{ "model": "radiansPerAngle" }` | how many radians one of the model's own angles is worth — 1 where the model works in radians, π/180 where it works in degrees — which is what a drawing multiplies a term by to turn an angle into a picture; `"angleUnit"` is the name of that unit itself |
 | `{ "element": <binding>, "index": <binding> }` | one element of a name the model defined over element indices with `y\left[i\right]=…`; the name comes from a binding, so an object points at whichever one the reader names |
 | `{ "past": <binding>, "ago": <binding> }` | what a name was worth `ago` earlier in the run, in the units of the model's own clock; a moment between two rows is read between them, and a moment before the run began reads as 0 |
 | `{ "swing": <binding> }` | the greatest distance from zero a name has reached on any row worked through so far, which is what an object fits a drawing to |
@@ -470,6 +525,7 @@ npx playwright test tests/object-picker.spec.js tests/component-blocks.spec.js
 | one object read two ways | [`ruler.json`](../../scripts/blocks/definitions/ruler.json) again — a linear scale and a logarithmic one in the same document, each set of ticks carried by a `when` on the same choice, and the pointer, the reading and the drag reading that choice through `choose` rather than through a second object. Its decade marks are placed by a `\log` in a formula over `$index`, since they are not evenly spaced, and the ones that fall outside the range are clamped to the edge and cut off by a `clip-box`, which keeps them out of the box the object reports as its own |
 | an instrument marked in π | [`protractor.json`](../../scripts/blocks/definitions/protractor.json) — `tick-ring` and `label-ring` round an `arc`, with a `direction` binding turning the pointer into the angle it stands at. What the two ends of its scale read is what it is marked in, so the same object measures degrees, radians or turns; `label-ring`'s `numberFormat` and the `format` binding's `"style": "pi"` are what write those numbers as π/6 rather than as 0.52 |
 | a quantity read as a length, up a scale of its own | [`thermometer.json`](../../scripts/blocks/definitions/thermometer.json) — the marks and their numbers are one `line` and one `text` under a `repeat` that steps down the scale, the numbers read from `$index`, and the value and the scale are worked out from the one ratio so they cannot disagree. It is also where to see **what scales with the box and what does not**: the glass is worked out from `$width`/`$height`, while the writing and the marks are the sizes `font.size.tick`, `font.size.large`, `axis.tickLength` and `axis.minorTickLength` hold, with the gaps around a label the same multiples of the tick font the chart's own axis uses — so resizing stretches the scale rather than the labels on it |
+| a construction read off a circle | [`trigonometric-circle.json`](../../scripts/blocks/definitions/trigonometric-circle.json) — six rows for the one point: whichever of them the model works out for itself places the point, chosen between by `defines`, and every row it leaves free is written by one `drag-circle-point`. It is where to see a reading marked with the sign of what it measures rather than named, through `valueIcon`. It is also where to see an angle worked out from a pair without an `atan2` to call: the half-angle form, with the half turn its denominator cannot reach handled apart |
 | a hand or arrow driven by an angle | [`rotating-vector.json`](../../scripts/blocks/definitions/rotating-vector.json) |
 | interactive, writing values back | [`compass.json`](../../scripts/blocks/definitions/compass.json) — `drag-angle` and `drag-rotate` on invisible grab areas |
 | drawn rather than written | [`compass.json`](../../scripts/blocks/definitions/compass.json) again — its rose and needle are [imported SVG](../../scripts/blocks/definitions/art/), wired by id, with the labels left to `label-ring` |
