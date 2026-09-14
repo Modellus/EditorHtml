@@ -705,12 +705,13 @@ var ComponentShapeToolbarMixin = {
     },
     createComponentEnumButtonGroup(parameter) {
         const named = !parameter.enumIcons;
+        const multiple = parameter.enumMultiple === true;
         const items = parameter.enumValues.map((value, index) => ({ value: value, icon: parameter.enumIcons?.[index] ?? "", hint: ComponentShapeToolbarMixin.formatChoiceLabel(value) }));
         return $('<div class="mdl-component-enum-buttons">').dxButtonGroup({
             items: items,
             keyExpr: "value",
-            selectionMode: "single",
-            selectedItemKeys: [this.properties[parameter.id]],
+            selectionMode: multiple ? "multiple" : "single",
+            selectedItemKeys: this.getComponentChoices(parameter),
             stylingMode: "outlined",
             elementAttr: { class: named ? "mdl-pill-group mdl-named-pill-group" : "mdl-pill-group mdl-small-icon" },
             buttonTemplate: (data, buttonContainer) => {
@@ -721,11 +722,28 @@ var ComponentShapeToolbarMixin = {
             },
             onContentReady: event => Utils.initPillButtonGroup(event.element[0]),
             onItemClick: event => {
+                if (multiple)
+                    return this.toggleComponentChoice(parameter, event.itemData.value, event.component);
                 Utils.movePillButtonGroup(event.component.element()[0]);
                 this.setComponentChoice(parameter, event.itemData.value);
             }
         });
     },
+    // A button of a group more than one of may be on at once turns itself on or off, and the choice
+    // holds the list of what is on. The last one on cannot be turned off — a reading has to be written
+    // in something — so pressing it leaves it where it is.
+    toggleComponentChoice(parameter, value, component) {
+        const chosen = this.getComponentChoices(parameter);
+        const next = chosen.includes(value) ? chosen.filter(choice => choice !== value) : parameter.enumValues.filter(choice => chosen.includes(choice) || choice === value);
+        if (next.length === 0) {
+            component?.option("selectedItemKeys", chosen);
+            return;
+        }
+        component?.option("selectedItemKeys", next);
+        Utils.movePillButtonGroup(component.element()[0]);
+        this.setComponentChoice(parameter, next.join(","));
+    },
+
     // The same catalogue of characters a body wears, offered to any component that says it draws
     // one: the object stores the key and places the drawing by the character's own pivot point.
     createComponentCharacterControl(parameter) {

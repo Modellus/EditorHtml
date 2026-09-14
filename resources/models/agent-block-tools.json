@@ -1167,7 +1167,7 @@
                                     "radians",
                                     "degrees"
                                 ],
-                                "description": "How the angle is written. Radians are written as the portion of π they are, the way a scale numbered in π is numbered, so a quarter turn is π/2; degrees are numbers of degrees with the degree mark after them, so a quarter turn is 90 º. It says nothing about what the angle is — that is the model's to say — so changing it leaves the point where it stands. Only the angle is affected: the arc is a length, and the sine, the cosine and the tangent are numbers. Left out, it stays \"radians\"."
+                                "description": "How the angle is written. Radians are written as the portion of π they are, the way a scale numbered in π is numbered, so a quarter turn is π/2; degrees are numbers of degrees with the degree mark after them, so a quarter turn is 90 º. Both may be on at once, and then the degrees stand in brackets after the portion, for a reader learning to read one off the other. It says nothing about what the angle is — that is the model's to say — so changing it leaves the point where it stands. Only the angle is affected: the arc is a length, and the sine, the cosine and the tangent are numbers. Left out, it stays \"radians\"."
                             },
                             "snapDivisions": {
                                 "type": "number",

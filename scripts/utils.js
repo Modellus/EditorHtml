@@ -7,16 +7,21 @@ class Utils {
         Utils.movePillButtonGroup(element);
     }
 
+    // The pill lies under what is chosen. A group where more than one may be on at once is chosen on
+    // several buttons together, so the pill runs from the first of them to the last and the whole of
+    // what is on reads as one.
     static movePillButtonGroup(element) {
         const pill = element.querySelector(".mdl-pill");
         if (!pill)
             return;
         // The button group marks the chosen button itself as the selected item.
-        const selected = element.querySelector(".dx-item-selected .dx-button");
-        if (!selected)
+        const selected = Array.from(element.querySelectorAll(".dx-item-selected .dx-button"));
+        if (selected.length === 0)
             return;
-        pill.style.left = selected.offsetLeft + "px";
-        pill.style.width = selected.offsetWidth + "px";
+        const left = Math.min(...selected.map(button => button.offsetLeft));
+        const right = Math.max(...selected.map(button => button.offsetLeft + button.offsetWidth));
+        pill.style.left = left + "px";
+        pill.style.width = (right - left) + "px";
     }
 
     static designTokens = null;
@@ -744,6 +749,10 @@ class Utils {
     // handed out from memory ever after. The size is part of the key, because the same fraction at a
     // different size is a different box.
     static mathMarkupBoxes = new Map();
+    // A reading that is no portion a reader knows is a decimal, and a decimal that follows a drag is a
+    // new one every few pixels, so what is kept is capped: the oldest goes when the room runs out, and
+    // the handful a reader actually dwells on stay.
+    static mathMarkupBoxLimit = 240;
 
     static getMathMarkupBox(latex, fontSize) {
         const text = String(latex ?? "");
@@ -760,6 +769,8 @@ class Utils {
         const bounds = host.getBoundingClientRect();
         const box = { markup: host.innerHTML, width: bounds.width, height: bounds.height };
         document.body.removeChild(host);
+        if (Utils.mathMarkupBoxes.size >= Utils.mathMarkupBoxLimit)
+            Utils.mathMarkupBoxes.delete(Utils.mathMarkupBoxes.keys().next().value);
         Utils.mathMarkupBoxes.set(key, box);
         return box;
     }

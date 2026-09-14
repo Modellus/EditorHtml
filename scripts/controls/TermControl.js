@@ -1574,13 +1574,28 @@ class TermControl {
     }
 
     // The same value as mathematics, for the surfaces that can typeset it: a portion of π is the
-    // fraction it is, written the way it is written by hand rather than spelt with a slash. Nothing is
-    // returned where the value is no mathematics — a number of degrees is a number, written as one.
-    writePlainValueLatex(value) {
+    // fraction it is, written the way it is written by hand rather than spelt with a slash, and a row
+    // written in two units at once carries the second in brackets after the first. Nothing is returned
+    // where the value is no mathematics — a number of degrees is a number, written as one. The
+    // companion is left off the field the reader types into: what is drawn there is what would be
+    // read back, and only the unit the row is set in is the reader's to write.
+    writePlainValueLatex(value, withCompanion = true) {
         const writing = this.getPlainValueWriting(this.normalizeTermValue(value));
         if (writing?.style !== "pi")
             return "";
-        return Utils.formatPortionLatex(this.getWrittenPlainValue(value));
+        const written = this.writePlainValueUnitLatex(value, writing);
+        if (written === "" || !withCompanion || !writing.also)
+            return written;
+        const companion = this.writePlainValueUnitLatex(value, writing.also);
+        return companion === "" ? written : `${written}\\;(${companion})`;
+    }
+
+    writePlainValueUnitLatex(value, writing) {
+        const written = Utils.parsePiText(this.normalizeTermValue(value)) / Number(writing.modelUnitsPerWritten);
+        if (writing.style === "pi")
+            return Utils.formatPortionLatex(written);
+        const suffixLatex = String(writing.suffixLatex ?? "");
+        return suffixLatex === "" ? "" : `${Utils.roundToPrecision(written, 6)}${suffixLatex}`;
     }
 
     readPlainValue(text) {
@@ -1781,7 +1796,7 @@ class TermControl {
         if (text === "")
             return "";
         if (TermControl.isPlainValue(text))
-            return this.writePlainValueLatex(text) || this.writePlainValue(text);
+            return this.writePlainValueLatex(text, false) || this.writePlainValue(text);
         return Utils.formatMathTermName(Utils.getDisplayedTerm(text, system));
     }
 

@@ -355,14 +355,14 @@ var BlockBehaviours = {
         type: "drag-axis-tick",
         category: "behaviour",
         displayName: "Drag axis tick",
-        description: "Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have. An axis whose ticks are placed by the logarithm of their value is dragged in decades rather than in values, and one that says how many parts it is cut into rather than how much one part is worth keeps the part and writes the count, so its numbers stay the same distance apart and there are more or fewer of them.",
+        description: "Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. An axis standing on zero is pulled from the middle, naming no minimum property and handing nought over as the minimum value, so what it writes is how far the drawing reaches from the origin. The same interaction, and the same arithmetic, the chart's axes have. An axis whose ticks are placed by the logarithm of their value is dragged in decades rather than in values, and one that says how many parts it is cut into rather than how much one part is worth keeps the part and writes the count, so its numbers stay the same distance apart and there are more or fewer of them.",
         tags: ["interaction", "drag", "axis", "scale", "ticks"],
         capabilities: ["interaction"],
         inputSchema: {
             properties: {
                 axis: { valueType: "string", defaultValue: "x", enumValues: ["x", "y"], label: "Axis", bindable: false },
                 value: { valueType: "number", defaultValue: 0, label: "Tick value" },
-                minimumProperty: { valueType: "string", defaultValue: "", label: "Minimum property", bindable: false, description: "Component property the axis starts at; it is held still while the tick is dragged." },
+                minimumProperty: { valueType: "string", defaultValue: "", label: "Minimum property", bindable: false, description: "Component property the axis starts at; it is held still while the tick is dragged. An axis measured from a value the object does not keep — zero, for one standing on the origin — names none and hands the value over as the minimum value instead." },
                 minimumValue: { valueType: "number", defaultValue: null, label: "Minimum value", description: "What the axis is drawn from, when that is not the minimum property as it stands — a logarithmic ruler given no positive minimum draws itself from a decade under its maximum, and its decades are pulled from there. Left empty the property is read." },
                 maximumProperty: { valueType: "string", defaultValue: "", label: "Maximum property", bindable: false },
                 scale: { valueType: "string", defaultValue: "linear", enumValues: ["linear", "logarithmic"], label: "Scale", description: "Whether a tick stands at its value or at the logarithm of it. A logarithmic axis is dragged in decades: the far end is written as a power of ten, so the decade under the pointer stays under it." },

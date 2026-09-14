@@ -154,7 +154,7 @@ reads as itself in a square. Like every other top-level field it does nothing un
 ### Parameters — what the user edits
 
 Each is `{ id, label, valueType, defaultValue, category }` plus any of `description`, `minimum`,
-`maximum`, `enumValues`, `enumIcons`, `unit`, `unitParameter`, `required`, `bindable`, `agentAccessible`,
+`maximum`, `enumValues`, `enumIcons`, `enumMultiple`, `unit`, `unitParameter`, `required`, `bindable`, `agentAccessible`,
 `userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`, `modeParameter`,
 `pairedField`, `modeField`, `valueParameter`, `minimumParameter`, `maximumParameter`, `toolbarKey`,
 `toolbarTooltip`, `angleUnitParameter`, `valueAnchor`, `valueIcon`, `valueIconMirrored`, `valueLocal`,
@@ -245,7 +245,8 @@ what each of its values writes:
 { "id": "angleUnit", "valueType": "string", "enumValues": ["radians", "degrees"],
   "choiceWriting": {
       "radians": { "suffix": "", "style": "pi", "radiansPer": 3.141592653589793 },
-      "degrees": { "suffix": "º", "radiansPer": 0.017453292519943295 } } }
+      "degrees": { "suffix": "º", "suffixLatex": "^\\circ", "radiansPer": 0.017453292519943295 } },
+  "enumMultiple": true }
 ```
 
 `radiansPer` is how many radians one written unit is worth — π for a row written in portions of π,
@@ -260,6 +261,13 @@ drawing the same fraction is typeset in a box beside the reading: `Utils.getMath
 piece of mathematics once and keeps what it measured, and `Utils.applyTermLabelMath` stands it beside
 the label and hands back its bounds for the plate — the portions a reader meets are a short list, so a
 label redrawn every frame pays the cost of typesetting none of them twice.
+
+**`enumMultiple`** lets more than one of a choice be on at once: the keys are pressed one at a time
+rather than chosen one instead of another, the property holds what is on as a comma-separated list in
+the order the definition offers them, and the last one on cannot be turned off. A row written in two
+units at once is read in both — the second in brackets after the first, typeset under the mark its
+`suffixLatex` gives it, `π/2 (90°)`. The second is drawn rather than typed, so the field the reader
+writes in still holds the first unit alone and what is typed there can only be read one way.
 
 A row written this way is **rounded in the unit it is read in** when a drag writes it, so a
 drag to the top of the circle is a round portion rather than a round number of radians.
@@ -398,7 +406,7 @@ why an ordinary object clips with a `clip-box` instead.
 | `drag-circle-point` | a point is dragged round a circle and everything the circle is read for is written at once: the angle, the radius the pointer stands at when `stretch` says the drag may write one, how far across and how far up the point is, the tangent and the length of the arc. Each names a variable and a property, so a row holding a plain number is written on the object itself; each is asked for on its own, so a circle whose angle the model works out is still dragged where it writes the point; and `snapDivisions` makes the angle land on a whole part of the circle — the point follows the pointer while it is held and lands on the nearest part, exactly, when it is let go. The readings are written together and the model is worked through once, and the whole drag is one undo entry |
 | `drag-rotate` | dragging a rim or a bezel turns it by the angle travelled, not to the pointer. Naming a `verticalVariable` as well writes a pair rather than a number: the pair keeps its length and takes the angle it was turned to, which is how an object driven by a direction stays draggable |
 | `keep-time` | a key runs a clock: `play` sets it counting real time from wherever it stands, `pause` holds it, and `stop` ends the run and clears it. The four parts of the reading — hours, minutes, seconds, thousandths — are named a variable and a property each, so a clock bound to nothing counts in its own numbers, and the whole run is one undo entry. It counts on a clock of its own, so it goes on counting while the player stands still; name a `runningParameter` and the drawing can show which key it is on |
-| `drag-axis-tick` | an axis tick rescales the axis. `scale: "logarithmic"` places the ticks by the logarithm of their value and writes the far end as a power of ten, so a decade under the pointer stays under it; naming a `countProperty` and a `stepValue` makes the drag hold the step and write the new count, which is what an axis numbered by its divisions rather than by its step needs |
+| `drag-axis-tick` | an axis tick rescales the axis. `scale: "logarithmic"` places the ticks by the logarithm of their value and writes the far end as a power of ten, so a decade under the pointer stays under it; naming a `countProperty` and a `stepValue` makes the drag hold the step and write the new count, which is what an axis numbered by its divisions rather than by its step needs. An axis measured from a value the object does not keep — nought, for one standing on the origin — names no `minimumProperty` and hands that value over as `minimumValue` instead |
 | `follow-pointer` | the drawing shows what is under the cursor without keeping it |
 | `hoverable`, `tooltip` | cursor and native tooltip |
 | `remember`, `forget`, `track-pointer` | the object keeps a memory (§4) |
@@ -417,7 +425,7 @@ Do not redraw what one of these already draws.
 | as many directions as the reader names, marked round a dial | `pointer-ring` |
 | a key with a label | `key-cap` |
 | a reading spelled out in lamps, the way a digital clock shows one | `seven-segment-display` |
-| **anything cartesian** | `plot-grid`, `plot-axes`, `plot-crosshair` |
+| **anything cartesian** | `plot-grid`, `plot-axes`, `plot-crosshair`. `plot-axes` rules its two axes along the sides of the box the way a chart frames its own, or — with **`origin: "zero"`** — crossing on the origin the way a referential is ruled, the marks crossing the axis they belong to and each number written along it inside the plot. **`showAxisLines: false`** leaves the marks and the numbers and draws neither line, for an object ruling an axis it draws itself. Naming both ends of an axis as properties — `minimumXProperty` and `maximumXProperty` — makes its ticks draggable the way a chart's are. A drawing standing on the origin and drawn at one scale on both axes names a single **`rangeProperty`** instead: the ticks on both axes are then pulled from the middle and both write how far the drawing reaches from zero, so a circle drawn against them stays a circle |
 | a memory shown as a list or a path | `memory-list`, `memory-trace` |
 | a whole object reused inside another | `analogue-clock`, `compass`, `speedometer`, `circular-gauge`, `rotating-vector`, `orbit-system`, `steering-wheel`, `calculator`, `mouse-tracker`, `thermometer`, `ruler`, `protractor`, `trigonometric-circle` |
 

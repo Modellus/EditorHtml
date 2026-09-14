@@ -498,6 +498,18 @@ An axis drawn this way is the chart's axis, down to the arithmetic — all of it
   ruler given no positive minimum draws itself from a decade under its maximum — says the axis is
   drawn from. It is the chart's interaction and the chart's formula — `AxisTickDrag`,
   `newScale = |tickOffsetValue / pixelOffset|` — and the whole drag is one undo step.
+* **An axis may be ruled on the origin instead of on the box.** `origin: "zero"` crosses the two axes
+  where the values are nought, the way a referential is ruled: each mark crosses the axis it belongs to
+  and each number is written along it, inside the plot, so nothing has to be left outside the box for
+  them. The number at the origin is left off, since each axis would write it and it sits under the
+  crossing. `showAxisLines: false` draws the marks and the numbers and neither line, for an object
+  ruling an axis it draws itself — an arrowed cross, say.
+* **An axis standing on the origin is pulled from the middle.** Naming one `rangeProperty` instead of
+  the two ends puts a handle on every numbered tick on the positive side of both axes, each holding
+  nought still and writing how far the drawing reaches from zero. One number serves both axes and the
+  pixels it is worth are the shorter of the two halves — the scale both are drawn at — so a circle
+  drawn against them stays a circle however far the view is pulled. It is what the trigonometric
+  circle is rescaled by.
 
 `plot-crosshair` answers a pointer the way the chart's crosshair answers a hovered x: both dashed
 lines cross the whole plot, the pointer's own place is read as a pair on a badge under it, and the

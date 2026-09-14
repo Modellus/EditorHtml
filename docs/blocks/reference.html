@@ -547,7 +547,7 @@
             </tbody>
         </table>
         <h3 id="block-drag-axis-tick"><code>drag-axis-tick</code> — Drag axis tick</h3>
-        <p>Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have. An axis whose ticks are placed by the logarithm of their value is dragged in decades rather than in values, and one that says how many parts it is cut into rather than how much one part is worth keeps the part and writes the count, so its numbers stay the same distance apart and there are more or fewer of them.</p>
+        <p>Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. An axis standing on zero is pulled from the middle, naming no minimum property and handing nought over as the minimum value, so what it writes is how far the drawing reaches from the origin. The same interaction, and the same arithmetic, the chart's axes have. An axis whose ticks are placed by the logarithm of their value is dragged in decades rather than in values, and one that says how many parts it is cut into rather than how much one part is worth keeps the part and writes the count, so its numbers stay the same distance apart and there are more or fewer of them.</p>
         <p class="block-meta">Capabilities: <code>interaction</code></p>
         <table class="docs-table">
             <thead><tr><th>Property</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>
@@ -1160,6 +1160,9 @@
                 <tr><td><code>maximumXProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>minimumYProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>maximumYProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
+                <tr><td><code>origin</code></td><td>string</td><td><code>"box"</code></td><td>box | zero</td></tr>
+                <tr><td><code>showAxisLines</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>rangeProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>color</code></td><td>colour</td><td><code>"token:axis.color"</code></td><td></td></tr>
                 <tr><td><code>zeroColor</code></td><td>colour</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>labelColor</code></td><td>colour</td><td><code>"token:axis.labelColor"</code></td><td></td></tr>
@@ -1451,6 +1454,7 @@
                 <tr><td><code>dragRadius</code></td><td>boolean</td><td><code>false</code></td><td></td></tr>
                 <tr><td><code>showGrid</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
                 <tr><td><code>showAxes</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
+                <tr><td><code>fitView</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
                 <tr><td><code>showAngle</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
                 <tr><td><code>showRadius</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
                 <tr><td><code>showSine</code></td><td>boolean</td><td><code>true</code></td><td></td></tr>
@@ -1468,6 +1472,7 @@
                 <tr><td><code>cosineColor</code></td><td>colour</td><td><code>"#2f9e44"</code></td><td></td></tr>
                 <tr><td><code>tangentColor</code></td><td>colour</td><td><code>"#6a1b9a"</code></td><td></td></tr>
                 <tr><td><code>arcColor</code></td><td>colour</td><td><code>"#f08c02"</code></td><td></td></tr>
+                <tr><td><code>viewRange</code></td><td>number</td><td><code>1.6</code></td><td>min 0.05</td></tr>
             </tbody>
         </table>
         <h2 id="tokens">Design tokens</h2>

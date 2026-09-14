@@ -627,7 +627,7 @@ class ComponentShape extends BaseShape {
         const termText = namesTerm ? this.formatTermForDisplay(termName) : "";
         const writing = this.getComponentRowWriting(parameter);
         const valueText = writing ? this.writeComponentRowValue(value, writing, termName) : this.formatModelValue(value, termName);
-        const valueLatex = writing ? this.writeComponentRowValueLatex(value, writing) : "";
+        const valueLatex = writing ? this.writeComponentRowValueLatex(value, writing, termName) : "";
         const unitText = writing ? "" : this.getTermUnitText(termName, entry.term);
         const iconGlyph = namesTerm ? "" : String(parameter.valueIcon ?? "");
         return {
@@ -642,14 +642,35 @@ class ComponentShape extends BaseShape {
     }
 
     // How a row is written, when a choice of the object's own says so: an angle is written as the
-    // portion of π it is, or as a number of degrees with the mark after it. What the row holds is an
-    // angle in the unit the model keeps its angles in, so the two are put together here — how many of
-    // the model's own units one written unit is worth — and the choice can never move what is held.
+    // portion of π it is, as a number of degrees with the mark after it, or as both at once where both
+    // are on. What the row holds is an angle in the unit the model keeps its angles in, so the two are
+    // put together here — how many of the model's own units one written unit is worth — and the choice
+    // can never move what is held. The first unit on is the one the row is written and read in; a
+    // second stands beside it, drawn rather than typed.
     getComponentRowWriting(parameter) {
         const chooser = this.getComponentParameter(parameter?.angleUnitParameter ?? "");
         if (!chooser?.choiceWriting)
             return null;
-        const writing = chooser.choiceWriting[String(this.properties[chooser.id] ?? "")] ?? null;
+        const written = this.getComponentChoices(chooser)
+            .map(choice => this.resolveComponentRowWriting(chooser, choice))
+            .filter(writing => writing !== null);
+        if (written.length === 0)
+            return null;
+        return Object.assign({}, written[0], { also: written[1] ?? null });
+    }
+
+    // What a choice stands at, always as a list and always in the order the definition offers them, so
+    // a choice more than one of may be on at once is read the same way as one only ever holding one. A
+    // choice standing at nothing at all falls back to the first it offers: there is no such thing as an
+    // angle written in no unit.
+    getComponentChoices(parameter) {
+        const held = String(this.properties[parameter.id] ?? "").split(",").map(value => value.trim());
+        const chosen = parameter.enumValues.filter(value => held.includes(value));
+        return chosen.length > 0 ? chosen : parameter.enumValues.slice(0, 1);
+    }
+
+    resolveComponentRowWriting(chooser, choice) {
+        const writing = chooser?.choiceWriting?.[choice] ?? null;
         const radiansPerWritten = Number(writing?.radiansPer);
         if (!writing || !Number.isFinite(radiansPerWritten) || radiansPerWritten === 0)
             return null;
@@ -664,8 +685,15 @@ class ComponentShape extends BaseShape {
     // written number is that angle counted in written units: portions of π, or degrees. A portion is
     // written the way a scale numbered in π is — π/2, 2π/3 — where it is one a reader knows, and as
     // the decimal portion with π a space after it where it is not. A degree carries its mark the same
-    // way, a space after the number, so the two are read apart.
+    // way, a space after the number, so the two are read apart. A reading written in both units has
+    // the second in brackets after the first.
     writeComponentRowValue(value, writing, termName) {
+        const written = this.writeComponentRowUnit(value, writing, termName);
+        const companion = writing.also ? this.writeComponentRowUnit(value, writing.also, termName) : "";
+        return companion === "" ? written : `${written} (${companion})`;
+    }
+
+    writeComponentRowUnit(value, writing, termName) {
         const written = Number(value) / Number(writing.radiansPer);
         const suffix = String(writing.suffix ?? "");
         if (writing.style !== "pi")
@@ -676,14 +704,27 @@ class ComponentShape extends BaseShape {
     }
 
     // The same value as mathematics, for the reading to carry typeset rather than spelt out: a portion
-    // of π is the fraction it is. Nothing is written where the value is no mathematics — a number of
-    // degrees is a number, and is written as one.
-    writeComponentRowValueLatex(value, writing) {
+    // of π is the fraction it is, and the degrees it comes to stand in brackets after it under the
+    // mark a degree wears in mathematics. Nothing is written where the value is no mathematics — a
+    // reading in degrees alone is a number, and is written as one.
+    writeComponentRowValueLatex(value, writing, termName) {
         if (writing.style !== "pi")
             return "";
+        const written = this.writeComponentRowUnitLatex(value, writing, termName);
+        if (written === "")
+            return "";
+        const companion = writing.also ? this.writeComponentRowUnitLatex(value, writing.also, termName) : "";
+        return companion === "" ? written : `${written}\\;(${companion})`;
+    }
+
+    writeComponentRowUnitLatex(value, writing, termName) {
+        const written = Number(value) / Number(writing.radiansPer);
         // Three places is what a scale numbered in π writes a portion to, and what a reading standing
         // beside a drawing has room for; the row in the toolbar, which is edited, keeps more.
-        return Utils.formatPortionLatex(Number(value) / Number(writing.radiansPer), "\\pi", 3);
+        if (writing.style === "pi")
+            return Utils.formatPortionLatex(written, "\\pi", 3);
+        const suffixLatex = String(writing.suffixLatex ?? "");
+        return suffixLatex === "" ? "" : `${this.formatModelValue(written, termName)}${suffixLatex}`;
     }
 
     getTermEntryLabelPosition(entry) {
@@ -1177,7 +1218,12 @@ class ComponentShape extends BaseShape {
     attachAxisTickDragBehaviour(element, input) {
         if (!this.isInteractable() || this.isLocked())
             return;
-        if (this.getBehaviourProperty({ property: input.minimumProperty }) === null || this.getBehaviourProperty({ property: input.maximumProperty }) === null)
+        // An axis measured from zero names no property for the end it is held at — nought is not
+        // something the object keeps — so it hands the value over instead.
+        const holdsMinimum = String(input.minimumProperty ?? "") !== "" || Number.isFinite(Number(input.minimumValue));
+        if (!holdsMinimum || this.getBehaviourProperty({ property: input.maximumProperty }) === null)
+            return;
+        if (String(input.minimumProperty ?? "") !== "" && this.getBehaviourProperty({ property: input.minimumProperty }) === null)
             return;
         element.style.cursor = input.axis === "x" ? "ew-resize" : "ns-resize";
         element.setAttribute("pointer-events", "all");

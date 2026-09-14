@@ -176,7 +176,7 @@
             ],
             "enumControl": "buttons",
             "category": "scale",
-            "description": "How the angle is written. Radians are written as the portion of π they are, the way a scale numbered in π is numbered, so a quarter turn is π/2; degrees are numbers of degrees with the degree mark after them, so a quarter turn is 90 º. It says nothing about what the angle is — that is the model's to say — so changing it leaves the point where it stands. Only the angle is affected: the arc is a length, and the sine, the cosine and the tangent are numbers.",
+            "description": "How the angle is written. Radians are written as the portion of π they are, the way a scale numbered in π is numbered, so a quarter turn is π/2; degrees are numbers of degrees with the degree mark after them, so a quarter turn is 90 º. Both may be on at once, and then the degrees stand in brackets after the portion, for a reader learning to read one off the other. It says nothing about what the angle is — that is the model's to say — so changing it leaves the point where it stands. Only the angle is affected: the arc is a length, and the sine, the cosine and the tangent are numbers.",
             "choiceWriting": {
                 "radians": {
                     "suffix": "",
@@ -185,9 +185,11 @@
                 },
                 "degrees": {
                     "suffix": "º",
+                    "suffixLatex": "^\\circ",
                     "radiansPer": 0.017453292519943295
                 }
-            }
+            },
+            "enumMultiple": true
         },
         {
             "id": "snapDivisions",
@@ -221,6 +223,14 @@
             "defaultValue": true,
             "category": "display",
             "description": "The two axes, their arrows and the numbers where the circle crosses them."
+        },
+        {
+            "id": "fitView",
+            "label": "Fit to the circle",
+            "valueType": "boolean",
+            "defaultValue": true,
+            "category": "display",
+            "description": "Whether the view is fitted to the circle, so a radius the model changes keeps the same picture. Turned off the view is the reader’s: it reaches as far as it was last set to, and pulling one of the numbered ticks sets it, the way a chart’s axes are rescaled. A circle the drag may stretch never fits itself, since a view resizing under the drag would scale the radius straight back to the size it started at."
         },
         {
             "id": "showAngle",
@@ -354,6 +364,15 @@
             "defaultValue": "#f08c02",
             "category": "style",
             "description": "The arc swept along the circle, and the plate its reading is written on."
+        },
+        {
+            "id": "viewRange",
+            "label": "Range",
+            "valueType": "number",
+            "defaultValue": 1.6,
+            "minimum": 0.05,
+            "category": "state",
+            "description": "How far the view reaches from the centre, in the units the circle is drawn in. It is set by pulling a numbered tick rather than typed, and it is read only while the view is not fitted to the circle."
         }
     ],
     "locals": [
@@ -373,6 +392,24 @@
             "id": "pad",
             "value": {
                 "token": "spacing.medium"
+            }
+        },
+        {
+            "id": "tickFont",
+            "value": {
+                "token": "font.size.tick"
+            }
+        },
+        {
+            "id": "tickLength",
+            "value": {
+                "token": "axis.tickLength"
+            }
+        },
+        {
+            "id": "axisLabelColor",
+            "value": {
+                "token": "axis.labelColor"
             }
         },
         {
@@ -582,16 +619,36 @@
             }
         },
         {
-            "id": "fitted",
-            "formula": "1-dragRadiusRead"
+            "id": "fitViewRead",
+            "value": {
+                "choose": {
+                    "parameter": "fitView"
+                },
+                "then": 1,
+                "otherwise": 0
+            }
         },
         {
-            "id": "viewRange",
-            "formula": "fitted\\cdot1.6\\cdot drawRadius+\\left(1-fitted\\right)\\cdot1.6"
+            "id": "fitted",
+            "formula": "fitViewRead\\cdot\\left(1-dragRadiusRead\\right)"
+        },
+        {
+            "id": "viewRangeHeld",
+            "value": {
+                "parameter": "viewRange"
+            }
+        },
+        {
+            "id": "heldRange",
+            "formula": "\\max\\left(0.05,viewRangeHeld\\right)"
+        },
+        {
+            "id": "viewSpan",
+            "formula": "fitted\\cdot1.6\\cdot drawRadius+\\left(1-fitted\\right)\\cdot heldRange"
         },
         {
             "id": "unit",
-            "formula": "\\frac{shortSide}{2\\cdot viewRange}"
+            "formula": "\\frac{shortSide}{2\\cdot viewSpan}"
         },
         {
             "id": "rangeX",
@@ -1026,7 +1083,17 @@
         },
         {
             "id": "largestRadius",
-            "formula": "viewRange"
+            "formula": "viewSpan"
+        },
+        {
+            "id": "rangeProperty",
+            "value": {
+                "choose": {
+                    "parameter": "fitted"
+                },
+                "then": "",
+                "otherwise": "viewRange"
+            }
         }
     ],
     "root": {
@@ -1126,6 +1193,64 @@
                             "parameter": "showAxesRead"
                         },
                         "children": [
+                            {
+                                "id": "plot-axes",
+                                "type": "plot-axes",
+                                "parameters": {
+                                    "x": {
+                                        "parameter": "plotX"
+                                    },
+                                    "y": {
+                                        "parameter": "plotY"
+                                    },
+                                    "width": {
+                                        "parameter": "plotW"
+                                    },
+                                    "height": {
+                                        "parameter": "plotH"
+                                    },
+                                    "minimumX": {
+                                        "parameter": "leftValue"
+                                    },
+                                    "maximumX": {
+                                        "parameter": "rangeX"
+                                    },
+                                    "minimumY": {
+                                        "parameter": "bottomValue"
+                                    },
+                                    "maximumY": {
+                                        "parameter": "rangeY"
+                                    },
+                                    "ticksX": 9,
+                                    "ticksY": 9,
+                                    "showTicks": true,
+                                    "showLabels": true,
+                                    "showBorder": false,
+                                    "rangeProperty": {
+                                        "parameter": "rangeProperty"
+                                    },
+                                    "color": {
+                                        "parameter": "axisColor"
+                                    },
+                                    "labelColor": {
+                                        "parameter": "axisLabelColor"
+                                    },
+                                    "fontSize": {
+                                        "parameter": "tickFont"
+                                    },
+                                    "lineWidth": {
+                                        "parameter": "axisWidth"
+                                    },
+                                    "tickLength": {
+                                        "parameter": "tickLength"
+                                    },
+                                    "origin": "zero",
+                                    "showAxisLines": false
+                                },
+                                "when": {
+                                    "parameter": "showAxesRead"
+                                }
+                            },
                             {
                                 "id": "axis-across",
                                 "type": "pointer-hand",

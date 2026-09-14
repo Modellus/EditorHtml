@@ -125,6 +125,22 @@ async function readAngleReading(page) {
     return `${readings[0]?.text ?? ''}${readings[0]?.maths ?? ''}`;
 }
 
+// A unit is turned on or off the way a reader turns it on or off: by pressing its button.
+async function pressAngleUnit(page, label) {
+    await page.evaluate(() => shell.board.selection.select(shell.board.shapes.getByName('Circle')));
+    await page.locator('.shape-context-toolbar.visible .mdl-component-settings-item, .shape-context-toolbar.visible [class*="settings"]').first().click();
+    const group = page.locator('.mdl-shape-overlay-popup').last().locator('.mdl-component-enum-buttons').first();
+    await group.locator('.dx-buttongroup-item', { hasText: label }).click();
+    await page.keyboard.press('Escape');
+}
+
+function readAngleUnits(page) {
+    return page.evaluate(() => {
+        const shape = shell.board.shapes.getByName('Circle');
+        return shape.getComponentChoices(shape.getComponentParameter('angleUnit'));
+    });
+}
+
 // The unit is chosen the way the toolbar chooses it, so what the choice carries with it is carried.
 async function chooseAngleUnit(page, unit) {
     await page.evaluate(unit => {
@@ -143,6 +159,27 @@ async function setModelAngleUnit(page, unit) {
         shell.board.forceRefresh();
     }, unit);
     await expect.poll(() => page.evaluate(() => shell.properties.angleUnit)).toBe(unit);
+}
+
+function readCircleRadius(page) {
+    return page.evaluate(() => Number(shell.board.shapes.getByName('Circle').element.querySelector('[data-source-id="circle"]').getAttribute('r')));
+}
+
+function countTickHandles(page) {
+    return page.evaluate(() => shell.board.shapes.getByName('Circle').element.querySelectorAll('[data-source-id*="tick-handle"]').length);
+}
+
+// A tick is pulled the way a reader pulls one: by its own grab area, along the axis it belongs to.
+async function dragTickHandle(page, axis, by) {
+    const handle = page.locator(`[data-source-id^="${axis}-tick-handle-"]`).last();
+    const box = await handle.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    if (axis === 'x')
+        await page.mouse.move(box.x + box.width / 2 + by, box.y + box.height / 2, { steps: 5 });
+    else
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - by, { steps: 5 });
+    await page.mouse.up();
 }
 
 function readPointCentre(page) {
@@ -605,7 +642,7 @@ test.describe('trigonometric circle component', () => {
         // Every number the object writes is a reading the board writes for it, so there is no notation
         // of the object's own to choose.
         await expect(menu.locator('.mdl-dropdown-list-label')).toHaveText([
-            'Angle unit', 'Snap to parts', 'Drag the radius', 'Grid', 'Axes', 'Angle', 'Radius', 'Sine', 'Cosine', 'Tangent', 'Arc'
+            'Angle unit', 'Snap to parts', 'Drag the radius', 'Grid', 'Axes', 'Fit to the circle', 'Angle', 'Radius', 'Sine', 'Cosine', 'Tangent', 'Arc'
         ]);
         const row = menu.locator('.mdl-dropdown-list-item').filter({ has: page.locator('.mdl-dropdown-list-label', { hasText: /^Tangent$/ }) });
         await row.locator('.dx-switch').click();
@@ -678,6 +715,35 @@ test.describe('trigonometric circle component', () => {
         expect(await readAngleChip(page)).toEqual({ value: '90', suffix: '\u00ba' });
     });
 
+    // The two units are not a choice of one: both buttons may be on at once, and then the degrees stand
+    // in brackets after the portion of π, for a reader learning to read one off the other. They are
+    // pressed the way a reader presses them, and the last one on cannot be turned off — a reading has
+    // to be written in something.
+    test('both units may be on at once, and the reading carries both', async ({ page }) => {
+        await setupBoard(page);
+        await addCircle(page, { angleVariable: '1.5707963268' });
+        await showReadings(page, ['angleVariable']);
+        const quarterTurn = await readPointCentre(page);
+        await pressAngleUnit(page, 'Degrees');
+        expect(await readAngleUnits(page)).toEqual(['radians', 'degrees']);
+        await expect.poll(() => readAngleReading(page)).toBe(' = \\frac{\\pi}{2}\\;(90.00^\\circ)');
+        // Nothing moved: the units say how the angle is written, never what it is.
+        expect(await readPointCentre(page)).toEqual(quarterTurn);
+        expect(await page.evaluate(() => shell.board.shapes.getByName('Circle').properties.angleVariable)).toBe('1.5707963268');
+        await pressAngleUnit(page, 'Radians');
+        expect(await readAngleUnits(page)).toEqual(['degrees']);
+        await expect.poll(() => readAngleReading(page)).toBe(' = 90.00 \u00ba');
+        await pressAngleUnit(page, 'Degrees');
+        expect(await readAngleUnits(page)).toEqual(['degrees']);
+    });
+
+    // The row wears both too, the degrees standing beside the portion the way they do on the drawing.
+    test('a row written in both wears the degrees beside the portion', async ({ page }) => {
+        await setupBoard(page);
+        await addCircle(page, { angleVariable: '1.5707963268', angleUnit: 'radians,degrees' });
+        expect(await readAngleChip(page)).toEqual({ value: '\\frac{\\pi}{2}\\;(90^{\\circ})', suffix: '' });
+    });
+
     // A model counting its angles in degrees hands the object degrees, and the row marked in radians
     // still writes the portion of π that angle is.
     test('the portion is the portion of a turn, whatever the model counts angles in', async ({ page }) => {
@@ -687,6 +753,57 @@ test.describe('trigonometric circle component', () => {
         expect(await readAngleChip(page)).toEqual({ value: '\\frac{\\pi}{2}', suffix: '' });
         await showReadings(page, ['angleVariable']);
         expect(await readAngleReading(page)).toBe(' = \\frac{\\pi}{2}');
+    });
+
+    // The axes are ruled the way a referential's are: the marks cross the axis they belong to and each
+    // number is written along it, inside the box, rather than outside the plot the way a chart writes
+    // them. The number at the origin is left off — each axis would write it, and it sits under the
+    // crossing besides.
+    test('the axes are numbered along themselves, the way a referential is ruled', async ({ page }) => {
+        await setupBoard(page);
+        const drawing = await buildDrawing(page, { radiusVariable: '1', fitView: false });
+        const labels = Object.entries(drawing.nodes)
+            .filter(([id]) => id.startsWith('x-label-'))
+            .map(([, node]) => node.text);
+        expect(labels).toEqual(['-1.5', '-1', '-0.5', '0.5', '1', '1.5']);
+        // Each number stands along its own axis rather than under the box: the horizontal ones just
+        // below the line through the origin, the vertical ones just to the left of it.
+        const centreY = Number(drawing.nodes.circle.attributes.cy);
+        const first = drawing.nodes['x-label-0'].attributes;
+        // A couple of characters below the line, rather than the half-box away the edge of the plot is.
+        expect(Math.abs(Number(first.y) - centreY)).toBeLessThan(30);
+        // The marks cross the axis rather than hanging off the edge of the box.
+        const tick = drawing.nodes['x-tick-0'].attributes;
+        expect(Number(tick.y1)).toBeLessThan(centreY);
+        expect(Number(tick.y2)).toBeGreaterThan(centreY);
+    });
+
+    // A numbered tick is pulled to rescale, the way a chart's is. Both axes write the one reach, so the
+    // circle stays a circle however far the view is pulled.
+    test('pulling a numbered tick rescales the view', async ({ page }) => {
+        await setupBoard(page);
+        await addCircle(page, { radiusVariable: '1', fitView: false });
+        const before = await readCircleRadius(page);
+        await dragTickHandle(page, 'x', -40);
+        await expect.poll(() => page.evaluate(() => Number(shell.board.shapes.getByName('Circle').properties.viewRange))).toBeGreaterThan(1.6);
+        expect(await readCircleRadius(page)).toBeLessThan(before);
+        // Pulled out again the view comes back in, and the circle with it.
+        await dragTickHandle(page, 'y', -30);
+        await expect.poll(() => readCircleRadius(page)).toBeLessThan(before);
+    });
+
+    // While the view is fitted to the circle there is nothing for a reader to set, so the ticks are not
+    // offered: a drawing that resizes itself would undo the pull as it was made.
+    test('a fitted view offers no ticks to pull', async ({ page }) => {
+        await setupBoard(page);
+        await addCircle(page, { radiusVariable: '1' });
+        expect(await countTickHandles(page)).toBe(0);
+        await page.evaluate(() => {
+            const shape = shell.board.shapes.getByName('Circle');
+            shape.setProperties({ fitView: false });
+            shape.draw();
+        });
+        expect(await countTickHandles(page)).toBeGreaterThan(0);
     });
 
     // The view follows the circle, so a radius the model changes keeps the same picture. A circle the

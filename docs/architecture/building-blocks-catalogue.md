@@ -441,7 +441,7 @@ Capabilities: `interaction`, `angular`, `writes-model`
 
 ### `drag-axis-tick` — Drag axis tick
 
-Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. The same interaction, and the same arithmetic, the chart's axes have. An axis whose ticks are placed by the logarithm of their value is dragged in decades rather than in values, and one that says how many parts it is cut into rather than how much one part is worth keeps the part and writes the count, so its numbers stay the same distance apart and there are more or fewer of them.
+Rescales an axis by dragging one of its ticks: the tick follows the pointer and the far end of the axis moves with it, writing the object's own maximum. An axis standing on zero is pulled from the middle, naming no minimum property and handing nought over as the minimum value, so what it writes is how far the drawing reaches from the origin. The same interaction, and the same arithmetic, the chart's axes have. An axis whose ticks are placed by the logarithm of their value is dragged in decades rather than in values, and one that says how many parts it is cut into rather than how much one part is worth keeps the part and writes the count, so its numbers stay the same distance apart and there are more or fewer of them.
 
 Capabilities: `interaction`
 
@@ -1096,6 +1096,9 @@ Capabilities: `layout`, `textual`
 | `maximumXProperty` | string | "" |  |
 | `minimumYProperty` | string | "" |  |
 | `maximumYProperty` | string | "" |  |
+| `origin` | string | "box" | box \| zero |
+| `showAxisLines` | boolean | true |  |
+| `rangeProperty` | string | "" |  |
 | `color` | colour | "token:axis.color" |  |
 | `zeroColor` | colour | "" |  |
 | `labelColor` | colour | "token:axis.labelColor" |  |
@@ -1400,6 +1403,7 @@ Capabilities: `radial`, `angular`, `reads-model`, `interaction`, `writes-model`,
 | `dragRadius` | boolean | false |  |
 | `showGrid` | boolean | true |  |
 | `showAxes` | boolean | true |  |
+| `fitView` | boolean | true |  |
 | `showAngle` | boolean | true |  |
 | `showRadius` | boolean | true |  |
 | `showSine` | boolean | true |  |
@@ -1417,6 +1421,7 @@ Capabilities: `radial`, `angular`, `reads-model`, `interaction`, `writes-model`,
 | `cosineColor` | colour | "#2f9e44" |  |
 | `tangentColor` | colour | "#6a1b9a" |  |
 | `arcColor` | colour | "#f08c02" |  |
+| `viewRange` | number | 1.6 | min 0.05 |
 
 ## Example: clock bound to model variables
 

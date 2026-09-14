@@ -84,10 +84,22 @@ var BlockComponentHelpers = {
     // its ends; naming neither leaves the ticks as ink.
     tickHandleNodes(parameters, box, ticks, labelGap) {
         const nodes = [];
+        // An axis standing on zero and drawn at the same scale as the other is pulled from the middle
+        // rather than from the end: what a tick writes is how far the drawing reaches from zero, one
+        // number for both axes, so a circle drawn against them stays a circle however it is rescaled.
+        // The pixels that reach is worth are the shorter of the two halves, which is the scale both
+        // axes are drawn at.
+        const range = String(parameters.rangeProperty ?? "");
+        const rangePixels = Math.min(box.right - box.toX(0), box.toY(0) - box.top);
         const addHandles = (axis, values, minimumProperty, maximumProperty, hitArea) => {
-            if (String(minimumProperty ?? "") === "" || String(maximumProperty ?? "") === "")
+            const symmetric = range !== "" && rangePixels > 0;
+            if (!symmetric && (String(minimumProperty ?? "") === "" || String(maximumProperty ?? "") === ""))
                 return;
             for (let index = 0; index < values.length; index++) {
+                // A tick on the far side of zero would be pulled the wrong way, so a symmetric axis is
+                // taken hold of on the side it is measured from.
+                if (symmetric && !(Number(values[index]) > 0))
+                    continue;
                 const area = hitArea(values[index]);
                 nodes.push({
                     id: `${axis}-tick-handle-${index}`,
@@ -97,22 +109,28 @@ var BlockComponentHelpers = {
                         type: "drag-axis-tick",
                         axis: axis,
                         value: values[index],
-                        minimumProperty: minimumProperty,
-                        maximumProperty: maximumProperty,
-                        originPixel: axis === "x" ? box.left : box.bottom,
-                        lengthPixels: axis === "x" ? box.width : box.height
+                        minimumProperty: symmetric ? "" : minimumProperty,
+                        minimumValue: symmetric ? 0 : null,
+                        maximumProperty: symmetric ? range : maximumProperty,
+                        originPixel: symmetric ? (axis === "x" ? box.toX(0) : box.toY(0)) : (axis === "x" ? box.left : box.bottom),
+                        lengthPixels: symmetric ? rangePixels : (axis === "x" ? box.width : box.height)
                     }]
                 });
             }
         };
+        // The grab area lies over the mark and the number it belongs to, which follow the axis: along
+        // the sides of the box, or crossing on the origin where the axes are ruled there.
+        const onZero = parameters.origin === "zero";
+        const acrossAt = onZero ? box.toY(0) : box.bottom;
+        const upAt = onZero ? box.toX(0) : box.left;
         addHandles("x", ticks.x.major, parameters.minimumXProperty, parameters.maximumXProperty, value => ({
             x: box.toX(value) - labelGap / 2,
-            y: box.bottom,
+            y: onZero ? acrossAt - labelGap / 2 : acrossAt,
             width: labelGap,
-            height: labelGap
+            height: onZero ? labelGap * 1.5 : labelGap
         }));
         addHandles("y", ticks.y.major, parameters.minimumYProperty, parameters.maximumYProperty, value => ({
-            x: box.left - labelGap * 2,
+            x: onZero ? upAt - labelGap * 1.5 : upAt - labelGap * 2,
             y: box.toY(value) - labelGap / 2,
             width: labelGap * 2,
             height: labelGap
@@ -706,6 +724,9 @@ var BlockComponentHelpers = {
             BlockComponentHelpers.parameter("maximumXProperty", "Horizontal maximum property", "string", ""),
             BlockComponentHelpers.parameter("minimumYProperty", "Vertical minimum property", "string", ""),
             BlockComponentHelpers.parameter("maximumYProperty", "Vertical maximum property", "string", ""),
+            BlockComponentHelpers.parameter("origin", "Where the axes stand", "string", "box", { enumValues: ["box", "zero"], description: "Where the two axes are drawn. \"box\" stands them along the left and the bottom of the plot, the way a chart frames its own, with the numbers written outside it. \"zero\" stands them on the origin and crosses them, the way a referential is ruled: the marks cross the axis they belong to and each number is written along it, inside the plot, so nothing has to be left outside the box for them." }),
+            BlockComponentHelpers.parameter("showAxisLines", "Draw the axis lines", "boolean", true, { description: "Turned off the marks and the numbers are drawn and the two lines are not, which is for an object that draws its own axes — an arrowed cross, say — and wants them ruled." }),
+            BlockComponentHelpers.parameter("rangeProperty", "Range property", "string", "", { description: "Component property holding how far the drawing reaches from zero, for axes that stand on zero and are drawn at one scale. Naming it makes the ticks on both axes draggable and both write that one number, so a circle drawn against them stays a circle. It is pulled from the middle rather than from the end, and takes the place of naming the two ends of each axis." }),
             BlockComponentHelpers.parameter("color", "Axis colour", "colour", "token:axis.color", { category: "style" }),
             // The two lines standing at zero are the origin the plot is read from rather than the box
             // it is drawn in, so an object may colour them apart from its frame and its ticks. Left
@@ -725,18 +746,27 @@ var BlockComponentHelpers = {
             const labelGapX = fontSize * context.tokens.getNumber("axis.labelGapX", 1.8);
             const labelGapY = fontSize * context.tokens.getNumber("axis.labelGapY", 0.7);
             const labelRise = fontSize * context.tokens.getNumber("axis.labelRise", 0.3);
-            const children = [
-                BlockComponentHelpers.strokeLine("axis-y", box.left, box.top, box.left, box.bottom, color, parameters.lineWidth),
-                BlockComponentHelpers.strokeLine("axis-x", box.left, box.bottom, box.right, box.bottom, color, parameters.lineWidth)
-            ];
+            // Where each axis is ruled: along the sides of the box, or crossing on the origin the way a
+            // referential is ruled. The marks and the numbers follow the line they belong to, so the
+            // whole axis moves together and nothing has to know which of the two it is drawing.
+            const onZero = parameters.origin === "zero";
+            const acrossAt = onZero ? box.toY(0) : box.bottom;
+            const upAt = onZero ? box.toX(0) : box.left;
+            const tickLength = Number(parameters.tickLength);
+            const children = [];
+            if (parameters.showAxisLines !== false) {
+                children.push(BlockComponentHelpers.strokeLine("axis-y", upAt, box.top, upAt, box.bottom, color, parameters.lineWidth));
+                children.push(BlockComponentHelpers.strokeLine("axis-x", box.left, acrossAt, box.right, acrossAt, color, parameters.lineWidth));
+            }
             if (parameters.showBorder === true) {
                 children.push(BlockComponentHelpers.strokeLine("border-top", box.left, box.top, box.right, box.top, color, parameters.lineWidth));
                 children.push(BlockComponentHelpers.strokeLine("border-right", box.right, box.top, box.right, box.bottom, color, parameters.lineWidth));
             }
             const zeroColor = context.tokens.resolveValue(parameters.zeroColor || parameters.color);
-            if (parameters.showZeroLines === true && Number(parameters.minimumX) < 0 && Number(parameters.maximumX) > 0)
+            // An axis standing on the origin is the zero line, so there is nothing to mark a second time.
+            if (!onZero && parameters.showZeroLines === true && Number(parameters.minimumX) < 0 && Number(parameters.maximumX) > 0)
                 children.push(BlockComponentHelpers.strokeLine("zero-y", box.toX(0), box.top, box.toX(0), box.bottom, zeroColor, parameters.lineWidth));
-            if (parameters.showZeroLines === true && Number(parameters.minimumY) < 0 && Number(parameters.maximumY) > 0)
+            if (!onZero && parameters.showZeroLines === true && Number(parameters.minimumY) < 0 && Number(parameters.maximumY) > 0)
                 children.push(BlockComponentHelpers.strokeLine("zero-x", box.left, box.toY(0), box.right, box.toY(0), zeroColor, parameters.lineWidth));
             const ticks = BlockComponentHelpers.plotTicks(parameters, box);
             // The ticks are worked out whether or not they are drawn: an axis whose marks are hidden is
@@ -744,25 +774,37 @@ var BlockComponentHelpers = {
             const showTicks = parameters.showTicks !== false;
             const minorLength = context.tokens.getNumber("axis.minorTickLength", 2.5);
             const minorOpacity = context.tokens.getNumber("axis.minorOpacity", 0.45);
-            for (let index = 0; showTicks && index < ticks.x.minor.length; index++)
-                children.push(BlockComponentHelpers.strokeLine(`x-minor-tick-${index}`, box.toX(ticks.x.minor[index]), box.bottom, box.toX(ticks.x.minor[index]), box.bottom + minorLength, color, 1, minorOpacity));
-            for (let index = 0; showTicks && index < ticks.y.minor.length; index++)
-                children.push(BlockComponentHelpers.strokeLine(`y-minor-tick-${index}`, box.left - minorLength, box.toY(ticks.y.minor[index]), box.left, box.toY(ticks.y.minor[index]), color, 1, minorOpacity));
+            for (let index = 0; showTicks && index < ticks.x.minor.length; index++) {
+                const position = box.toX(ticks.x.minor[index]);
+                const from = onZero ? acrossAt - minorLength / 2 : acrossAt;
+                children.push(BlockComponentHelpers.strokeLine(`x-minor-tick-${index}`, position, from, position, from + minorLength, color, 1, minorOpacity));
+            }
+            for (let index = 0; showTicks && index < ticks.y.minor.length; index++) {
+                const position = box.toY(ticks.y.minor[index]);
+                const from = onZero ? upAt - minorLength / 2 : upAt - minorLength;
+                children.push(BlockComponentHelpers.strokeLine(`y-minor-tick-${index}`, from, position, from + minorLength, position, color, 1, minorOpacity));
+            }
             for (let index = 0; index < ticks.x.major.length; index++) {
                 const position = box.toX(ticks.x.major[index]);
-                if (showTicks)
-                    children.push(BlockComponentHelpers.strokeLine(`x-tick-${index}`, position, box.bottom, position, box.bottom + Number(parameters.tickLength), color, parameters.lineWidth));
+                if (showTicks) {
+                    const from = onZero ? acrossAt - tickLength / 2 : acrossAt;
+                    children.push(BlockComponentHelpers.strokeLine(`x-tick-${index}`, position, from, position, from + tickLength, color, parameters.lineWidth));
+                }
                 if (parameters.showLabels !== true)
+                    continue;
+                // A number at the origin would be written twice over, once by each axis, and sits under
+                // the crossing besides, so an axis ruled on zero leaves it off.
+                if (onZero && Math.abs(Number(ticks.x.major[index])) < 1e-9)
                     continue;
                 // The first and the last label lean inwards, so a scale reads to its own ends
                 // instead of spilling past the plot — the rule the chart's axis follows.
                 let anchor = "middle";
                 let labelX = position;
-                if (index === 0) {
+                if (!onZero && index === 0) {
                     anchor = "start";
                     labelX = position - fontSize * 0.2;
                 }
-                if (index === ticks.x.major.length - 1) {
+                if (!onZero && index === ticks.x.major.length - 1) {
                     anchor = "end";
                     labelX = position + fontSize * 0.2;
                 }
@@ -771,7 +813,7 @@ var BlockComponentHelpers = {
                     type: "text",
                     properties: {
                         x: labelX,
-                        y: box.bottom + labelGapX,
+                        y: acrossAt + (onZero ? tickLength / 2 + labelRise : 0) + labelGapX,
                         text: formatAxisTickValue(ticks.x.major[index], "decimal", context.notation),
                         fontSize: fontSize,
                         fontFamily: parameters.fontFamily,
@@ -784,15 +826,19 @@ var BlockComponentHelpers = {
             }
             for (let index = 0; index < ticks.y.major.length; index++) {
                 const position = box.toY(ticks.y.major[index]);
-                if (showTicks)
-                    children.push(BlockComponentHelpers.strokeLine(`y-tick-${index}`, box.left - Number(parameters.tickLength), position, box.left, position, color, parameters.lineWidth));
+                if (showTicks) {
+                    const from = onZero ? upAt - tickLength / 2 : upAt - tickLength;
+                    children.push(BlockComponentHelpers.strokeLine(`y-tick-${index}`, from, position, from + tickLength, position, color, parameters.lineWidth));
+                }
                 if (parameters.showLabels !== true)
+                    continue;
+                if (onZero && Math.abs(Number(ticks.y.major[index])) < 1e-9)
                     continue;
                 children.push({
                     id: `y-label-${index}`,
                     type: "text",
                     properties: {
-                        x: box.left - labelGapY - Number(parameters.tickLength),
+                        x: upAt - labelGapY - tickLength / (onZero ? 2 : 1),
                         y: position + labelRise,
                         text: formatAxisTickValue(ticks.y.major[index], "decimal", context.notation),
                         fontSize: fontSize,
