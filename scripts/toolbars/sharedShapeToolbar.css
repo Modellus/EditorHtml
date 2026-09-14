@@ -12,7 +12,16 @@ math-field::part(placeholder) {
 
 math-field:focus-within {
     outline: none;
+}
+
+/* A widget of the toolkit keeps its text from being selected, and a math field standing inside one
+   inherits that. The caret a click on the field means then has nowhere to land in it and is left in
+   the box around it, so the field is focused and deaf: the keys that command it - a backspace, an
+   arrow - still reach it, while what is typed goes nowhere. The field is selectable from the start,
+   before the focus a click on it would give it. */
+math-field:not([read-only]) {
     user-select: text;
+    -webkit-user-select: text;
 }
 
 math-field {

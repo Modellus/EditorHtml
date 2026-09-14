@@ -272,14 +272,17 @@ class BoardEditor extends Workspace {
         this.reset();
     }
 
+    // A property of the model - the player's start, end and step among them - is changed the way a
+    // shape is: the model is marked as changed, so the auto save carries it, and the change is the
+    // command the collaborators are told about. Told in so many words, since the room answers every
+    // joining and every reconnection with the snapshot it holds, and a change it was never given
+    // would be taken back by the next one to arrive.
     setPropertyCommand(name, value) {
         const previousProperties = Utils.cloneProperties(this.properties);
         this.setProperty(name, value);
-        const newProperties = Utils.cloneProperties(this.properties);
-        const command = {
-            execute: () => this.setPropertiesAndReset(newProperties),
-            undo: () => this.setPropertiesAndReset(previousProperties)
-        };
+        const command = new SetPropertiesCommand(this, Utils.cloneProperties(this.properties));
+        command.previousProperties = previousProperties;
+        this._hasChanges = true;
         this.commands.invoker.record(command);
     }
 

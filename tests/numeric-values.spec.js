@@ -245,6 +245,51 @@ test.describe('a field standing empty', () => {
     });
 });
 
+// A field already holding a value is written into the way any field is: the caret goes where the
+// click put it and what is typed lands there. The field stands inside a widget of the toolkit,
+// which keeps its own text from being selected, and a field that inherits that has nowhere for the
+// caret to land: it is left focused and deaf, taking a backspace and an arrow while what is typed
+// goes nowhere. The player's end is the box that starts with a value in it.
+test.describe('a field already holding a value', () => {
+    async function openPlayerEnd(page) {
+        await page.evaluate(() => shell.bottomToolbar._endDropdownElement.dxDropDownButton('instance').open());
+        const field = page.locator('.mdl-player-range-dropdown math-field.mdl-numeric-math-field').first();
+        await expect(field).toBeVisible();
+        await page.waitForTimeout(500);
+        return field;
+    }
+
+    test('takes what is typed into it after a click, beside what it holds', async ({ page }) => {
+        await setupBoard(page);
+        const end = await openPlayerEnd(page);
+        expect(await readField(end)).toBe('10');
+        await end.click();
+        await page.waitForTimeout(200);
+        await page.keyboard.type('7');
+        expect(await readField(end)).toBe('107');
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(300);
+        expect(await page.evaluate(() => shell.properties.independent.end)).toBe(107);
+    });
+
+    test('takes typing after the reader has backspaced what it held away', async ({ page }) => {
+        await setupBoard(page);
+        const end = await openPlayerEnd(page);
+        await end.click();
+        await page.waitForTimeout(200);
+        for (let press = 0; press < 4; press++) {
+            await page.keyboard.press('Backspace');
+            await page.waitForTimeout(80);
+        }
+        expect(await readField(end)).toBe('');
+        await page.keyboard.type('100');
+        expect(await readField(end)).toBe('100');
+        await page.keyboard.press('Enter');
+        await page.waitForTimeout(300);
+        expect(await page.evaluate(() => shell.properties.independent.end)).toBe(100);
+    });
+});
+
 test.describe('the numeric grammar the fields share', () => {
     test('reads a value in either notation and nothing with a comma', async ({ page }) => {
         await setupBoard(page);
