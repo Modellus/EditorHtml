@@ -71,6 +71,13 @@ class BlockDefinitionLoader {
             indexedSource: indexedSource,
             valueSource: valueSource,
             axisFit: axisFit,
+            // The frame on its own, without the drawing: what the object hands back to the model is
+            // read from the same locals the drawing is made of, and reading them is not worth a whole
+            // drawing when it happens on every row of a run.
+            applyFrame: (parameters, context) => {
+                BlockDefinitionLoader.applyLocals(locals, parameters, context);
+                return parameters;
+            },
             create: (parameters, context) => {
                 BlockDefinitionLoader.applyLocals(locals, parameters, context);
                 return BlockDefinitionLoader.pruneNode(BlockMigrations.clone(root), context);
@@ -230,6 +237,17 @@ class BlockDefinitionLoader {
                 problems.push(`Local "${local.id}" collides with a parameter or an earlier local.`);
             BlockDefinitionLoader.findUnknownNames(local, declared, `locals[${index}]`, problems);
             declared.add(local.id);
+        }
+        // A row the object writes back names the local carrying what it drew, and may name a second
+        // one saying when the row is the object's to write. Both are checked once the locals are
+        // declared, so a row reaching for a name the definition never works out is reported here
+        // rather than writing nothing at run time.
+        for (const parameter of document.parameters ?? []) {
+            for (const field of ["writesLocal", "writesWhen"]) {
+                const local = String(parameter?.[field] ?? "");
+                if (local !== "" && !declared.has(local))
+                    problems.push(`Parameter "${parameter.id}" writes from "${local}", which the definition does not declare.`);
+            }
         }
         if (document.root)
             BlockDefinitionLoader.findUnknownNames(document.root, declared, "root", problems);

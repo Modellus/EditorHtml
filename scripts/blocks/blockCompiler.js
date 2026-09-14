@@ -38,6 +38,35 @@ class BlockCompiler {
         return compilation;
     }
 
+    // The numbers the object would be drawn from, without drawing it: its parameters resolved and
+    // every local worked out onto them. What an object hands back to the model is read from here, so
+    // what it writes and what it draws are the same reckoning rather than two that could disagree.
+    // Nothing is built — a reading written on every row of a run cannot cost a whole drawing each
+    // time — and a component that is not defined as a document has no locals to work out, so it has
+    // no frame to read either.
+    evaluateFrame(definition, context = {}) {
+        const root = definition?.root ?? null;
+        const registration = root ? this.registry.get(root.type) : null;
+        if (!root || !registration || typeof registration.applyFrame !== "function")
+            return null;
+        const compilation = {
+            nodes: [],
+            componentFrame: null,
+            diagnostics: [],
+            stats: { nodeCount: 0, maxDepth: 0, componentsUsed: [], blocksUsed: [], durationMs: 0 },
+            context: this.createRootContext(definition, context)
+        };
+        const parameters = this.resolveComponentParameters(root, registration, compilation, compilation.context, "root");
+        const frameContext = this.createChildContext(compilation.context, {
+            parameters: parameters,
+            componentStack: [registration.type],
+            componentDepth: 1
+        });
+        this.attachContextResolvers(frameContext);
+        registration.applyFrame(parameters, frameContext);
+        return parameters;
+    }
+
     createRootContext(definition, context) {
         const tokens = context.tokens ?? new BlockTokens(definition?.preset ?? "standard", context.tokenOverrides ?? null);
         const parameters = Object.assign({}, context.parameters ?? {});
@@ -48,8 +77,10 @@ class BlockCompiler {
             height: Number(context.height) || tokens.getNumber("size.default.height", 180),
             caseNumber: Number(context.caseNumber) || 1,
             // Which writing on the board belongs to the object being drawn, so a name it hands the
-            // model itself is not read back as a name the model works out for it.
-            valueSourceId: String(context.valueSourceId ?? ""),
+            // model itself is not read back as a name the model works out for it. An object writing
+            // several rows of its own — a circle handing back its sine, its cosine and its arc at
+            // once — is registered once per row, so it is a list rather than one name.
+            valueSourceIds: Array.isArray(context.valueSourceIds) ? context.valueSourceIds.slice() : [],
             iteration: Number(context.iteration) || 1,
             playing: context.playing === true,
             precision: Number.isFinite(Number(context.precision)) ? Number(context.precision) : 2,

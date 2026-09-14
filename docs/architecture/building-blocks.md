@@ -333,6 +333,21 @@ stay in code, because they generate geometry per index or per character rather t
   is added to the system and withdrawn with the source exactly as an indexed one is, and the model has
   the same last word: a name it works out for itself is read, never written over. The row naming it
   invites a name of the reader's own for the same reason.
+* **A row of the object may be the reading it writes.** A `valueSource` is a declaration of the
+  document's own; a row the reader names a term on can write the same way without one, by naming a
+  **`writesLocal`** on the parameter — the local carrying what the object drew, which is already what
+  `valueLocal` shows beside the drawing. The row is then registered as a value source of its own, one
+  per row, and the object writes every one of them on the row the run stands on: the Trigonometric
+  circle hands the model the cosine, the sine, the tangent and the arc it is reading while the model
+  turns the point, so a term the model never works out is still plotted and tabulated. A
+  **`writesWhen`** names a local saying when the row is the object's to write, for a row that is the
+  reading in one arrangement and the driver in another — the circle writes the angle it reads off a
+  point the model places, and leaves the angle alone when the angle is what places the point. The
+  model's last word, the term being added and withdrawn, and the row inviting a name of the reader's
+  own are all exactly as they are for a declared `valueSource`. What is written is read from the
+  object's **frame** — `BlockCompiler.evaluateFrame` resolves the parameters and works the locals out
+  onto them without building a single node — so what the object writes and what it draws are one
+  reckoning, and a reading written on every row of a run does not cost a drawing each time.
 * **A name another object writes is one the model holds.** Two objects writing the same name row by
   row would only overwrite each other, so a name one of them writes reads as defined to all the
   others — its own writing excepted, or a wave handing over its reference oscillator would read that

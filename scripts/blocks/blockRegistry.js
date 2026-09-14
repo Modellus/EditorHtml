@@ -79,6 +79,10 @@ class BuildingBlockRegistry {
             deprecated: registration.deprecated === true,
             replacedBy: registration.replacedBy ?? null,
             create: registration.create ?? null,
+            // The numbers a component would be drawn from, worked out without drawing it. What an
+            // object hands back to the model is read from here, so a reading written on every row of
+            // a run costs the frame rather than the whole drawing.
+            applyFrame: registration.applyFrame ?? null,
             render: registration.render ?? null,
             apply: registration.apply ?? null,
             attach: registration.attach ?? null,

@@ -253,8 +253,9 @@ class ComponentShape extends BaseShape {
             parameters: parameters,
             caseNumber: this.getTermCaseNumber("caseNumber"),
             // Which writing on the board is this object's own, so a name it hands the model itself is
-            // not read back as a name the model works out.
-            valueSourceId: this.getValueSourceId(),
+            // not read back as a name the model works out. An object writing a row of its own for each
+            // reading it takes registers once for each, so it is a list rather than one name.
+            valueSourceIds: this.getValueSourceIds(),
             iteration: this.board.calculator.getIteration(),
             playing: this.board.calculator.isPlaying(),
             precision: this.board.calculator.getPrecision(),
@@ -600,7 +601,7 @@ class ComponentShape extends BaseShape {
             return false;
         if (this.board.calculator.getIndexedSourceName(this.getIndexedSourceId()) === name)
             return false;
-        if (this.board.calculator.getValueSourceName(this.getValueSourceId()) === name)
+        if (this.getValueSourceIds().some(sourceId => this.board.calculator.getValueSourceName(sourceId) === name))
             return false;
         return this.getComponentCompiler().bindings.definesTerm(name, this.getCompilationContext());
     }
@@ -982,7 +983,9 @@ class ComponentShape extends BaseShape {
         // An object taken off the board takes the wave it published with it, so a name it stood for
         // stops answering rather than going on drawing from an object that is no longer there.
         const withdrewWave = this.board.calculator.removeIndexedSource(this.getIndexedSourceId());
-        const withdrewReading = this.board.calculator.removeValueSource(this.getValueSourceId());
+        let withdrewReading = false;
+        for (const sourceId of this.getValueSourceIds())
+            withdrewReading = this.board.calculator.removeValueSource(sourceId) || withdrewReading;
         if (withdrewWave || withdrewReading)
             this.board.calculator.refreshDataSources();
         this.stopKeepingTime();
@@ -1588,6 +1591,7 @@ class ComponentShape extends BaseShape {
     publishModelData() {
         let feedsModel = this.publishIndexedSource();
         feedsModel = this.publishValueSource() || feedsModel;
+        feedsModel = this.publishWritingSources(this.hasWritingParameters() ? this.buildComponentFrame() : null) || feedsModel;
         for (const parameter of this.getMemoryParameters()) {
             const series = this.buildMemorySeries(parameter);
             this.board.calculator.setDataSource(this.getMemorySourceId(parameter.id), series.names, series.values);
@@ -1618,7 +1622,8 @@ class ComponentShape extends BaseShape {
     publishesParameter(parameterId) {
         const id = String(parameterId);
         return String(this.getIndexedSourceDeclaration()?.name?.parameter ?? "") === id
-            || String(this.getValueSourceDeclaration()?.name?.parameter ?? "") === id;
+            || String(this.getValueSourceDeclaration()?.name?.parameter ?? "") === id
+            || this.getWritingParameters().some(parameter => parameter.id === id);
     }
 
     getIndexedSourceId() {
@@ -1668,8 +1673,74 @@ class ComponentShape extends BaseShape {
         return this.getIndexedSourceParameters().includes(name);
     }
 
-    getValueSourceId() {
-        return `value:${this.id}`;
+    // The reading the definition declares is written under the object's own id; a row the object
+    // writes back is written under an id of its own, so a circle handing the model its sine and its
+    // cosine registers once for each rather than fighting itself over one name.
+    getValueSourceId(parameterId = "") {
+        return String(parameterId) === "" ? `value:${this.id}` : `value:${this.id}:${parameterId}`;
+    }
+
+    getValueSourceIds() {
+        return [this.getValueSourceId()].concat(this.getWritingParameters().map(parameter => this.getValueSourceId(parameter.id)));
+    }
+
+    // The rows the object writes back: the ones the definition gives a local to write from. A row
+    // read off the drawing — how far across the point of a circle stands, the arc it has travelled —
+    // is the object's to write whenever the model leaves its term free, and it is written on every
+    // row of a run rather than only where a drag last left it.
+    getWritingParameters() {
+        const componentType = this.getComponentType();
+        if (this._writingParameters?.type === componentType)
+            return this._writingParameters.parameters;
+        const parameters = BlockObjects.getComponentParameters(componentType)
+            .filter(parameter => String(parameter.writesLocal ?? "") !== "");
+        this._writingParameters = { type: componentType, parameters: parameters };
+        return parameters;
+    }
+
+    // What the object would be drawn from now, read without drawing it. It is worked out once and
+    // handed to everything that reads a row off it, so a run writing four readings a row is one
+    // reckoning of the object rather than four.
+    buildComponentFrame() {
+        return this.getComponentCompiler().evaluateFrame(this.properties.definition, this.getCompilationContext());
+    }
+
+    // A row is the object's to write while the model leaves its term free and while the definition
+    // says the row is being read rather than driving the drawing: the angle a point is placed at is
+    // the object's reading when the model places the point, and the model's own word when it is the
+    // angle the model works out.
+    publishWritingSources(frame) {
+        let published = false;
+        for (const parameter of this.getWritingParameters()) {
+            const sourceId = this.getValueSourceId(parameter.id);
+            const name = String(this.properties[parameter.id] ?? "").trim();
+            const writes = this.canPublishValueSource(name) && this.isWritingRowOn(parameter, frame);
+            published = this.board.calculator.setValueSource(sourceId, writes ? name : "") || published;
+        }
+        return published;
+    }
+
+    isWritingRowOn(parameter, frame) {
+        const gate = String(parameter.writesWhen ?? "");
+        if (gate === "")
+            return true;
+        return Number(frame?.[gate]) > 0;
+    }
+
+    // What every row the object writes is holding now, read off one frame. A row whose local worked
+    // out to nothing — the tangent where the point stands above the centre and the line is never met —
+    // is left holding what it had rather than handed an infinity.
+    getWritingSourceValues(frame) {
+        const writes = [];
+        for (const parameter of this.getWritingParameters()) {
+            const name = this.board.calculator.getValueSourceName(this.getValueSourceId(parameter.id));
+            if (name === "" || !this.isWritingRowOn(parameter, frame))
+                continue;
+            const value = Number(frame?.[String(parameter.writesLocal ?? "")]);
+            if (Number.isFinite(value))
+                writes.push({ name: name, value: value });
+        }
+        return writes;
     }
 
     // The model has the last word on a name it works out itself: a term it assigns, one it defines
@@ -1711,21 +1782,45 @@ class ComponentShape extends BaseShape {
         return String(this.getComponentCompiler().bindings.resolve(declaration.name, this.getCompilationContext(), "") ?? "").trim() === String(name);
     }
 
-    // What the object is reading now, written on the row the model is showing. The row is worked
-    // through again after it, so a definition reading the name is answered on the same row rather
-    // than a step behind the object it reads.
+    // What the object is reading now, written on the row the model is showing. Every row it writes
+    // goes down together and the model is worked through once after them, so a definition reading any
+    // of the names is answered on the same row rather than a step behind the object it reads, and a
+    // circle writing four readings is one pass of the model rather than four.
     writeValueSource() {
-        const declaration = this.getValueSourceDeclaration();
-        const name = this.board.calculator.getValueSourceName(this.getValueSourceId());
-        if (!declaration || name === "")
-            return;
-        const value = Number(this.getComponentCompiler().bindings.resolveSum(declaration, this.getCompilationContext(), NaN));
-        if (!Number.isFinite(value))
+        const writes = this.getValueSourceWrites();
+        if (writes.length === 0)
             return;
         const calculator = this.board.calculator;
         const iteration = calculator.getIteration();
-        calculator.setTermValueOnIteration(name, value, iteration, this.getTermCaseNumber("caseNumber"));
+        const caseNumber = this.getTermCaseNumber("caseNumber");
+        for (const write of writes)
+            calculator.setTermValueOnIteration(write.name, write.value, iteration, caseNumber);
         calculator.recalculate(iteration);
+    }
+
+    getValueSourceWrites() {
+        const writes = [];
+        const declaration = this.getValueSourceDeclaration();
+        const name = this.board.calculator.getValueSourceName(this.getValueSourceId());
+        if (declaration && name !== "") {
+            const value = Number(this.getComponentCompiler().bindings.resolveSum(declaration, this.getCompilationContext(), NaN));
+            if (Number.isFinite(value))
+                writes.push({ name: name, value: value });
+        }
+        if (this.writesAnyRow())
+            writes.push(...this.getWritingSourceValues(this.buildComponentFrame()));
+        return writes;
+    }
+
+    hasWritingParameters() {
+        return this.getWritingParameters().length > 0;
+    }
+
+    // Whether any row of the object is standing under a name it writes. Asked before the frame is
+    // worked out, so an object whose rows the model all works out for itself costs nothing per row of
+    // a run.
+    writesAnyRow() {
+        return this.getWritingParameters().some(parameter => this.board.calculator.getValueSourceName(this.getValueSourceId(parameter.id)) !== "");
     }
 
     // What the object writes is worked out from its parameters, so editing one of them is the model
@@ -1746,7 +1841,8 @@ class ComponentShape extends BaseShape {
     }
 
     isValueSourceProperty(name) {
-        return this.getValueSourceParameters().includes(name);
+        return this.getValueSourceParameters().includes(name)
+            || this.getWritingParameters().some(parameter => parameter.id === name);
     }
 
     isModelSourceProperty(name) {

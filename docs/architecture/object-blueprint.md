@@ -158,7 +158,7 @@ Each is `{ id, label, valueType, defaultValue, category }` plus any of `descript
 `userEditable`, `structured`, `termParameters`, `colorParameter`, `pairedParameter`, `modeParameter`,
 `pairedField`, `modeField`, `valueParameter`, `minimumParameter`, `maximumParameter`, `toolbarKey`,
 `toolbarTooltip`, `angleUnitParameter`, `valueAnchor`, `valueIcon`, `valueIconMirrored`, `valueLocal`,
-`visibleWhen`.
+`writesLocal`, `writesWhen`, `visibleWhen`.
 
 `valueType` is one of `number`, `string`, `boolean`, `colour`, `variable`, `terms`, `expression`,
 `memory`, `character`, `audio`, `object`.
@@ -230,6 +230,21 @@ drawing shows until a gesture or the model writes it. Name a **`valueLocal`** an
 that local instead of the row: the number beside a projection is then the projection, and the two
 can never disagree. The row itself is untouched, so what a drag writes and what a file carries are
 still the row's own.
+
+A row read off the drawing is also the object's to **write**. Name a **`writesLocal`** and the row
+hands the model that local on every row of a run: the circle's sine goes down beside the angle the
+model turned it by, so a term the model never works out is still plotted, tabulated and read back
+like one it does. What is written goes under the name the row stands at, through the same value-source
+registration a `valueSource` uses — so the model always has the last word (a name it assigns, defines
+over element indices, loads as measurements or another object already writes is read, never written),
+a name the model has never held is added to it as a term, and the row invites one: it offers *Name a
+new term* the way a published wave does. Add a **`writesWhen`** naming a local that says when the row
+is the object's to write, for a row that is the reading in one arrangement and the driver in another
+— a circle writes the angle it reads off a point the model places, and leaves the angle alone when
+the angle is what places the point. The value written is the local as it stands, in the model's own
+units, so a `writesLocal` for an angle names a local divided back out of radians. The gesture is
+unchanged: a drag still writes the row where the model leaves it free, and the object's own writing
+is what a run puts there.
 
 A row holding a plain number has no name to write in front of that value. **`valueIcon`** is the mark
 the measure goes by, written where the name would stand — an angle, a wave for a sine, the chart's

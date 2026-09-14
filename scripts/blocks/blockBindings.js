@@ -492,9 +492,15 @@ class BlockBindings {
         // the piano's chord is not a name a wave is free to work out for itself, it is one to repeat.
         // The object's own writing is not — a wave handing the model its own reference oscillator
         // would otherwise read that back and repeat itself.
-        if (this.calculator.isValueSourceName(name) && this.calculator.getValueSourceName(context?.valueSourceId ?? "") !== name)
+        if (this.calculator.isValueSourceName(name) && !this.writesValueSourceName(name, context))
             return true;
         return this.calculator.system.getTerm(name)?.type === Modellus.TermType.PRELOADED;
+    }
+
+    // Whether the object being drawn is the one writing under that name. An object hands the model
+    // one registration per row it writes, so every one of them is asked rather than a single name.
+    writesValueSourceName(name, context) {
+        return (context?.valueSourceIds ?? []).some(sourceId => this.calculator.getValueSourceName(sourceId) === name);
     }
 
     resolveIndependent(binding, fallbackValue) {

@@ -57,6 +57,20 @@ function readProperties(page, names) {
     }, names);
 }
 
+
+// A run of the model, far enough in that the rows the object wrote can be read back a few at a time.
+async function runModel(page, iterations = 12) {
+    await page.evaluate(() => shell.board.calculator.play());
+    await page.waitForFunction(count => shell.board.calculator.getLastCalculatedIteration() > count, iterations, { timeout: 20000 });
+    await page.evaluate(() => shell.board.calculator.pause());
+}
+
+function readTermsAt(page, iteration, names) {
+    return page.evaluate(([iteration, names]) => Object.fromEntries(
+        names.map(name => [name, Number(shell.board.calculator.system.getByNameOnIteration(iteration, name, 1))])
+    ), [iteration, names]);
+}
+
 function readTerms(page, names) {
     return page.evaluate(names => Object.fromEntries(names.map(name => [name, Number(shell.board.calculator.getByName(name, 1))])), names);
 }
@@ -817,6 +831,80 @@ test.describe('trigonometric circle component', () => {
         const heldLarge = await buildDrawing(page, { radiusVariable: '4', dragRadius: true });
         expect(Number(fittedLarge.nodes.circle.attributes.r)).toBe(Number(fittedSmall.nodes.circle.attributes.r));
         expect(Number(heldLarge.nodes.circle.attributes.r)).toBeCloseTo(Number(heldSmall.nodes.circle.attributes.r) * 4, 6);
+    });
+
+
+    // A row the model leaves free is the object's to write, and not only where a drag last left it.
+    // The circle writes what it is reading onto every row of a run, so a model that turns the point
+    // hands the sine of that turn to a chart and a table like a term it works out for itself. This is
+    // the whole point of naming a free term on a row: without it the column would hold the number it
+    // started at for the length of the run.
+    test('a circle the model turns writes its readings onto every row of the run', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Turning');
+            shell.board.shapes.getByName('Turning').properties.expression = 'spin=t';
+            shell.reset();
+        });
+        await addCircle(page, { angleVariable: 'spin', radiusVariable: '1', pointXVariable: 'cosine', pointYVariable: 'sine', arcVariable: 'travelled' });
+        await runModel(page);
+        for (const iteration of [2, 5, 10]) {
+            const row = await readTermsAt(page, iteration, ['spin', 'cosine', 'sine', 'travelled']);
+            expect(row.sine).toBeCloseTo(Math.sin(row.spin), 6);
+            expect(row.cosine).toBeCloseTo(Math.cos(row.spin), 6);
+            expect(row.travelled).toBeCloseTo(row.spin, 6);
+        }
+    });
+
+    // A name the row stands under is the object's to add when the model has never held it, the way a
+    // wave an object publishes becomes a term: the reader writes "sine" on the row and the model has a
+    // sine to plot, without an equation saying so.
+    test('a row naming a term the model never held has it added to the model', async ({ page }) => {
+        await setupBoard(page);
+        await page.evaluate(() => {
+            modellus.shape.addExpression('Turning');
+            shell.board.shapes.getByName('Turning').properties.expression = 'spin=t';
+            shell.reset();
+        });
+        expect(await page.evaluate(() => shell.board.calculator.isTerm('sine'))).toBe(false);
+        await addCircle(page, { angleVariable: 'spin', pointYVariable: 'sine' });
+        expect(await page.evaluate(() => shell.board.calculator.isTerm('sine'))).toBe(true);
+    });
+
+    // Which row is the reading and which is the driver is the model's to settle. A pair the model
+    // works out places the point, and then the angle is what the circle reads off it rather than what
+    // it is told, so that is the row the object writes.
+    test('the angle is the row written when the model places the point instead', async ({ page }) => {
+        await setupBoard(page);
+        await addCircleModel(page);
+        await addCircle(page, { angleVariable: 'theta', pointXVariable: 'computedAcross', pointYVariable: 'computedUp' });
+        await runModel(page);
+        const row = await readTermsAt(page, 5, ['theta', 'computedAcross', 'computedUp']);
+        expect(row.computedAcross).toBeCloseTo(-0.6, 6);
+        expect(row.computedUp).toBeCloseTo(0.8, 6);
+        expect(row.theta).toBeCloseTo(Math.atan2(0.8, -0.6), 6);
+    });
+
+    // A written angle is written in the unit the model counts angles in, like every other angle the
+    // object hands back: the mark the object wears says how the reader reads it, never what is held.
+    test('a written angle is written in the unit the model counts angles in', async ({ page }) => {
+        await setupBoard(page);
+        await addCircleModel(page);
+        await setModelAngleUnit(page, 'degrees');
+        await addCircle(page, { angleVariable: 'theta', pointXVariable: 'computedAcross', pointYVariable: 'computedUp' });
+        await runModel(page);
+        const row = await readTermsAt(page, 5, ['theta']);
+        expect(row.theta).toBeCloseTo(Math.atan2(0.8, -0.6) * 180 / Math.PI, 6);
+    });
+
+    // A row the model works out for itself is read, never written: the object would only be telling
+    // the model what it was just told, and the model has the last word on its own terms.
+    test('a row the model works out for itself is not written over', async ({ page }) => {
+        await setupBoard(page);
+        await addCircleModel(page);
+        await addCircle(page, { angleVariable: 'turned', pointYVariable: 'computedUp' });
+        await runModel(page);
+        expect((await readTermsAt(page, 5, ['computedUp'])).computedUp).toBeCloseTo(0.8, 6);
     });
 
     test('nothing is drawn outside the box the object reports as its own', async ({ page }) => {

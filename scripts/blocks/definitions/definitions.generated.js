@@ -17491,7 +17491,7 @@ BlockDefinitionLoader.registerAll([
         "category": "component",
         "displayName": "Trigonometric circle",
         "writesNotation": false,
-        "description": "Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is written by the drag — so the same object shows a model turning a circle and lets a reader turn one for the model. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it.",
+        "description": "Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is the circle's to write — so the same object shows a model turning a circle and lets a reader turn one for the model. A free row is written both ways: by dragging the point, and by the circle itself on every row of a run, so a sine the model never works out is still plotted and tabulated like one it does. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it.",
         "icon": "fa-light fa-circle-quarter-stroke",
         "tags": [
             "object",
@@ -17525,7 +17525,7 @@ BlockDefinitionLoader.registerAll([
             }
         },
         "agentTool": {
-            "usage": "Use it wherever a model turns something round a circle, or wherever a reader should be able to. Naming a term the model works out on angleVariable turns the point with the run; naming a pair on pointXVariable and pointYVariable places the point directly and the angle and the radius are read off it instead. Every row the model leaves free is written by dragging the point, so the same object is the control for an angle, a radius, a pair of coordinates, a tangent and an arc length at once. radiusVariable at one makes it the trigonometric circle, where the projections read the cosine and the sine themselves. snapDivisions makes a dragged angle land on a whole number of parts of the circle when the point is let go — twelve for every thirty degrees, each read as the portion of π it is.",
+            "usage": "Use it wherever a model turns something round a circle, or wherever a reader should be able to. Naming a term the model works out on angleVariable turns the point with the run; naming a pair on pointXVariable and pointYVariable places the point directly and the angle and the radius are read off it instead. Every row the model leaves free is the object's to write — by dragging the point, and by the circle itself on each row of a run — so the same object is the control for an angle, a radius, a pair of coordinates, a tangent and an arc length at once, and naming a free term on pointYVariable while the model turns the angle is how the sine of the run reaches a chart or a table. radiusVariable at one makes it the trigonometric circle, where the projections read the cosine and the sine themselves. snapDivisions makes a dragged angle land on a whole number of parts of the circle when the point is let go — twelve for every thirty degrees, each read as the portion of π it is.",
             "parameters": [
                 "angleVariable",
                 "radiusVariable",
@@ -17558,7 +17558,7 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": "0.9",
                 "category": "model",
                 "colorParameter": "angleColor",
-                "description": "The angle the point stands at, measured from the positive horizontal axis and growing anticlockwise. A term the model works out for itself turns the point; a term the model leaves free, or a plain number, is written by dragging the point. It is held in the unit the model is set to, whichever the object is marked in, so changing the mark changes how the angle is written and never where the point is.",
+                "description": "The angle the point stands at, measured from the positive horizontal axis and growing anticlockwise. A term the model works out for itself turns the point; a term the model leaves free, or a plain number, is written by dragging the point, and is written by the circle itself while the point is placed some other way. It is held in the unit the model is set to, whichever the object is marked in, so changing the mark changes how the angle is written and never where the point is.",
                 "valueAnchor": {
                     "node": "angle-anchor",
                     "x": 0.5,
@@ -17566,7 +17566,9 @@ BlockDefinitionLoader.registerAll([
                 },
                 "valueLocal": "angleWrapped",
                 "valueIcon": "",
-                "angleUnitParameter": "angleUnit"
+                "angleUnitParameter": "angleUnit",
+                "writesLocal": "angleWritten",
+                "writesWhen": "derivedAngle"
             },
             {
                 "id": "radiusVariable",
@@ -17575,14 +17577,16 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": "1",
                 "category": "model",
                 "colorParameter": "radiusColor",
-                "description": "How far the point stands from the centre. Left at one the circle is the trigonometric circle, where the two projections read the cosine and the sine themselves rather than multiples of them.",
+                "description": "How far the point stands from the centre. Left at one the circle is the trigonometric circle, where the two projections read the cosine and the sine themselves rather than multiples of them. Placed by a pair of coordinates the circle reads its radius off them, and a term the model leaves free is written with it.",
                 "valueAnchor": {
                     "node": "radius-anchor",
                     "x": 0.5,
                     "y": 0.5
                 },
                 "valueLocal": "radius",
-                "valueIcon": ""
+                "valueIcon": "",
+                "writesLocal": "radius",
+                "writesWhen": "readsPoint"
             },
             {
                 "id": "pointXVariable",
@@ -17591,7 +17595,7 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": "0",
                 "category": "model",
                 "colorParameter": "cosineColor",
-                "description": "How far across the point stands — the radius times the cosine of the angle, and the cosine itself on a circle of radius one. Named together with the row below it, the pair places the point and the angle is read off it.",
+                "description": "How far across the point stands — the radius times the cosine of the angle, and the cosine itself on a circle of radius one. Named together with the row below it, the pair places the point and the angle is read off it. A term the model leaves free is written with what the circle is reading: by a drag while the model stands still, and by the circle itself on every row of a run.",
                 "valueAnchor": {
                     "node": "cosine-anchor",
                     "x": 0.5,
@@ -17599,7 +17603,8 @@ BlockDefinitionLoader.registerAll([
                 },
                 "valueLocal": "pointValueX",
                 "valueIcon": "",
-                "valueIconMirrored": true
+                "valueIconMirrored": true,
+                "writesLocal": "pointValueX"
             },
             {
                 "id": "pointYVariable",
@@ -17608,14 +17613,15 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": "0",
                 "category": "model",
                 "colorParameter": "sineColor",
-                "description": "How far up the point stands — the radius times the sine of the angle, and the sine itself on a circle of radius one. Named together with the row above it, the pair places the point and the angle is read off it.",
+                "description": "How far up the point stands — the radius times the sine of the angle, and the sine itself on a circle of radius one. Named together with the row above it, the pair places the point and the angle is read off it. A term the model leaves free is written with what the circle is reading: by a drag while the model stands still, and by the circle itself on every row of a run.",
                 "valueAnchor": {
                     "node": "sine-anchor",
                     "x": 0.5,
                     "y": 0.5
                 },
                 "valueLocal": "pointValueY",
-                "valueIcon": ""
+                "valueIcon": "",
+                "writesLocal": "pointValueY"
             },
             {
                 "id": "tangentVariable",
@@ -17624,14 +17630,16 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": "0",
                 "category": "model",
                 "colorParameter": "tangentColor",
-                "description": "The tangent of the angle, read on the line standing at the radius. A term the model works out for itself places the point where its tangent says, which is a half turn short of telling the whole story, so it is read only where neither the pair nor the angle is the model's own. A quarter turn has no tangent at all: nothing is written there and the row keeps what it held.",
+                "description": "The tangent of the angle, read on the line standing at the radius. A term the model works out for itself places the point where its tangent says, which is a half turn short of telling the whole story, so it is read only where neither the pair nor the angle is the model's own. A quarter turn has no tangent at all: nothing is written there and the row keeps what it held. A term the model leaves free is written with what the circle is reading: by a drag while the model stands still, and by the circle itself on every row of a run.",
                 "valueAnchor": {
                     "node": "tangent-anchor",
                     "x": 0.5,
                     "y": 0.5
                 },
                 "valueLocal": "tangentValue",
-                "valueIcon": ""
+                "valueIcon": "",
+                "writesLocal": "tangentValue",
+                "writesWhen": "cosNotZero"
             },
             {
                 "id": "arcVariable",
@@ -17640,14 +17648,15 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": "0",
                 "category": "model",
                 "colorParameter": "arcColor",
-                "description": "The length of the arc swept from the zero direction, the radius times the angle in radians. A term the model works out for itself places the point where that length reaches — the last of the four ways the point can be placed, and so read only where the pair, the angle and the tangent are all left free. Every other row it names is written by the drag.",
+                "description": "The length of the arc swept from the zero direction, the radius times the angle in radians. A term the model works out for itself places the point where that length reaches — the last of the four ways the point can be placed, and so read only where the pair, the angle and the tangent are all left free. Every other row it names is written by the drag. A term the model leaves free is written with what the circle is reading: by a drag while the model stands still, and by the circle itself on every row of a run.",
                 "valueAnchor": {
                     "node": "arc-anchor",
                     "x": 0.5,
                     "y": 0.5
                 },
                 "valueLocal": "arcValue",
-                "valueIcon": ""
+                "valueIcon": "",
+                "writesLocal": "arcValue"
             },
             {
                 "id": "angleUnit",
@@ -18031,6 +18040,10 @@ BlockDefinitionLoader.registerAll([
                 "formula": "1-readsPoint-readsTangent-readsArc"
             },
             {
+                "id": "derivedAngle",
+                "formula": "1-readsAngle"
+            },
+            {
                 "id": "pointRadius",
                 "formula": "\\sqrt{pointXTerm^2+pointYTerm^2}"
             },
@@ -18083,6 +18096,10 @@ BlockDefinitionLoader.registerAll([
             {
                 "id": "angleWrapped",
                 "formula": "\\mod\\left(\\mod\\left(angleRadians,turn\\right)+turn,turn\\right)"
+            },
+            {
+                "id": "angleWritten",
+                "formula": "\\frac{angleWrapped}{angleToRadians}"
             },
             {
                 "id": "angleDegrees",
