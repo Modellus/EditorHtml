@@ -30,14 +30,33 @@ class BlockGeometry {
         };
     }
 
+    // How far an arc sweeps, always the way the drawing goes round. A whole turn and more is a whole
+    // turn: the two ends stand at the same place, which is the difference between sweeping nothing
+    // and sweeping everything, and only how far apart they were asked to be says which it is.
     static clockwiseSpan(startAngleDegrees, endAngleDegrees) {
-        return BlockGeometry.normalizeDegrees(startAngleDegrees - endAngleDegrees);
+        const span = Number(startAngleDegrees) - Number(endAngleDegrees);
+        if (Math.abs(span) >= 360)
+            return 360;
+        return BlockGeometry.normalizeDegrees(span);
+    }
+
+    // A whole circle, drawn as the two halves a single arc command cannot be: an arc that ends where
+    // it began is no arc at all to SVG.
+    static circlePath(centerX, centerY, radius) {
+        return [
+            `M ${centerX - radius} ${centerY}`,
+            `A ${radius} ${radius} 0 1 1 ${centerX + radius} ${centerY}`,
+            `A ${radius} ${radius} 0 1 1 ${centerX - radius} ${centerY}`,
+            "Z"
+        ].join(" ");
     }
 
     static arcPath(centerX, centerY, radius, startAngleDegrees, endAngleDegrees) {
         const span = BlockGeometry.clockwiseSpan(startAngleDegrees, endAngleDegrees);
         if (span < 0.001)
             return "";
+        if (span >= 360)
+            return BlockGeometry.circlePath(centerX, centerY, radius);
         const largeArc = span > 180 ? 1 : 0;
         const start = BlockGeometry.polarPoint(centerX, centerY, radius, startAngleDegrees);
         const end = BlockGeometry.polarPoint(centerX, centerY, radius, endAngleDegrees);
@@ -48,6 +67,12 @@ class BlockGeometry {
         const span = BlockGeometry.clockwiseSpan(startAngleDegrees, endAngleDegrees);
         if (span < 0.001)
             return "";
+        // Swept the whole way round, a sector is the disc it was cut from, and one with a hole in it
+        // is the ring.
+        if (span >= 360)
+            return innerRadius > 0
+                ? BlockGeometry.ringPath(centerX, centerY, innerRadius, outerRadius)
+                : BlockGeometry.circlePath(centerX, centerY, outerRadius);
         const largeArc = span > 180 ? 1 : 0;
         const outerStart = BlockGeometry.polarPoint(centerX, centerY, outerRadius, startAngleDegrees);
         const outerEnd = BlockGeometry.polarPoint(centerX, centerY, outerRadius, endAngleDegrees);
@@ -64,10 +89,7 @@ class BlockGeometry {
 
     static ringPath(centerX, centerY, innerRadius, outerRadius) {
         return [
-            `M ${centerX - outerRadius} ${centerY}`,
-            `A ${outerRadius} ${outerRadius} 0 1 1 ${centerX + outerRadius} ${centerY}`,
-            `A ${outerRadius} ${outerRadius} 0 1 1 ${centerX - outerRadius} ${centerY}`,
-            "Z",
+            BlockGeometry.circlePath(centerX, centerY, outerRadius),
             `M ${centerX - innerRadius} ${centerY}`,
             `A ${innerRadius} ${innerRadius} 0 1 0 ${centerX + innerRadius} ${centerY}`,
             `A ${innerRadius} ${innerRadius} 0 1 0 ${centerX - innerRadius} ${centerY}`,

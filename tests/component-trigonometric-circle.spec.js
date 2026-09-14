@@ -85,6 +85,23 @@ async function readCentre(page) {
 
 // The point is the only thing on the circle that can be taken hold of, so a drag always starts on it
 // and goes wherever it is being taken.
+
+// A drag taken round the circle through one angle after another with the button held down the whole
+// way, so the object is given a pointer going round rather than a pointer jumping across. How far a
+// pointer has been turned cannot be read from where it ended: only from every step it took.
+async function dragRound(page, centre, angles, reachFactor = 1) {
+    const reach = centre.reach * reachFactor;
+    const start = await page.evaluate(() => {
+        const box = shell.board.shapes.getByName('Circle').element.querySelector('[data-source-id="point"]').getBoundingClientRect();
+        return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    });
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    for (const radians of angles)
+        await page.mouse.move(centre.x + Math.cos(radians) * reach, centre.y - Math.sin(radians) * reach, { steps: 6 });
+    await page.mouse.up();
+}
+
 async function dragTo(page, centre, radians, reachFactor = 1) {
     const reach = centre.reach * reachFactor;
     const start = await page.evaluate(() => {
@@ -237,7 +254,7 @@ async function buildDrawing(page, overrides, size = 280) {
         return {
             markup: BlockRenderer.toMarkup(compilation.nodes),
             nodes: Object.fromEntries(BlockRenderer.flatten(compilation.nodes).map(node => [node.sourceId, { text: node.text, attributes: node.attributes }])),
-            frame: Object.fromEntries(['angleWrapped', 'radius', 'pointValueX', 'pointValueY', 'tangentValue', 'arcValue']
+            frame: Object.fromEntries(['angleRadians', 'angleMarked', 'radius', 'pointValueX', 'pointValueY', 'tangentValue', 'arcValue']
                 .map(name => [name, compilation.componentFrame[name]])),
             diagnostics: compilation.diagnostics.map(diagnostic => diagnostic.code),
             errors: validation.errors.map(error => error.code),
@@ -356,7 +373,7 @@ test.describe('trigonometric circle component', () => {
         await setupBoard(page);
         await setModelAngleUnit(page, 'degrees');
         const drawing = await buildDrawing(page, { angleVariable: '90', radiusVariable: '2', arcColor: '#f08c02' });
-        expect(drawing.frame.angleWrapped).toBeCloseTo(Math.PI / 2, 6);
+        expect(drawing.frame.angleRadians).toBeCloseTo(Math.PI / 2, 6);
         expect(drawing.frame.arcValue).toBeCloseTo(Math.PI, 6);
     });
 
@@ -386,7 +403,7 @@ test.describe('trigonometric circle component', () => {
         const centre = Number(drawing.nodes.circle.attributes.cx);
         const radius = Number(drawing.nodes.circle.attributes.r);
         expect(Number(drawing.nodes.point.attributes.cx)).toBeCloseTo(centre + radius * Math.cos(0.5), 6);
-        expect(drawing.frame.angleWrapped).toBeCloseTo(0.5, 6);
+        expect(drawing.frame.angleRadians).toBeCloseTo(0.5, 6);
     });
 
     // A pair the model works out for itself places the point directly, and then the angle and the
@@ -401,7 +418,7 @@ test.describe('trigonometric circle component', () => {
         expect(Number(drawing.nodes.point.attributes.cx)).toBeCloseTo(centre - 0.6 * unit, 4);
         expect(Number(drawing.nodes.point.attributes.cy)).toBeCloseTo(centre - 0.8 * unit, 4);
         // atan2(0.8, -0.6) is 2.2143 radians, and the arc it has swept is that times a radius of one.
-        expect(drawing.frame.angleWrapped).toBeCloseTo(Math.atan2(0.8, -0.6), 6);
+        expect(drawing.frame.angleRadians).toBeCloseTo(Math.atan2(0.8, -0.6), 6);
         expect(drawing.frame.radius).toBeCloseTo(1, 6);
         expect(drawing.frame.arcValue).toBeCloseTo(Math.atan2(0.8, -0.6), 6);
     });
@@ -417,7 +434,7 @@ test.describe('trigonometric circle component', () => {
         });
         await page.waitForFunction(() => Number(shell.board.calculator.getByName('computedAcross', 1)) === -1);
         const drawing = await buildDrawing(page, { pointXVariable: 'computedAcross', pointYVariable: 'computedUp' });
-        expect(drawing.frame.angleWrapped).toBeCloseTo(Math.PI, 6);
+        expect(drawing.frame.angleRadians).toBeCloseTo(Math.PI, 6);
     });
 
     // Neither the pair nor the angle being the model's own, a tangent it works out is what is left to
@@ -431,7 +448,7 @@ test.describe('trigonometric circle component', () => {
         });
         await page.waitForFunction(() => Number(shell.board.calculator.getByName('slope', 1)) === 1);
         const drawing = await buildDrawing(page, { tangentVariable: 'slope', showTangent: true });
-        expect(drawing.frame.angleWrapped).toBeCloseTo(Math.PI / 4, 6);
+        expect(drawing.frame.angleRadians).toBeCloseTo(Math.PI / 4, 6);
     });
 
     // The last of the four ways the point can be placed: an arc the model works out is divided by the
@@ -446,7 +463,7 @@ test.describe('trigonometric circle component', () => {
         await page.waitForFunction(() => Number(shell.board.calculator.getByName('travelled', 1)) === 3);
         const drawing = await buildDrawing(page, { arcVariable: 'travelled', radiusVariable: '2', showArc: true });
         // Three along a circle of radius two is 1.5 radians round, and the arc reads back as it was given.
-        expect(drawing.frame.angleWrapped).toBeCloseTo(1.5, 6);
+        expect(drawing.frame.angleRadians).toBeCloseTo(1.5, 6);
         expect(drawing.frame.arcValue).toBeCloseTo(3, 6);
     });
 
@@ -710,7 +727,7 @@ test.describe('trigonometric circle component', () => {
             shell.board.calculator.calculate();
             shell.board.forceRefresh();
         });
-        await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Circle').lastCompilation?.componentFrame?.angleWrapped ?? 0)).toBeCloseTo(Math.PI / 2, 6);
+        await expect.poll(() => page.evaluate(() => shell.board.shapes.getByName('Circle').lastCompilation?.componentFrame?.angleRadians ?? 0)).toBeCloseTo(Math.PI / 2, 6);
         const quarterTurn = await readPointCentre(page);
         await chooseAngleUnit(page, 'degrees');
         expect(await page.evaluate(() => Number(shell.board.calculator.getByName('theta', 1)))).toBeCloseTo(1.5707963268, 9);
@@ -905,6 +922,102 @@ test.describe('trigonometric circle component', () => {
         await addCircle(page, { angleVariable: 'turned', pointYVariable: 'computedUp' });
         await runModel(page);
         expect((await readTermsAt(page, 5, ['computedUp'])).computedUp).toBeCloseTo(0.8, 6);
+    });
+
+
+    // An angle is how far the point has been turned, not where on the circle it ended. Taken round
+    // clockwise it goes down through nothing and on past a whole turn the other way, so a reader
+    // winding the point round twice is holding a model of two turns rather than of the place it
+    // stopped at.
+    test('a point taken round clockwise turns the angle down past nothing and past a whole turn', async ({ page }) => {
+        await setupBoard(page);
+        await addCircle(page, { angleVariable: '0' });
+        const centre = await readCentre(page);
+        await dragRound(page, centre, [-1, -2, -3, -4, -5, -6, -7]);
+        await expect.poll(async () => (await readProperties(page, ['angleVariable'])).angleVariable).toBeLessThan(-Math.PI * 2);
+        expect((await readProperties(page, ['angleVariable'])).angleVariable).toBeCloseTo(-7, 1);
+    });
+
+    // And the same the other way: round anticlockwise the angle goes on up past a whole turn rather
+    // than falling back to the part of a turn the point happens to stand at.
+    test('a point taken round anticlockwise turns the angle up past a whole turn', async ({ page }) => {
+        await setupBoard(page);
+        await addCircle(page, { angleVariable: '0' });
+        const centre = await readCentre(page);
+        await dragRound(page, centre, [1, 2, 3, 4, 5, 6, 7]);
+        await expect.poll(async () => (await readProperties(page, ['angleVariable'])).angleVariable).toBeGreaterThan(Math.PI * 2);
+        expect((await readProperties(page, ['angleVariable'])).angleVariable).toBeCloseTo(7, 1);
+    });
+
+    // A drag carries on from the angle the point is drawn at rather than starting again from where
+    // the pointer is, so a circle already turned once round is turned twice round rather than back to
+    // the first quarter.
+    test('a drag carries on from the angle the point already stands at', async ({ page }) => {
+        await setupBoard(page);
+        await addCircle(page, { angleVariable: String(Math.PI * 2) });
+        const centre = await readCentre(page);
+        await dragTo(page, centre, Math.PI / 2);
+        await expect.poll(() => readProperties(page, ['angleVariable'])).toEqual({ angleVariable: 7.85398163397 });
+    });
+
+    // A term is the angle, whatever it has reached: the point stands where that many radians put it
+    // and the row reads the term itself rather than the part of a turn it ends on.
+    test('an angle past a whole turn is drawn and read as the angle it is', async ({ page }) => {
+        await setupBoard(page);
+        const drawing = await buildDrawing(page, { angleVariable: '7.5' });
+        const centre = Number(drawing.nodes.circle.attributes.cx);
+        const radius = Number(drawing.nodes.circle.attributes.r);
+        expect(drawing.frame.angleRadians).toBeCloseTo(7.5, 6);
+        expect(drawing.frame.angleMarked).toBeCloseTo(Math.PI * 2, 6);
+        expect(Number(drawing.nodes.point.attributes.cx)).toBeCloseTo(centre + radius * Math.cos(7.5), 4);
+        expect(Number(drawing.nodes.point.attributes.cy)).toBeCloseTo(centre - radius * Math.sin(7.5), 4);
+        // The arc travelled is the whole turn and a bit, not the bit.
+        expect(drawing.frame.arcValue).toBeCloseTo(7.5, 6);
+    });
+
+    // The wedge is the part of a turn, marked the way it was turned: an angle turned back from
+    // nothing is drawn the short way round below the axis rather than the long way round above it.
+    test('an angle turned the other way is marked back from nothing rather than the long way round', async ({ page }) => {
+        await setupBoard(page);
+        const back = await buildDrawing(page, { angleVariable: String(-Math.PI / 2) });
+        const forward = await buildDrawing(page, { angleVariable: String(Math.PI / 2) });
+        expect(back.frame.angleRadians).toBeCloseTo(-Math.PI / 2, 6);
+        // The sweep is a quarter turn either way, so neither is drawn as the long way round.
+        expect(back.nodes['angle-arc'].attributes.d).toContain(' 0 1 ');
+        expect(forward.nodes['angle-arc'].attributes.d).toContain(' 0 1 ');
+        expect(Number(back.nodes.point.attributes.cy)).toBeCloseTo(2 * Number(back.nodes.circle.attributes.cy) - Number(forward.nodes.point.attributes.cy), 4);
+    });
+
+
+    // The mark cannot say less of an angle the further it is turned. Past a whole turn it is the whole
+    // circle and stays the whole circle, rather than emptying out and starting the turn again — a
+    // point wound round one and a quarter times has been round more than one wound round exactly once,
+    // and the drawing must never say the opposite.
+    test('an angle past a whole turn is marked as the whole circle rather than starting again', async ({ page }) => {
+        await setupBoard(page);
+        const circles = [];
+        for (const angle of [String(Math.PI * 2), '7.5', '20', String(-Math.PI * 2), '-7.5']) {
+            const drawing = await buildDrawing(page, { angleVariable: angle, showArc: true });
+            const wedge = drawing.nodes['angle-wedge'].attributes.d;
+            const centre = Number(drawing.nodes.circle.attributes.cx);
+            // The whole circle is drawn as its two halves, since an arc ending where it began is no
+            // arc at all, and it stands on the centre rather than sweeping from it.
+            expect(wedge.match(/A /g), angle).toHaveLength(2);
+            expect(wedge, angle).toContain('Z');
+            expect(drawing.nodes['arc'].attributes.d.match(/A /g), angle).toHaveLength(2);
+            circles.push(wedge.replace(/-?\d+(\.\d+)?/g, value => (Math.abs(Number(value) - centre) < 1e-9 ? 'c' : value)));
+        }
+        // Every one of them is the same circle: there is no further round for the mark to go.
+        expect(new Set(circles).size).toBe(1);
+    });
+
+    // Just short of a whole turn it is still a sweep, so the circle does not fill until the turn is
+    // really complete.
+    test('an angle just short of a whole turn is still marked as a sweep', async ({ page }) => {
+        await setupBoard(page);
+        const drawing = await buildDrawing(page, { angleVariable: '6.2' });
+        expect(drawing.nodes['angle-wedge'].attributes.d).toContain('L ');
+        expect(drawing.frame.angleMarked).toBeCloseTo(6.2, 6);
     });
 
     test('nothing is drawn outside the box the object reports as its own', async ({ page }) => {

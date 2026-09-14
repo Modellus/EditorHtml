@@ -574,6 +574,7 @@
                 <tr><td><code>centerY</code></td><td>number</td><td><code>0</code></td><td></td></tr>
                 <tr><td><code>pixelsPerUnit</code></td><td>number</td><td><code>1</code></td><td></td></tr>
                 <tr><td><code>unitsPerTurn</code></td><td>number</td><td><code>360</code></td><td></td></tr>
+                <tr><td><code>angleValue</code></td><td>number</td><td><code>0</code></td><td></td></tr>
                 <tr><td><code>angleVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>angleProperty</code></td><td>string</td><td><code>""</code></td><td></td></tr>
                 <tr><td><code>radiusVariable</code></td><td>variable</td><td><code>""</code></td><td></td></tr>
@@ -1438,7 +1439,7 @@
             </tbody>
         </table>
         <h3 id="block-trigonometric-circle"><code>trigonometric-circle</code> — Trigonometric circle</h3>
-        <p>Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is the circle's to write — so the same object shows a model turning a circle and lets a reader turn one for the model. A free row is written both ways: by dragging the point, and by the circle itself on every row of a run, so a sine the model never works out is still plotted and tabulated like one it does. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it.</p>
+        <p>Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is the circle's to write — so the same object shows a model turning a circle and lets a reader turn one for the model. A free row is written both ways: by dragging the point, and by the circle itself on every row of a run, so a sine the model never works out is still plotted and tabulated like one it does. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it, and the angle counts the turns: round one way it grows past a whole turn, round the other it falls through nothing and past a turn the other way, so what the circle hands the model is how far the point has been turned rather than where it stopped.</p>
         <p class="block-meta">Capabilities: <code>radial</code> <code>angular</code> <code>reads-model</code> <code>interaction</code> <code>writes-model</code> <code>textual</code></p>
         <table class="docs-table">
             <thead><tr><th>Parameter</th><th>Type</th><th>Default</th><th>Range</th></tr></thead>

@@ -155,6 +155,7 @@ var BlockBehaviours = {
                 centerY: { valueType: "number", defaultValue: 0, label: "Centre Y" },
                 pixelsPerUnit: { valueType: "number", defaultValue: 1, label: "Pixels per unit", description: "How many pixels one unit of the radius covers, so the circle is stretched in the units it is drawn in rather than in pixels." },
                 unitsPerTurn: { valueType: "number", defaultValue: 360, label: "Units in a whole turn", description: "What a whole turn is worth in the units the angle is written in: 360 for degrees, and two π for radians." },
+                angleValue: { valueType: "number", defaultValue: 0, label: "Angle drawn", description: "The angle the point is drawn at, in radians, counted as it was turned rather than folded back into one turn. A drag carries on from there: taken round clockwise the angle goes down through nothing and past a whole turn the other way, and round the other way it goes on up, so what the row holds says how far the point has been turned rather than only where it ended." },
                 angleVariable: { valueType: "variable", defaultValue: "", label: "Angle", bindable: false },
                 angleProperty: { valueType: "string", defaultValue: "", label: "Angle property", description: "Property written when the angle row holds a plain number instead of naming a model term." },
                 radiusVariable: { valueType: "variable", defaultValue: "", label: "Radius", bindable: false },

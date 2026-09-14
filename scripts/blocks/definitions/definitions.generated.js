@@ -17491,7 +17491,7 @@ BlockDefinitionLoader.registerAll([
         "category": "component",
         "displayName": "Trigonometric circle",
         "writesNotation": false,
-        "description": "Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is the circle's to write — so the same object shows a model turning a circle and lets a reader turn one for the model. A free row is written both ways: by dragging the point, and by the circle itself on every row of a run, so a sine the model never works out is still plotted and tabulated like one it does. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it.",
+        "description": "Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is the circle's to write — so the same object shows a model turning a circle and lets a reader turn one for the model. A free row is written both ways: by dragging the point, and by the circle itself on every row of a run, so a sine the model never works out is still plotted and tabulated like one it does. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it, and the angle counts the turns: round one way it grows past a whole turn, round the other it falls through nothing and past a turn the other way, so what the circle hands the model is how far the point has been turned rather than where it stopped.",
         "icon": "fa-light fa-circle-quarter-stroke",
         "tags": [
             "object",
@@ -17525,7 +17525,7 @@ BlockDefinitionLoader.registerAll([
             }
         },
         "agentTool": {
-            "usage": "Use it wherever a model turns something round a circle, or wherever a reader should be able to. Naming a term the model works out on angleVariable turns the point with the run; naming a pair on pointXVariable and pointYVariable places the point directly and the angle and the radius are read off it instead. Every row the model leaves free is the object's to write — by dragging the point, and by the circle itself on each row of a run — so the same object is the control for an angle, a radius, a pair of coordinates, a tangent and an arc length at once, and naming a free term on pointYVariable while the model turns the angle is how the sine of the run reaches a chart or a table. radiusVariable at one makes it the trigonometric circle, where the projections read the cosine and the sine themselves. snapDivisions makes a dragged angle land on a whole number of parts of the circle when the point is let go — twelve for every thirty degrees, each read as the portion of π it is.",
+            "usage": "Use it wherever a model turns something round a circle, or wherever a reader should be able to. Naming a term the model works out on angleVariable turns the point with the run; naming a pair on pointXVariable and pointYVariable places the point directly and the angle and the radius are read off it instead. Every row the model leaves free is the object's to write — by dragging the point, and by the circle itself on each row of a run — so the same object is the control for an angle, a radius, a pair of coordinates, a tangent and an arc length at once, and naming a free term on pointYVariable while the model turns the angle is how the sine of the run reaches a chart or a table. radiusVariable at one makes it the trigonometric circle, where the projections read the cosine and the sine themselves. The angle is counted as it is turned, so a point wound round twice reads two turns and one wound back reads a negative angle. snapDivisions makes a dragged angle land on a whole number of parts of the circle when the point is let go — twelve for every thirty degrees, each read as the portion of π it is.",
             "parameters": [
                 "angleVariable",
                 "radiusVariable",
@@ -17558,13 +17558,13 @@ BlockDefinitionLoader.registerAll([
                 "defaultValue": "0.9",
                 "category": "model",
                 "colorParameter": "angleColor",
-                "description": "The angle the point stands at, measured from the positive horizontal axis and growing anticlockwise. A term the model works out for itself turns the point; a term the model leaves free, or a plain number, is written by dragging the point, and is written by the circle itself while the point is placed some other way. It is held in the unit the model is set to, whichever the object is marked in, so changing the mark changes how the angle is written and never where the point is.",
+                "description": "The angle the point stands at, measured from the positive horizontal axis and growing anticlockwise. A term the model works out for itself turns the point; a term the model leaves free, or a plain number, is written by dragging the point, and is written by the circle itself while the point is placed some other way. The angle counts how far the point has been turned rather than where on the circle it ended: taken round clockwise it goes down through nothing and on past a whole turn the other way, taken round the other way it goes on up past a whole turn, and a term the model works out for itself is the angle exactly, however far beyond a turn it has gone. It is held in the unit the model is set to, whichever the object is marked in, so changing the mark changes how the angle is written and never where the point is.",
                 "valueAnchor": {
                     "node": "angle-anchor",
                     "x": 0.5,
                     "y": 0.5
                 },
-                "valueLocal": "angleWrapped",
+                "valueLocal": "angleRadians",
                 "valueIcon": "",
                 "angleUnitParameter": "angleUnit",
                 "writesLocal": "angleWritten",
@@ -18094,20 +18094,28 @@ BlockDefinitionLoader.registerAll([
                 "formula": "2\\cdot\\pi"
             },
             {
-                "id": "angleWrapped",
-                "formula": "\\mod\\left(\\mod\\left(angleRadians,turn\\right)+turn,turn\\right)"
+                "id": "angleMarked",
+                "formula": "sign\\left(angleRadians\\right)\\cdot\\min\\left(\\left|angleRadians\\right|,turn\\right)"
             },
             {
                 "id": "angleWritten",
-                "formula": "\\frac{angleWrapped}{angleToRadians}"
+                "formula": "\\frac{angleRadians}{angleToRadians}"
             },
             {
                 "id": "angleDegrees",
-                "formula": "\\frac{angleWrapped\\cdot180}{\\pi}"
+                "formula": "\\frac{angleMarked\\cdot180}{\\pi}"
+            },
+            {
+                "id": "wedgeFrom",
+                "formula": "\\max\\left(0,angleDegrees\\right)"
+            },
+            {
+                "id": "wedgeTo",
+                "formula": "\\min\\left(0,angleDegrees\\right)"
             },
             {
                 "id": "bisector",
-                "formula": "\\frac{angleWrapped}{2}"
+                "formula": "\\frac{angleMarked}{2}"
             },
             {
                 "id": "dragRadiusRead",
@@ -18209,7 +18217,7 @@ BlockDefinitionLoader.registerAll([
             },
             {
                 "id": "arcValue",
-                "formula": "radius\\cdot angleWrapped"
+                "formula": "radius\\cdot angleRadians"
             },
             {
                 "id": "tangentValue",
@@ -19044,7 +19052,6 @@ BlockDefinitionLoader.registerAll([
                             "properties": {
                                 "fill": "none",
                                 "innerRadius": 0,
-                                "endAngle": 0,
                                 "strokeLinecap": "round"
                             },
                             "bindings": {
@@ -19058,13 +19065,16 @@ BlockDefinitionLoader.registerAll([
                                     "parameter": "radiusPixels"
                                 },
                                 "startAngle": {
-                                    "parameter": "angleDegrees"
+                                    "parameter": "wedgeFrom"
                                 },
                                 "stroke": {
                                     "parameter": "arcColor"
                                 },
                                 "strokeWidth": {
                                     "parameter": "thickLine"
+                                },
+                                "endAngle": {
+                                    "parameter": "wedgeTo"
                                 }
                             }
                         },
@@ -19076,7 +19086,6 @@ BlockDefinitionLoader.registerAll([
                             },
                             "properties": {
                                 "innerRadius": 0,
-                                "endAngle": 0,
                                 "stroke": "none",
                                 "opacity": 0.18
                             },
@@ -19091,10 +19100,13 @@ BlockDefinitionLoader.registerAll([
                                     "parameter": "wedgeRadius"
                                 },
                                 "startAngle": {
-                                    "parameter": "angleDegrees"
+                                    "parameter": "wedgeFrom"
                                 },
                                 "fill": {
                                     "parameter": "angleColor"
+                                },
+                                "endAngle": {
+                                    "parameter": "wedgeTo"
                                 }
                             }
                         },
@@ -19106,8 +19118,7 @@ BlockDefinitionLoader.registerAll([
                             },
                             "properties": {
                                 "fill": "none",
-                                "innerRadius": 0,
-                                "endAngle": 0
+                                "innerRadius": 0
                             },
                             "bindings": {
                                 "centerX": {
@@ -19120,13 +19131,16 @@ BlockDefinitionLoader.registerAll([
                                     "parameter": "wedgeRadius"
                                 },
                                 "startAngle": {
-                                    "parameter": "angleDegrees"
+                                    "parameter": "wedgeFrom"
                                 },
                                 "stroke": {
                                     "parameter": "angleColor"
                                 },
                                 "strokeWidth": {
                                     "parameter": "thinLine"
+                                },
+                                "endAngle": {
+                                    "parameter": "wedgeTo"
                                 }
                             }
                         },
@@ -19454,6 +19468,9 @@ BlockDefinitionLoader.registerAll([
                             },
                             "unitsPerTurn": {
                                 "parameter": "unitsPerTurn"
+                            },
+                            "angleValue": {
+                                "parameter": "angleRadians"
                             },
                             "angleVariable": {
                                 "parameter": "angleVariable"

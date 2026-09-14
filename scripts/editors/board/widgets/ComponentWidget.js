@@ -2349,6 +2349,14 @@ class ComponentShape extends BaseShape {
         this._circlePointRecordsUndo = writes.some(reading => this.isDragHalfPropertyWrite(reading.variable, reading.property));
         if (this._circlePointRecordsUndo)
             this.dragStart();
+        // A drag carries on from the angle the point is drawn at rather than starting again from
+        // where the pointer happens to be, and what it adds up is how far the pointer has been taken
+        // round: clockwise the angle goes down through nothing and past a whole turn the other way,
+        // anticlockwise it goes on up past a whole turn. The row then says how far the point has been
+        // turned rather than only where on the circle it ended.
+        this._circlePointAngle = Number(input.angleValue);
+        if (!Number.isFinite(this._circlePointAngle))
+            this._circlePointAngle = 0;
         this._circlePointMove = moveEvent => this.onCirclePointDragMove(moveEvent, input);
         this._circlePointEnd = () => this.onCirclePointDragEnd();
         window.addEventListener("pointermove", this._circlePointMove);
@@ -2367,11 +2375,23 @@ class ComponentShape extends BaseShape {
             return;
         // The point follows the pointer while it is held, so a reader setting an angle is never
         // fighting the parts the object was asked to land on. Where it lands is settled when it is let
-        // go, and what the pointer last said is kept for that.
-        this._circlePointAngle = Math.atan2(up, across);
+        // go. The point stands where the pointer is, and how far it was turned to get there is the
+        // short way round from where it stood — never more than half a turn, which is the only way a
+        // step between two pointer moves can be read. So the angle carries on past a whole turn and
+        // back through nothing instead of folding into the turn the pointer happens to be in.
+        this._circlePointAngle += ComponentShape.shortestAngleStep(Math.atan2(up, across) - this._circlePointAngle);
         this._circlePointRadius = this.readCirclePointRadius(input, distance);
         this._circlePointInput = input;
         this.writeCirclePointReadings(input, this._circlePointAngle, this._circlePointRadius);
+    }
+
+    // How far round one angle stands from another, the short way: the step a pointer moving between
+    // two frames can be read as having made. Nothing to measure from is no step at all.
+    static shortestAngleStep(step) {
+        if (!Number.isFinite(step))
+            return 0;
+        const turn = Math.PI * 2;
+        return step - turn * Math.round(step / turn);
     }
 
     // A whole turn cut into as many equal parts as the object asks for, so a dragged angle lands on
@@ -2403,18 +2423,17 @@ class ComponentShape extends BaseShape {
     // would be the whole cost of the object.
     writeCirclePointReadings(input, angleRadians, radius, exactAngle = false) {
         const turn = Math.PI * 2;
-        const wrapped = ((angleRadians % turn) + turn) % turn;
         const unitsPerTurn = Number(input.unitsPerTurn) || 360;
-        const cosine = Math.cos(wrapped);
-        const sine = Math.sin(wrapped);
+        const cosine = Math.cos(angleRadians);
+        const sine = Math.sin(angleRadians);
         // An angle the object landed on a part of the circle is that part exactly. Rounding it the way
         // every other dragged value is rounded would leave a third of a turn holding 1.05 rather than
         // the third it is, and a reading written in portions of π could no longer say which part it is.
-        this.writeCirclePointReading("angle", wrapped * unitsPerTurn / turn, exactAngle);
+        this.writeCirclePointReading("angle", angleRadians * unitsPerTurn / turn, exactAngle);
         this.writeCirclePointReading("radius", radius);
         this.writeCirclePointReading("x", radius * cosine);
         this.writeCirclePointReading("y", radius * sine);
-        this.writeCirclePointReading("arc", radius * wrapped);
+        this.writeCirclePointReading("arc", radius * angleRadians);
         // A quarter turn stands the point where the tangent line is never met. There is no number to
         // write there, so the row keeps what it held rather than being handed one the reader would
         // have to read as an infinity.

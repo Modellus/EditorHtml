@@ -470,6 +470,7 @@ Capabilities: `interaction`, `angular`, `writes-model`
 | `centerY` | number | 0 |  |
 | `pixelsPerUnit` | number | 1 |  |
 | `unitsPerTurn` | number | 360 |  |
+| `angleValue` | number | 0 |  |
 | `angleVariable` | variable | "" |  |
 | `angleProperty` | string | "" |  |
 | `radiusVariable` | variable | "" |  |
@@ -1386,7 +1387,7 @@ Capabilities: `radial`, `angular`, `scale`
 
 ### `trigonometric-circle` — Trigonometric circle
 
-Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is the circle's to write — so the same object shows a model turning a circle and lets a reader turn one for the model. A free row is written both ways: by dragging the point, and by the circle itself on every row of a run, so a sine the model never works out is still plotted and tabulated like one it does. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it.
+Circle with a point the reader drags round it, and everything the circle is read for drawn where it is read: the angle swept from the horizontal, the radius out to the point, the two projections that are its cosine and its sine, the tangent taken on the line standing at the radius, and the arc the point has travelled. Each of them names a term of its own — one the model works out for itself moves the point, one the model leaves free is the circle's to write — so the same object shows a model turning a circle and lets a reader turn one for the model. A free row is written both ways: by dragging the point, and by the circle itself on every row of a run, so a sine the model never works out is still plotted and tabulated like one it does. A dragged angle can be made to land on a whole number of parts of the circle rather than wherever the pointer left it, and the angle counts the turns: round one way it grows past a whole turn, round the other it falls through nothing and past a turn the other way, so what the circle hands the model is how far the point has been turned rather than where it stopped.
 
 Capabilities: `radial`, `angular`, `reads-model`, `interaction`, `writes-model`, `textual`
 
