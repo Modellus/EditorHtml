@@ -1,0 +1,136 @@
+{
+    "type": "speedometer",
+    "checks": [
+        {
+            "name": "64 of 160 is four tenths of the sweep, and the needle turns to −27°",
+            "given": {
+                "model": "v=64",
+                "parameters": {
+                    "valueVariable": "v",
+                    "maximum": 160,
+                    "unit": "km/h"
+                },
+                "width": 180,
+                "height": 180
+            },
+            "expect": [
+                {
+                    "validator": "clean"
+                },
+                {
+                    "local": "value",
+                    "equals": 64
+                },
+                {
+                    "local": "sweep",
+                    "equals": 270
+                },
+                {
+                    "local": "ratio",
+                    "equals": 0.4
+                },
+                {
+                    "local": "needleAngle",
+                    "equals": -27
+                },
+                {
+                    "local": "readoutText",
+                    "equalsText": "64"
+                },
+                {
+                    "node": "needle",
+                    "attribute": "transform",
+                    "contains": "rotate"
+                }
+            ]
+        },
+        {
+            "name": "the readout follows the term's own unit rather than the parameter",
+            "given": {
+                "model": "v=64",
+                "parameters": {
+                    "valueVariable": "v",
+                    "maximum": 160,
+                    "unit": "km/h"
+                }
+            },
+            "expect": [
+                {
+                    "local": "readoutUnit",
+                    "equalsText": "km/h"
+                }
+            ]
+        },
+        {
+            "name": "a zero range does not divide",
+            "given": {
+                "model": "v=64",
+                "parameters": {
+                    "valueVariable": "v",
+                    "minimum": 100,
+                    "maximum": 100
+                }
+            },
+            "expect": [
+                {
+                    "validator": "clean"
+                },
+                {
+                    "local": "ratio",
+                    "equals": 0
+                }
+            ]
+        },
+        {
+            "name": "the scale labels hold their floor at 80 px",
+            "given": {
+                "model": "v=64",
+                "parameters": {
+                    "valueVariable": "v",
+                    "maximum": 160
+                },
+                "width": 80,
+                "height": 80
+            },
+            "expect": [
+                {
+                    "validator": "clean"
+                },
+                {
+                    "local": "r",
+                    "equals": 34
+                },
+                {
+                    "local": "labelFontSize",
+                    "equals": 7
+                },
+                {
+                    "nodes": {
+                        "atLeast": 20
+                    }
+                }
+            ]
+        },
+        {
+            "name": "it still draws in high contrast",
+            "given": {
+                "model": "v=64",
+                "parameters": {
+                    "valueVariable": "v",
+                    "maximum": 160
+                },
+                "preset": "high-contrast"
+            },
+            "expect": [
+                {
+                    "validator": "clean"
+                },
+                {
+                    "nodes": {
+                        "atLeast": 20
+                    }
+                }
+            ]
+        }
+    ]
+}

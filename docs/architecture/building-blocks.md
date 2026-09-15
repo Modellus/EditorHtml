@@ -103,7 +103,9 @@ arrives as *another document* when that model is opened somewhere else. That is 
 section exists — an object the editor does not ship with has to travel with the model that uses it.
 
 Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
-`pages/board/board-offline.html`, in this order):
+`pages/board/board-offline.html`, in this order). The four `scripts/catalog/object*.js` files are
+the exception: they belong to the catalogue and to the block shape editor at
+[`pages/shape-editor`](../../pages/shape-editor), and nothing on a board loads them.
 
 | File | Global | Role |
 | --- | --- | --- |
@@ -130,6 +132,11 @@ Files (all plain globals, loaded by `<script>` in `pages/board/index.html` and
 | `scripts/blocks/blockObjectLibrary.js` | `BlockObjectLibrary` | the objects a model carries with it |
 | `scripts/blocks/blockObjectCatalogue.js` | `BlockObjectCatalogue` | the objects the catalogue offers |
 | `scripts/catalog/objectDrawing.js` | `ObjectDrawing` | compiles an object and photographs it |
+| `scripts/catalog/objectChecks.js` | `ObjectChecks` | stands an object on a model at a named size and preset, and says whether it still does what it is supposed to |
+| `scripts/catalog/objectDocument.js` | `ObjectDocument` | one named change to a definition at a time — a formula, a binding, a property, a modifier, a behaviour, a condition — and the fork that starts an object from one the editor ships with |
+| `scripts/catalog/objectInspector.js` | `ObjectInspector` | what an object is doing: its locals, its parameters, its nodes and its problems, read off the frame the drawing was made from — and the rows that change any of them |
+| `scripts/catalog/objectWorkbench.js` | `ObjectWorkbench` | the whole workbench as one thing: the test bed, the drawings, the panels, the checks and the editing, knowing nothing about where the definition is kept |
+| `electron/build-definitions.js` | — | generates the bundle from every object the catalogue has flagged, and stops the build rather than shipping one it could not read |
 | `scripts/catalog/objectSeeder.js` | `ObjectSeeder` | publishes the bundled objects to the catalogue |
 | `scripts/blocks/blockObjects.js` | `BlockObjects` | object definitions and component instances |
 | `scripts/blocks/blockAgentTools.js` | `BlockAgentTools` | the agent-safe tool surface |
@@ -948,6 +955,11 @@ entry is `{ code, path, message, expected?, suggestion? }`. Four levels run in o
 4. **Visual** — nothing drawn, everything invisible, zero-size interactive targets, nodes far
    outside the object box.
 
+What is checked is the **document**, not the instance: a term name a definition binds to is looked
+up, but a term name standing in an instance's own parameter — the `valueVariable` a reader typed on
+the toolbar — is not, so an object pointed at a name the model does not hold validates clean and
+simply draws from zero. The inspector shows that as a local reading 0 rather than as a problem.
+
 ## 10. Serialization and migration
 
 A `ComponentShape` serializes like every other shape: `{ type: "ComponentShape", id, parent, properties }`,
@@ -981,7 +993,7 @@ model file carries those objects with it, in a top-level `objects` array of defi
 | Call | Role |
 | --- | --- |
 | `sealBuiltIns()` | runs once at load, recording every component the editor registers for itself |
-| `collectFromShapes(shapes)` | the documents those shapes need, built-ins excluded, followed through the objects an object is itself built from |
+| `collectFromShapes(shapes)` | the documents those shapes need, the bundled ones excluded, followed through the objects an object is itself built from |
 | `registerAll(documents)` | registers them again on the far side, reporting `{ registered, problems }` |
 
 `BoardEditor.serialize()` writes the section only when there is something to write, and
@@ -1005,16 +1017,120 @@ The catalogue is an addition, never a condition: a failed read leaves the palett
 the editor ships with and retries the next time it opens, which is also how the offline board — no
 API client at all — behaves. [`objects-api.md`](objects-api.md) is the endpoint contract.
 
-Objects are authored in the catalogue itself, under **Assets → Objects** in
-[`pages/catalog`](../../pages/catalog), which loads the block layer for the purpose. The editor takes
-the definition JSON and draws it beside the text as it is written: `inspectObjectDefinition()` runs
-`BlockDefinitionLoader.inspect()`, refuses a type the editor ships with, registers the document and
-compiles it, and either paints the drawing or lists every problem. An object cannot be published
-until that list is empty.
+An object is two things in the catalogue. The **card** — its picture, its name, what it is for, and
+whether the editor ships with it — is edited under **Assets → Objects** in
+[`pages/catalog`](../../pages/catalog). The **document** is edited in the block shape editor. The
+popup carries no definition at all: a JSON text area beside a description field is no way to write a
+drawing, and the split is what each surface is for.
 
 The screenshot is not uploaded by hand — `ObjectDrawing.toScreenshotFile()` rasterises the very
-drawing the preview shows, so a catalogue card can never advertise something the object does not
-draw. The same `preview.parameters` the palette uses picks the values it is drawn with, and the
+drawing the shape editor is showing, so a catalogue card can never advertise something the object
+does not draw. It can be replaced from the card form, because a ruler drawn at 480 pixels is not
+always the best thing to put on a card.
+
+Nothing is refused for being an object this release shipped with. Every shape in the catalogue is
+written in the same editor, the bundled ones included — they are bundled because the catalogue says
+they are, and editing one is how they are maintained.
+
+### Telling the seven kinds of thing apart
+
+A catalogue holds models, videos, audios, images, data sets, characters and objects, and a card is a
+card: a page of objects and a page of images were the same grey grid, and the popup over either said
+only "Edit". Each asset type has a colour and a mark of its own — the ones the tree has always used —
+written down once in `ModelsApp.assetTypes` rather than in the six places that each spelled them out.
+
+They follow the type everywhere it appears. `applyAssetIdentity()` stamps `data-asset-type` and
+`--asset-accent` onto the header and the card view whenever a branch is selected, including the
+taxonomy branches beneath it — a page of Physics objects is a page of objects — and the stylesheet
+does the rest: the mark beside the title, the rule under the header, the stripe along the top of
+every card, the tint on a placeholder. `ModelsApp.assetPopupWrapper()` puts the same colour on each
+edit form, so a popup over a page of cards is never ambiguous about which of the seven it is about to
+change.
+
+### The block shape editor
+
+Objects are **built** somewhere else: [`pages/shape-editor`](../../pages/shape-editor), reached from
+the popup by *Open in the block shape editor*. The split is what each is for — the popup publishes an
+object and needs a form, the editor builds one and needs a workbench, and a workbench does not fit
+in a popup beside a description field.
+
+It is **maintenance's**. An object goes into a catalogue everyone draws from, so who may write one is
+the same question as who may write a sample or a system template, and it is answered the same way:
+the button is shown only to `canAccessMaintenance()`, and the page checks the flag itself before
+building anything — a page is a URL, and a URL is something anyone can be sent. Adding an object
+goes straight here rather than to a form, because a shape has no card until it has a drawing. Whatever was typed
+into the popup travels through in `sessionStorage` under `mdl.shapeEditor.handover`, so pressing the
+button never costs an unsaved definition; `?object_id=` says which object is being edited, and a
+first publish rewrites the address to the object it created so a second save updates rather than
+publishing a twin.
+
+`ObjectWorkbench` is the whole of what the page hosts, and it knows nothing about where the
+definition is kept: whoever builds it says how to read the text, how to write it back and where to
+put a message. The catalogue's popup shares only the stylesheet
+([`scripts/catalog/objectWorkbench.css`](../../scripts/catalog/objectWorkbench.css)), for the small
+card preview it draws.
+
+**An object is written against a model, not against nothing.** `ObjectDrawing` compiles through a
+`Calculator` bound to no model at all, so every formula falls back to zero: a gauge with every
+radius at 0 both validates and "draws". Beside the definition is a **test bed** — a model written in
+the same LaTeX an Expression shape holds, a row of it to stand on, a size, a preset and the
+parameter values the object is handed — and everything in the shape editor reports from that one
+compilation. Three panels read it:
+
+* **Drawing** — the object on that model, beside the card it will be published as, and then the same
+  object compiled afresh at 80, 180 and 480px and in all five presets. Labels have to stay legible
+  at 80px and every preset has to restyle the whole drawing, and neither is checkable one drawing at
+  a time.
+* **Inspect** — what the object is doing, and where it is changed: every local in declaration order
+  with the expression behind it and the value it worked out, the parameters it was handed, the
+  compiled tree with each node under the id the document gave it, and everything the compiler and
+  the validator have to say. `ObjectInspector` reads `compilation.componentFrame`, which the
+  compiler already fills with every local, so the numbers shown are the ones the drawing was made
+  from rather than a second evaluation.
+* **Checks** — what the object is *supposed* to do. A check is a `given` (model, row, parameters,
+  size, preset) and a list of `expect` entries: `validator: "clean"`, a `local` equal to a value, a
+  `node`'s attribute, a `nodes.atLeast` count, or a `markup` snapshot of the deterministic markup.
+  *Add from test bed* writes one from wherever the object is standing. They are kept against the
+  object's type in local storage while it is being written and belong in
+  [`tests/object-checks/<type>.json`](../../tests/object-checks), which
+  `tests/object-checks.spec.js` runs over the bundled objects — the same runner, so a check recorded
+  while writing an object is the check CI keeps afterwards.
+
+Checks are held **beside** the document and never inside it: an undeclared top-level key is dropped
+in silence by `BlockDefinitionLoader.register` and again by `BuildingBlockRegistry.normalizeRegistration`,
+and the catalogue endpoint would refuse it.
+
+**An object is changed where it is read.** Every row in the Inspect panel is also the place that one
+thing is edited: click a local's expression, a parameter's default, a node's binding, a property, a
+modifier, a behaviour or the condition a node is drawn under, and type over it. A row hands back a
+*named edit* — never a rewritten document — and `ObjectDocument.apply()` performs it on a copy, so a
+refused edit changes nothing at all. What it gives back is written into the definition text on the
+left, which stays the one version of the object: it is what the drawing is compiled from, what the
+checks run against, and what is sent to the catalogue.
+
+A row hands the author the value exactly as the document writes it rather than the friendly reading
+shown at rest — a binding described as `valueVariable` is really `{"parameter": "valueVariable", "as":
+"number"}`, and editing the reading would throw the rest of it away in silence. Going the other way,
+the shorthands an author would write by hand are accepted: a bare name is the parameter or local of
+that name, a number or `true`/`false` is the constant, anything in braces is the binding written out,
+and everything else is read as the mathematics it looks like. Writing mathematics over a binding
+makes the local a formula and writing a binding over mathematics makes it a binding, which is the
+one change that used to mean rewriting an object of two keys by hand.
+
+Two edits reach further than the row they are made in. **Renaming a local** rewrites every formula
+and every `{parameter: …}` that read it, across the locals, the root, the sources and the parameters
+that write from it — without that, a rename leaves formulas reading a model term of the old name,
+which is exactly the silent failure `findUnknownNames` exists to report. **Removing a node** takes
+its children with it. Neither is reversible on its own, which is why **Undo** keeps whole definitions
+rather than edits: `_objectDocumentHistory` holds the text before each edit, and the JSON beside it
+keeps the text area's own undo for typing.
+
+**Start from…** offers every object the editor ships with whose body is a document. Choosing one
+forks it — `ObjectDocument.fork()` gives it a type of its own (`my-speedometer`) and a display name
+saying it is a copy — because a catalogue object cannot take the type of a shipped one, and because
+what is published afterwards is a new object rather than a change to the one in the registry. It is
+also the only alternative to starting an object by pasting fifteen kilobytes of JSON out of the
+repository. The same `preview.parameters` the palette uses picks the values it is drawn with, and the
 drawing is always compiled at `ObjectDrawing.previewSize` and rasterised larger: a parameter written
 in pixels would otherwise shrink against a bigger canvas.
 
@@ -1036,11 +1152,37 @@ the shape the catalogue's object editor expects. That is the path from an object
 board to one published for everyone: invent, copy, paste, publish. It appears only for objects that
 have a document behind them.
 
-### Seeding the bundled objects
+### Which objects a release carries
 
-The six objects the editor ships with belong in the catalogue's listing too, so that browsing it
-shows everything rather than everything-except-the-built-ins. `ObjectSeeder` publishes them, keyed
-by the definition's own type, so running it twice changes nothing:
+**The catalogue decides, not this repository.** An object is a row in the catalogue with an
+`is_bundled` flag, and `npm run build:definitions` ([`electron/build-definitions.js`](../../electron/build-definitions.js))
+reads `GET /objects/bundle` and writes every flagged document into
+`scripts/blocks/definitions/definitions.generated.js` — the one script the browser loads, since it
+cannot fetch a `.json` when the offline build runs from `file://`. `predist` runs it, so a release
+ships what the catalogue says it ships.
+
+There are no definition files in this repository any more. There used to be seventeen under
+`scripts/blocks/definitions/`, mirrored by a hand-written `BUILT_IN_OBJECT_TYPES` in the API; adding
+a shape to the bundle meant a commit in two repositories and a release. It is now a switch on the
+object's own card. (The `art/` folder stays: those SVGs are the sources the compass and steering
+wheel drawings were imported from, and nothing generates them back.)
+
+A build that cannot reach the catalogue **stops**. Falling back to whatever bundle happened to be on
+disk would let a release ship objects nobody chose, with nothing in the log to say so. An empty
+bundle stops it too: a catalogue nobody has flagged anything in is far likelier than an intention to
+ship no objects at all.
+
+What a board draws is the **deployed** bundle, never the catalogue's copy —
+`BlockObjectLibrary.registerDocument()` refuses to register over a bundled type. An edit made in the
+shape editor is visible there immediately and reaches boards at the next release, so a mistake has a
+release to be caught in rather than reaching everyone the moment it is saved.
+
+### Seeding a catalogue that has none
+
+`ObjectSeeder` runs in one direction, once: from a build into a catalogue that does not have its
+objects yet. What it publishes is whatever the bundle currently registers, keyed by the definition's
+own type — so running it twice changes nothing — and it flags each one as bundled, which is what
+lets the next build read them back out.
 
 ```
 npx http-server . -p 8432 -c-1 --silent          # in another terminal
@@ -1049,10 +1191,6 @@ node tests/seed-objects.js --out=/tmp/drawings   # …and writes the drawings ou
 node tests/seed-objects.js --write --token=…     # creates whatever is missing
 node tests/seed-objects.js --write --update      # also rewrites what is already there
 ```
-
-The definitions stay bundled regardless: a seeded object carries a built-in type, so
-`BlockObjectLibrary.registerDocument()` refuses to register it and the board keeps drawing the copy
-it ships with. What seeding adds is the catalogue card — the screenshot and the description.
 
 Writing needs to know what the catalogue already holds, so a listing that cannot be read stops a
 write; a dry run carries on against an empty catalogue, which is what makes the plan readable before
@@ -1083,7 +1221,7 @@ the endpoints exist at all.
 * `tests/object-picker.spec.js` — the palette: what it lists, the drawn previews, search, and what
   choosing an object arms for drawing.
 * `tests/object-catalogue.spec.js` — the catalogue against a stubbed API: the screenshot cards, the
-  definition read on placement only, degrading to the built-in objects, and the model that results.
+  definition read on placement only, degrading to the bundled objects, and the model that results.
 * `tests/catalog-objects.spec.js` — the catalogue's own Objects section: the branch and its cards,
   the live preview, every way a definition is refused, and what publishing sends.
 * `tests/object-seed.spec.js` — seeding against a stubbed catalogue: the plan, the write, seeding
@@ -1110,6 +1248,33 @@ the endpoints exist at all.
 * `tests/component-agent-tools.spec.js` — tool schemas, discovery, the full build→validate→preview→insert
   loop, structured errors and correction, refusal of unknown types and injection attempts,
   custom components, and the tool-bridge naming convention.
+* `tests/shape-editor-workbench.spec.js` — the workbench beside the definition: the test bed
+  standing the object on a model, the locals following it, the two drawings, the three sizes and five
+  presets, a node named by the id the document gave it and marked in the drawing, a check taken from
+  where the object is standing, a wrong check failing with what it reads instead, and an unusable
+  definition reported rather than drawn.
+* `tests/shape-editor-editing.spec.js` — the rows doing the editing: a formula changed in its row
+  turning the drawing, the change one undo and one redo away, a rename carrying every formula that
+  read it, a property changed on the part it is drawn on, a binding pointed at a local that did not
+  exist a moment ago, a node removed, a condition deciding whether a node is drawn, an edit the
+  document cannot take refused without changing anything, and an object started from one the editor
+  ships with.
+* `tests/shape-editor-access.spec.js` — the two places and who may reach the second: the catalogue's
+  popup editing the card and nothing else, the way through shown only to maintenance and refused by
+  the page itself, and the object loaded, saved back with the description the popup wrote, published
+  once, and refused while it is unusable.
+* `tests/catalog-objects.spec.js` — the card a shape is listed under: the branch that lists them, the
+  form that has a picture, a name, a description and a bundle switch and no definition anywhere in
+  it, a save that sends those and not the document, the flag that puts a shape in the next build, and
+  Add Object going straight to the editor.
+* `tests/catalog-asset-identity.spec.js` — which part of the catalogue you are looking at: six
+  branches each wearing their own colour and mark, the colour carried into the header and the cards,
+  a taxonomy branch keeping the type above it, somewhere that is not an asset wearing nothing, and
+  each edit form wearing the colour of what it edits.
+* `tests/component-definitions.spec.js` — the bundle is a generated file, every object in it is one
+  the registry accepts and can build, and it is not the empty bundle an unflagged catalogue produces.
+* `tests/object-checks.spec.js` — every `tests/object-checks/*.json` run against the object the
+  editor ships, plus the runner's own ability to fail.
 
 Add unit-level assertions to the first file, board behaviour to the second, and anything the
 agent can reach to the third. Compilation is deterministic, so

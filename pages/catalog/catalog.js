@@ -82,6 +82,23 @@ const fontAwesomeIcons = [
 DevExpress.config({ licenseKey: 'ewogICJmb3JtYXQiOiAxLAogICJjdXN0b21lcklkIjogImNmOWZhNjAzLTI4ZTAtMTFlMi05NWQwLTAwMjE5YjhiNTA0NyIsCiAgIm1heFZlcnNpb25BbGxvd2VkIjogMjUyCn0=.WlJvwd9AewkKcLiqaZc3LVfKt9FGlzfDD16Zi6iEW4KIN+1MFccO3f68vdJoStCEqtYXdaUrX48WcQJMNg/7K+geEzM2ZVRCeJKxjXIi8OFVU8lXf6cvC+4b3MRFaijuN3c4ug==' });
 
 class ModelsApp {
+  // What each kind of asset looks like, in one place.
+  //
+  // A catalogue holds seven kinds of thing and a card is a card: without something to tell them
+  // apart, a page of objects and a page of images are the same grey grid, and the popup that opens
+  // over either says only "Edit". So every asset type has a colour and a mark of its own, and they
+  // follow it everywhere it appears — the tree it is chosen from, the menu it is added from, the
+  // header and cards it is listed in, and the form it is edited in. The colours are the ones the
+  // tree has always used; what is new is that they are written down once instead of six times.
+  static assetTypes = {
+    video: { label: "Videos", icon: "fa-light fa-video", color: "#e11d48" },
+    audio: { label: "Audios", icon: "fa-light fa-waveform-lines", color: "#16a34a" },
+    image: { label: "Images", icon: "fa-light fa-image", color: "#0ea5e9" },
+    data: { label: "Data", icon: "fa-light fa-table", color: "#d97706" },
+    character: { label: "Characters", icon: "fa-light fa-person-running", color: "#7c3aed" },
+    object: { label: "Objects", icon: "fa-light fa-shapes", color: "#0891b2" }
+  };
+
   constructor() {
     this.userSdk = new UserSdk(sessionKey, userKey, "/pages/login/index.html");
     this.elements = {
@@ -288,13 +305,16 @@ class ModelsApp {
     });
   }
   buildUploadMenuItems() {
+    const mark = name => ({ icon: ModelsApp.assetTypes[name].icon, iconColor: ModelsApp.assetTypes[name].color });
     return [
-      { id: "upload-video", text: this.translations.get("Upload Video"), icon: "fa-light fa-video", iconColor: "#e11d48", action: () => this.showUploadVideoPopup() },
-      { id: "upload-audio", text: this.translations.get("Upload Audio"), icon: "fa-light fa-waveform-lines", iconColor: "#16a34a", action: () => this.showUploadAudioPopup() },
-      { id: "upload-image", text: this.translations.get("Upload Image"), icon: "fa-light fa-image", iconColor: "#0ea5e9", action: () => this.showUploadImagePopup() },
-      { id: "upload-data", text: this.translations.get("Upload Data"), icon: "fa-light fa-table", iconColor: "#d97706", action: () => this.showDataPopup() },
-      { id: "add-character", text: this.translations.get("Add Character"), icon: "fa-light fa-person-running", iconColor: "#7c3aed", action: () => this.showCharacterPopup() },
-      { id: "add-object", text: this.translations.get("Add Object"), icon: "fa-light fa-shapes", iconColor: "#0891b2", action: () => this.showObjectPopup() }
+      { id: "upload-video", text: this.translations.get("Upload Video"), ...mark("video"), action: () => this.showUploadVideoPopup() },
+      { id: "upload-audio", text: this.translations.get("Upload Audio"), ...mark("audio"), action: () => this.showUploadAudioPopup() },
+      { id: "upload-image", text: this.translations.get("Upload Image"), ...mark("image"), action: () => this.showUploadImagePopup() },
+      { id: "upload-data", text: this.translations.get("Upload Data"), ...mark("data"), action: () => this.showDataPopup() },
+      { id: "add-character", text: this.translations.get("Add Character"), ...mark("character"), action: () => this.showCharacterPopup() },
+      // A shape has no card until it has a definition, and a definition is written in the block
+      // shape editor. So this opens the editor rather than a form with nothing in it to fill in.
+      { id: "add-object", text: this.translations.get("Add Object"), ...mark("object"), action: () => this.openObjectInShapeEditor(null) }
     ];
   }
 
@@ -2375,6 +2395,7 @@ class ModelsApp {
       visible: true,
       showTitle: true,
       title: "Edit Image",
+      wrapperAttr: ModelsApp.assetPopupWrapper("image"),
       width: 520,
       height: "auto",
       maxHeight: "90vh",
@@ -2512,6 +2533,7 @@ class ModelsApp {
       visible: true,
       showTitle: true,
       title: popupTitle,
+      wrapperAttr: ModelsApp.assetPopupWrapper("data"),
       width: 520,
       height: "auto",
       maxHeight: "90vh",
@@ -2522,86 +2544,57 @@ class ModelsApp {
     });
   }
 
-  // The definition is the object: everything else on the form is how the catalogue talks about it.
-  // So it is checked the way the editor checks it — schema, declared names, registered block types,
-  // and a compile that has to produce something — before the object can be saved at all.
-  inspectObjectDefinition(definitionText) {
-    let definitionDocument = null;
-    try {
-      definitionDocument = JSON.parse(definitionText);
-    } catch (error) {
-      return { document: null, problems: [`The definition is not valid JSON: ${error.message}`] };
-    }
-    const problems = BlockDefinitionLoader.inspect(definitionDocument);
-    if (BlockObjectLibrary.isBuiltIn(definitionDocument.type))
-      problems.push(`"${definitionDocument.type}" is an object the editor ships with, so a catalogue object cannot take that type.`);
-    if (problems.length > 0)
-      return { document: definitionDocument, problems };
-    try {
-      BlockDefinitionLoader.register(definitionDocument);
-    } catch (error) {
-      return { document: definitionDocument, problems: [error.message] };
-    }
-    const compilation = ObjectDrawing.compile(definitionDocument, ObjectDrawing.previewSize);
-    for (const diagnostic of compilation.diagnostics)
-      problems.push(`${diagnostic.path}: ${diagnostic.message}`);
-    if (compilation.nodes.length === 0)
-      problems.push("The definition compiles to nothing: it would draw an empty object.");
-    return { document: definitionDocument, problems, compilation };
-  }
-
-  // The preview follows the definition as it is written, so the drawing and the problems are never
-  // a click behind what the editor holds.
-  scheduleObjectPreview(definitionText) {
-    if (this._objectPreviewTimer)
-      clearTimeout(this._objectPreviewTimer);
-    this._objectPreviewTimer = setTimeout(() => this.renderObjectPreview(definitionText), 400);
-  }
-
-  renderObjectPreview(definitionText) {
-    const inspection = this.inspectObjectDefinition(definitionText);
-    this._objectPreviewSvg = inspection.problems.length > 0 ? null : ObjectDrawing.toSvg(inspection.document, ObjectDrawing.previewSize);
-    this._objectPreviewProblems = inspection.problems;
-    this.paintObjectPreview();
-    return inspection;
-  }
-
-  // The form rebuilds its items whenever a template resolves, so what the preview shows is held
-  // here and painted again into whichever host the template built last. Looking the host up by id
-  // instead would drop the painting whenever the click lands inside a rebuild.
-  paintObjectPreview() {
-    const previewHost = this._objectPreviewHostElement;
-    if (!previewHost)
-      return;
-    if (this._objectPreviewSvg) {
-      previewHost.innerHTML = `<div class="object-preview-drawing">${this._objectPreviewSvg}</div>`;
+  // The card a shape is listed under: its picture, what it is called, what it is for, and whether
+  // the editor ships with it. The definition is not here — a shape is drawn by a document of
+  // formulas, and a document of formulas is written in the block shape editor, not in a text area
+  // beside a description field. What this form edits is everything the catalogue knows about the
+  // object; the button at the foot goes to where the object itself is edited.
+  showObjectPopup(objectData) {
+    if (!objectData) {
+      this.openObjectInShapeEditor(null);
       return;
     }
-    if (this._objectPreviewProblems?.length > 0) {
-      previewHost.innerHTML = `<div class="object-preview-problems"><ul>${this._objectPreviewProblems.map(problem => `<li>${this.escapeHtml(problem)}</li>`).join("")}</ul></div>`;
-      return;
-    }
-    previewHost.innerHTML = `<div class="object-preview-empty">The preview is drawn from the definition.</div>`;
-  }
-
-  showObjectPopup(objectData = null) {
     let popupHost = document.getElementById("object-popup");
     if (!popupHost) {
       document.body.insertAdjacentHTML("beforeend", `<div id="object-popup"></div>`);
       popupHost = document.getElementById("object-popup");
     }
-    this._objectPreviewSvg = null;
-    this._objectPreviewProblems = [];
-    const isEdit = objectData !== null;
-    const formData = { title: objectData?.title || "", definition: "" };
+    this._objectThumbnailFile = null;
+    const formData = {
+      title: objectData.title || "",
+      // Whether this release will carry the object. Nothing else decides it: the build reads the
+      // flag off the catalogue and generates the bundle from what it finds, so a shape joins the
+      // objects the editor ships with the moment this is switched on and the next build runs.
+      is_bundled: Boolean(objectData.is_bundled)
+    };
+    const canManageBundle = this.canAccessMaintenance();
     const buildContent = contentElement => {
-      const host = contentElement.get(0);
+      const host = contentElement.get ? contentElement.get(0) : contentElement;
       host.innerHTML = `<div id="object-form"></div>`;
       const formHost = document.getElementById("object-form");
       this._objectFormInstance = new DevExpress.ui.dxForm(formHost, {
         formData,
         colCount: 1,
         items: [
+          {
+            label: { text: "Image" },
+            template: (_, itemElement) => {
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
+              // The picture is normally the object's own drawing, photographed when it was last
+              // saved in the editor. It can be replaced here, because a drawing of a ruler at 480
+              // pixels is not always the best thing to put on a card.
+              this._objectThumbnailControl = new ImageControl({
+                imageSource: objectData.thumbnail_url || "",
+                dropHint: "Drop a picture here to replace the object's own drawing",
+                onUploadFile: file => {
+                  this._objectThumbnailFile = file;
+                  return Promise.resolve(URL.createObjectURL(file));
+                },
+                onImageCleared: () => { this._objectThumbnailFile = null; }
+              });
+              itemHost.appendChild(this._objectThumbnailControl.createHost().get(0));
+            }
+          },
           {
             dataField: "title",
             label: { text: "Title" },
@@ -2614,7 +2607,7 @@ class ModelsApp {
           {
             label: { text: "Description" },
             template: (_, itemElement) => {
-              const itemHost = itemElement.get(0);
+              const itemHost = itemElement.get ? itemElement.get(0) : itemElement;
               itemHost.insertAdjacentHTML("beforeend", `
                 <div id="object-html-editor"></div>
                 <div id="object-html-toolbar" class="html-editor-toolbar"></div>
@@ -2622,54 +2615,41 @@ class ModelsApp {
               this._objectHTMLEditor = new DevExpress.ui.dxHtmlEditor(document.getElementById("object-html-editor"), {
                 value: "",
                 valueType: "html",
-                height: 160,
+                height: 200,
                 toolbar: {
                   container: document.getElementById("object-html-toolbar"),
                   items: ["bold", "italic", "underline", "strike", "separator", "orderedList", "bulletList", "separator", "link", "separator", "undo", "redo"]
                 }
               });
-              if (objectData?.description)
+              if (objectData.description)
                 Utils.toHtml(objectData.description).then(descriptionHtml => this._objectHTMLEditor.option("value", descriptionHtml));
             }
           },
           {
-            label: { text: "Definition" },
-            template: (_, itemElement) => {
-              const itemHost = itemElement.get(0);
-              itemHost.innerHTML = `
-                <div class="object-editor-split">
-                  <div id="object-definition-host"></div>
-                  <div id="object-preview-host" class="object-preview-host"></div>
-                </div>`;
-              this._objectPreviewHostElement = itemHost.querySelector(".object-preview-host");
-              this._objectDefinitionEditor = new DevExpress.ui.dxTextArea(document.getElementById("object-definition-host"), {
-                value: "",
-                height: 300,
-                spellcheck: false,
-                valueChangeEvent: "input",
-                onValueChanged: event => this.scheduleObjectPreview(event.value),
-                elementAttr: { id: "object-definition-editor", class: "object-definition-editor" },
-                inputAttr: { style: "font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;" },
-                placeholder: "Paste the object definition JSON here"
-              });
-              this.paintObjectPreview();
-            }
+            dataField: "is_bundled",
+            visible: canManageBundle,
+            label: { text: "Ships with the editor" },
+            editorType: "dxSwitch",
+            editorOptions: { elementAttr: { id: "object-bundled-switch" } },
+            helpText: "Bundled shapes travel with every release. The next build reads this flag and generates the bundle from it."
           },
           {
             itemType: "button",
             horizontalAlignment: "left",
+            visible: canManageBundle,
             buttonOptions: {
-              text: "Check and preview",
-              icon: "fa-light fa-wand-magic-sparkles",
-              elementAttr: { id: "object-check-button" },
-              onClick: () => this.renderObjectPreview(this._objectDefinitionEditor.option("value"))
+              text: "Open in the block shape editor",
+              icon: "fa-light fa-pen-ruler",
+              stylingMode: "outlined",
+              elementAttr: { id: "object-open-shape-editor-button" },
+              onClick: () => this.openObjectInShapeEditor(objectData)
             }
           },
           {
             itemType: "button",
             horizontalAlignment: "right",
             buttonOptions: {
-              text: isEdit ? "Save" : "Publish",
+              text: "Save",
               type: "default",
               elementAttr: { id: "object-save-button" },
               onClick: () => this.saveObject(objectData)
@@ -2677,12 +2657,8 @@ class ModelsApp {
           }
         ]
       });
-      if (isEdit)
-        this.loadObjectDefinitionIntoEditor(objectData);
     };
-    const popupTitle = isEdit ? "Edit Object" : "Add Object";
     if (this.objectPopupInstance) {
-      this.objectPopupInstance.option("title", popupTitle);
       buildContent(this.objectPopupInstance.content());
       this.objectPopupInstance.show();
       return;
@@ -2690,53 +2666,45 @@ class ModelsApp {
     this.objectPopupInstance = new DevExpress.ui.dxPopup(popupHost, {
       visible: true,
       showTitle: true,
-      title: popupTitle,
-      width: 900,
+      title: "Edit Object",
+      width: 560,
       height: "auto",
       maxHeight: "90vh",
       dragEnabled: true,
       closeOnOutsideClick: true,
       showCloseButton: true,
+      wrapperAttr: ModelsApp.assetPopupWrapper("object"),
       contentTemplate: contentElement => buildContent(contentElement)
     });
   }
 
-  async loadObjectDefinitionIntoEditor(objectData) {
-    this.setStatus("Loading object definition…");
-    try {
-      const definitionDocument = await this.apiClient.fetchObjectDefinition(objectData.id);
-      this._objectDefinitionEditor.option("value", JSON.stringify(definitionDocument, null, 4));
-      this.renderObjectPreview(this._objectDefinitionEditor.option("value"));
-      this.setStatus("");
-    } catch (error) {
-      this.setStatus(error?.message || "Failed to load the object definition.", true);
-    }
+  // The editor opens on the object the form is showing. Without one it opens empty, which is how a
+  // new shape starts: there is no card to edit until there is a drawing to put on it.
+  openObjectInShapeEditor(objectData) {
+    const url = new URL("/pages/shape-editor/index.html", window.location.origin);
+    if (objectData?.id)
+      url.searchParams.set("object_id", objectData.id);
+    window.location.href = url.toString();
   }
 
   async saveObject(objectData) {
     const validation = this._objectFormInstance.validate();
     if (!validation.isValid) return;
-    const inspection = this.renderObjectPreview(this._objectDefinitionEditor.option("value"));
-    if (inspection.problems.length > 0) {
-      this.setStatus("The definition has to be usable before the object can be saved.", true);
-      return;
-    }
-    const isEdit = objectData !== null;
     const values = this._objectFormInstance.option("formData");
     const rawDescription = this._objectHTMLEditor ? this._objectHTMLEditor.option("value") : "";
     const descriptionValue = rawDescription ? (await Utils.fromHtml(rawDescription)).trim() || null : null;
-    const screenshot = await ObjectDrawing.toScreenshotFile(this._objectPreviewSvg);
-    this.setStatus(isEdit ? "Saving object…" : "Publishing object…");
+    this.setStatus("Saving object…");
     try {
-      if (isEdit) {
-        await this.apiClient.patchObject(objectData.id, { title: values.title, description: descriptionValue, definition: inspection.document });
-        if (screenshot)
-          await this.apiClient.uploadObjectThumbnail(objectData.id, screenshot);
-        this.setStatus("Object saved.");
-      } else {
-        await this.apiClient.createObject({ title: values.title, description: descriptionValue, definition: inspection.document }, screenshot);
-        this.setStatus("Object published.");
-      }
+      // The definition is not sent: this form never had it, and sending it back unchanged would
+      // make every card edit a republication of the document as well.
+      await this.apiClient.patchObject(objectData.id, {
+        title: values.title,
+        description: descriptionValue,
+        is_bundled: Boolean(values.is_bundled)
+      });
+      if (this._objectThumbnailFile)
+        await this.apiClient.uploadObjectThumbnail(objectData.id, this._objectThumbnailFile);
+      this.setStatus("Object saved.");
       this.objectPopupInstance.hide();
       this.loadModels();
     } catch (error) {
@@ -2843,6 +2811,7 @@ class ModelsApp {
       visible: true,
       showTitle: true,
       title: "Upload Video",
+      wrapperAttr: ModelsApp.assetPopupWrapper("video"),
       width: 480,
       height: "auto",
       dragEnabled: true,
@@ -2951,6 +2920,7 @@ class ModelsApp {
       visible: true,
       showTitle: true,
       title: "Upload Audio",
+      wrapperAttr: ModelsApp.assetPopupWrapper("audio"),
       width: 480,
       height: "auto",
       dragEnabled: true,
@@ -3041,6 +3011,7 @@ class ModelsApp {
       visible: true,
       showTitle: true,
       title: "Upload Image",
+      wrapperAttr: ModelsApp.assetPopupWrapper("image"),
       width: 480,
       height: "auto",
       dragEnabled: true,
@@ -3232,9 +3203,10 @@ class ModelsApp {
       visible: true,
       showTitle: true,
       title: popupTitle,
+      wrapperAttr: ModelsApp.assetPopupWrapper("character"),
       width: 680,
       height: "auto",
-      maxHeight: "92vh",
+      maxHeight: "90vh",
       dragEnabled: true,
       closeOnOutsideClick: true,
       showCloseButton: true,
@@ -5127,6 +5099,7 @@ class ModelsApp {
     const isCardFeed = this.isCardFeedNodeId(selectedNodeId);
     const isModelsFeed = this.isModelsFeedNodeId(selectedNodeId);
     this.elements.contentTitle.textContent = this.getSelectedTreeNodeLabel();
+    this.applyAssetIdentity(this.assetTypeForNodeId(selectedNodeId));
     this.elements.contentHeader.classList.toggle("content-header--tools-hidden", !isCardFeed);
     this.elements.contentHeader.classList.toggle("content-header--models-only-hidden", !isModelsFeed);
     if (!isCardFeed) {
@@ -5472,6 +5445,45 @@ class ModelsApp {
     return filter;
   }
 
+  // Which kind of asset a tree node is showing, whether it is the type itself or one of the
+  // taxonomy children under it. Everything that has to look like that type asks this.
+  assetTypeForNodeId(nodeId) {
+    if (this.isVideoNodeId(nodeId)) return "video";
+    if (this.isAudioNodeId(nodeId)) return "audio";
+    if (this.isImageNodeId(nodeId)) return "image";
+    if (this.isDataNodeId(nodeId)) return "data";
+    if (this.isCharacterNodeId(nodeId)) return "character";
+    if (this.isObjectNodeId(nodeId)) return "object";
+    return null;
+  }
+
+  // The colour and the mark of whatever is being listed, carried on the header and the card view so
+  // the page itself says which part of the catalogue it is showing. Set on the elements rather than
+  // written into six card templates: a card is a card, and what changes is the room it is in.
+  applyAssetIdentity(assetType) {
+    const identity = ModelsApp.assetTypes[assetType] ?? null;
+    for (const element of [this.elements.contentHeader, this.elements.cardView, this.elements.drawerShell]) {
+      if (!element)
+        continue;
+      if (identity) {
+        element.setAttribute("data-asset-type", assetType);
+        element.style.setProperty("--asset-accent", identity.color);
+      } else {
+        element.removeAttribute("data-asset-type");
+        element.style.removeProperty("--asset-accent");
+      }
+    }
+    const markHost = document.getElementById("content-type-mark");
+    if (markHost)
+      markHost.innerHTML = identity ? `<i class="${identity.icon}" aria-hidden="true"></i>` : "";
+  }
+
+  // A form wears the colour of what it is editing, so a popup over a page of cards is never
+  // ambiguous about which of the seven things it is about to change.
+  static assetPopupWrapper(assetType) {
+    return { class: `mdl-asset-popup mdl-asset-popup--${assetType}` };
+  }
+
   isVideoNodeId(nodeId) {
     return nodeId === treeNodeIds.catalogVideos
       || (typeof nodeId === "string" && (nodeId.startsWith("catalog-video-education-item:") || nodeId.startsWith("catalog-video-science-item:")));
@@ -5797,8 +5809,8 @@ class ModelsApp {
               id: treeNodeIds.catalogVideos,
               label: this.translations.get("Videos"),
               text: `${this.translations.get("Videos")} (${videosCount})`,
-              iconClass: "fa-light fa-video",
-              iconColor: "#e11d48",
+              iconClass: ModelsApp.assetTypes.video.icon,
+              iconColor: ModelsApp.assetTypes.video.color,
               expanded: false,
               items: [
                 {
@@ -5825,8 +5837,8 @@ class ModelsApp {
               id: treeNodeIds.catalogAudios,
               label: this.translations.get("Audios"),
               text: `${this.translations.get("Audios")} (${audiosCount})`,
-              iconClass: "fa-light fa-waveform-lines",
-              iconColor: "#16a34a",
+              iconClass: ModelsApp.assetTypes.audio.icon,
+              iconColor: ModelsApp.assetTypes.audio.color,
               expanded: false,
               items: [
                 {
@@ -5853,8 +5865,8 @@ class ModelsApp {
               id: treeNodeIds.catalogImages,
               label: this.translations.get("Images"),
               text: `${this.translations.get("Images")} (${imagesCount})`,
-              iconClass: "fa-light fa-image",
-              iconColor: "#0ea5e9",
+              iconClass: ModelsApp.assetTypes.image.icon,
+              iconColor: ModelsApp.assetTypes.image.color,
               expanded: false,
               items: [
                 {
@@ -5881,8 +5893,8 @@ class ModelsApp {
               id: treeNodeIds.catalogData,
               label: this.translations.get("Data"),
               text: `${this.translations.get("Data")} (${dataCount})`,
-              iconClass: "fa-light fa-table",
-              iconColor: "#d97706",
+              iconClass: ModelsApp.assetTypes.data.icon,
+              iconColor: ModelsApp.assetTypes.data.color,
               expanded: false,
               items: [
                 {
@@ -5909,8 +5921,8 @@ class ModelsApp {
               id: treeNodeIds.catalogCharacters,
               label: this.translations.get("Characters"),
               text: `${this.translations.get("Characters")} (${charactersCount})`,
-              iconClass: "fa-light fa-person-running",
-              iconColor: "#7c3aed",
+              iconClass: ModelsApp.assetTypes.character.icon,
+              iconColor: ModelsApp.assetTypes.character.color,
               expanded: false,
               items: characterCategoryItems
             },
@@ -5918,8 +5930,8 @@ class ModelsApp {
               id: treeNodeIds.catalogObjects,
               label: this.translations.get("Objects"),
               text: `${this.translations.get("Objects")} (${objectsCount})`,
-              iconClass: "fa-light fa-shapes",
-              iconColor: "#0891b2",
+              iconClass: ModelsApp.assetTypes.object.icon,
+              iconColor: ModelsApp.assetTypes.object.color,
               expanded: false,
               items: [
                 {

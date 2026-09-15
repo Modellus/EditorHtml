@@ -1,0 +1,167 @@
+/* The block shape editor's own chrome. Everything inside the workbench is styled by the sheet it
+   shares with the catalogue's popup; this is the page around it — a bar, two columns and the JSON. */
+
+body {
+  margin: 0;
+  background: #f4f6f8;
+  color: #253047;
+}
+
+.shape-editor-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e6e9ee;
+  background: #fff;
+}
+
+.shape-editor-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #253047;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.shape-editor-title-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 320px;
+  max-width: 520px;
+  margin-left: 8px;
+}
+
+.shape-editor-title-field span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9aa3b2;
+}
+
+.shape-editor-title-field input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid #dde2e9;
+  border-radius: 7px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  color: #253047;
+}
+
+.shape-editor-status {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #7a8494;
+}
+
+.shape-editor-status.error {
+  color: #e03130;
+}
+
+.shape-editor-button {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid #dde2e9;
+  border-radius: 7px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  color: #495468;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.shape-editor-button:hover {
+  border-color: #b9c2ce;
+  background: #f6f8fa;
+}
+
+.shape-editor-button-primary {
+  border-color: #0f6cbd;
+  background: #0f6cbd;
+  color: #fff;
+}
+
+.shape-editor-button-primary:hover {
+  border-color: #0c5ba0;
+  background: #0c5ba0;
+}
+
+/* Two columns, each scrolling on its own: the JSON is long and the workbench is tall, and a page
+   where one of them drags the other down the screen is unusable for either. */
+.shape-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 560px;
+  gap: 14px;
+  align-items: start;
+  padding: 14px 16px;
+}
+
+.shape-editor-definition {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.shape-editor-definition textarea {
+  width: 100%;
+  box-sizing: border-box;
+  height: calc(100vh - 140px);
+  padding: 10px 12px;
+  border: 1px solid #dde2e9;
+  border-radius: 8px;
+  background: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #253047;
+  resize: none;
+}
+
+.shape-editor-definition textarea:focus {
+  outline: none;
+  border-color: #0f6cbd;
+}
+
+/* On a page the panels have the height they never had in a popup, so they are given it — and the
+   model and the parameters, which are the two things actually typed into, get a line each instead
+   of fighting over one. */
+.shape-editor .object-testbed-wide {
+  flex: 1 1 100%;
+}
+
+.shape-editor .object-tab-panel {
+  max-height: calc(100vh - 250px);
+}
+
+.shape-editor .object-inspect-nodes {
+  max-height: 300px;
+}
+
+.shape-editor-refused {
+  max-width: 520px;
+  margin: 80px auto;
+  padding: 24px;
+  border: 1px solid #e6e9ee;
+  border-radius: 10px;
+  background: #fff;
+  text-align: center;
+  line-height: 1.6;
+}

@@ -1,5 +1,5 @@
 {
-    "generatedFrom": "scripts/blocks/definitions/*.json",
+    "generatedFrom": "the objects this build carries",
     "tools": [
         {
             "name": "add_calculator",

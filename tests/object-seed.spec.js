@@ -1,18 +1,16 @@
 const { test, expect } = require('@playwright/test');
-const fs = require('fs');
-const path = require('path');
-const ObjectSeeder = require('../scripts/catalog/objectSeeder.js');
 
 const HARNESS_URL = '/tests/object-seed-harness.html';
 const API_BASE = 'https://objects-api.test';
-const DEFINITIONS_DIRECTORY = path.join(__dirname, '..', 'scripts', 'blocks', 'definitions');
 
-function readDefinitions() {
-    return fs.readdirSync(DEFINITIONS_DIRECTORY)
-        .filter(name => name.endsWith('.json'))
-        .sort()
-        .map(name => JSON.parse(fs.readFileSync(path.join(DEFINITIONS_DIRECTORY, name), 'utf8')))
-        .filter(document => ObjectSeeder.isCatalogueObject(document));
+// What this build carries, read off the bundle the harness registered rather than off files: the
+// definitions are not files in this repository any more. Seeding is the one direction they travel
+// from here into a catalogue; after that the catalogue is where they live and the build reads them
+// back out of it.
+function readDefinitions(page) {
+    return page.evaluate(() => [...BlockDefinitionLoader.documents.values()]
+        .filter(document => ObjectSeeder.isCatalogueObject(document))
+        .sort((left, right) => left.type.localeCompare(right.type)));
 }
 
 // Stands in for the catalogue: remembers what was written so a test can read it back, and can be
@@ -71,7 +69,7 @@ test.describe('seeding the bundled objects', () => {
         const state = createState();
         await stubObjectsApi(page, state);
         await openHarness(page);
-        const seeding = await seed(page, readDefinitions(), { write: false });
+        const seeding = await seed(page, await readDefinitions(page), { write: false });
         expect(seeding.results.map(result => result.type)).toEqual([
             'calculator', 'circular-gauge', 'clock', 'compass', 'mechanical-wave', 'mouse-tracker', 'orbit-system', 'oscilloscope', 'piano', 'protractor', 'rotating-vector', 'ruler', 'speedometer', 'steering-wheel', 'thermometer', 'trigonometric-circle'
         ]);
@@ -83,7 +81,7 @@ test.describe('seeding the bundled objects', () => {
         const state = createState();
         await stubObjectsApi(page, state);
         await openHarness(page);
-        const seeding = await seed(page, readDefinitions(), { write: true });
+        const seeding = await seed(page, await readDefinitions(page), { write: true });
         expect(state.created).toHaveLength(16);
         expect(seeding.results.map(result => result.id)).toEqual(['id-1', 'id-2', 'id-3', 'id-4', 'id-5', 'id-6', 'id-7', 'id-8', 'id-9', 'id-10', 'id-11', 'id-12', 'id-13', 'id-14', 'id-15', 'id-16']);
         const clockBody = state.created[seeding.results.findIndex(result => result.type === 'clock')].body;
@@ -97,7 +95,7 @@ test.describe('seeding the bundled objects', () => {
         const state = createState([{ id: 'obj-1', type: 'compass', title: 'Compass' }]);
         await stubObjectsApi(page, state);
         await openHarness(page);
-        const seeding = await seed(page, readDefinitions(), { write: true });
+        const seeding = await seed(page, await readDefinitions(page), { write: true });
         const compass = seeding.results.find(result => result.type === 'compass');
         expect(compass.action).toBe('skip');
         expect(compass.id).toBe('obj-1');
@@ -109,7 +107,7 @@ test.describe('seeding the bundled objects', () => {
         const state = createState([{ id: 'obj-1', type: 'compass', title: 'Compass' }]);
         await stubObjectsApi(page, state);
         await openHarness(page);
-        const seeding = await seed(page, readDefinitions(), { write: true, update: true });
+        const seeding = await seed(page, await readDefinitions(page), { write: true, update: true });
         expect(seeding.results.find(result => result.type === 'compass').action).toBe('update');
         expect(state.updated).toHaveLength(1);
         expect(state.updated[0].path).toBe('/objects/obj-1');
@@ -122,7 +120,7 @@ test.describe('seeding the bundled objects', () => {
         state.failType = 'compass';
         await stubObjectsApi(page, state);
         await openHarness(page);
-        const seeding = await seed(page, readDefinitions(), { write: true });
+        const seeding = await seed(page, await readDefinitions(page), { write: true });
         const compass = seeding.results.find(result => result.type === 'compass');
         expect(compass.action).toBe('failed');
         expect(compass.error).toContain('that one is not allowed');
@@ -137,7 +135,7 @@ test.describe('seeding the bundled objects', () => {
         state.failType = 'compass';
         await stubObjectsApi(page, state);
         await openHarness(page);
-        const seeding = await seed(page, readDefinitions(), { write: true, update: true });
+        const seeding = await seed(page, await readDefinitions(page), { write: true, update: true });
         const compass = seeding.results.find(result => result.type === 'compass');
         expect(compass.action).toBe('failed');
         expect(compass.error).toContain('400');
@@ -150,7 +148,7 @@ test.describe('seeding the bundled objects', () => {
         state.listFails = true;
         await stubObjectsApi(page, state);
         await openHarness(page);
-        const dryRun = await seed(page, readDefinitions(), { write: false });
+        const dryRun = await seed(page, await readDefinitions(page), { write: false });
         expect(dryRun.catalogueProblem).toContain('Fetch objects failed (500)');
         expect(dryRun.results).toHaveLength(16);
         const writeAttempt = await page.evaluate(async input => {
@@ -161,7 +159,7 @@ test.describe('seeding the bundled objects', () => {
             } catch (error) {
                 return error.message;
             }
-        }, { apiBase: API_BASE, definitions: readDefinitions() });
+        }, { apiBase: API_BASE, definitions: await readDefinitions(page) });
         expect(writeAttempt).toContain('nothing was written');
         expect(state.created).toHaveLength(0);
     });
@@ -169,7 +167,7 @@ test.describe('seeding the bundled objects', () => {
     test('every bundled object draws something to be photographed', async ({ page }) => {
         await stubObjectsApi(page, createState());
         await openHarness(page);
-        const seeding = await seed(page, readDefinitions(), { write: false, includeDrawing: true });
+        const seeding = await seed(page, await readDefinitions(page), { write: false, includeDrawing: true });
         for (const result of seeding.results) {
             const drawnElements = result.svg.match(/<(circle|path|line|text|rect|polyline|polygon|ellipse|g)\b/g) ?? [];
             expect(drawnElements.length, result.type).toBeGreaterThan(2);

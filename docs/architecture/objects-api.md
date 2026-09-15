@@ -5,10 +5,14 @@ The client side is [`sdk/modelsApiClient.js`](../../sdk/modelsApiClient.js); the
 through `BlockObjectCatalogue`. See [`building-blocks.md`](building-blocks.md) §9 for what an object
 is and how a model carries it.
 
-An object is a building-block component definition — the same JSON as
-[`scripts/blocks/definitions/*.json`](../../scripts/blocks/definitions) — plus the catalogue
-metadata every other asset has. It behaves like videos and data sets: taxonomy by education level
-and science, a thumbnail, a title and a description.
+An object is a building-block component definition — the document
+[`blockDefinitionLoader.js`](../../scripts/blocks/blockDefinitionLoader.js) registers — plus the
+catalogue metadata every other asset has. It behaves like videos and data sets: taxonomy by
+education level and science, a thumbnail, a title and a description. It carries one field they do
+not: `is_bundled`, which says whether the editor ships with it. `GET /objects/bundle` answers with
+every flagged object's whole document, and `npm run build:definitions` generates the editor's bundle
+from that — so which objects a release carries is decided here rather than by any list in the
+editor's source.
 
 ## The resource
 

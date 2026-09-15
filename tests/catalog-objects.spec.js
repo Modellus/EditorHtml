@@ -1,92 +1,52 @@
 const { test, expect } = require('@playwright/test');
 
 const CATALOG_URL = '/pages/catalog/index.html';
-const { API_HOST, API_GLOB } = require('./apiHost');
+const { API_GLOB } = require('./apiHost');
+
+// The card a shape is listed under, and the flag that decides whether it ships.
+//
+// A shape is two things in the catalogue: a document of formulas, which is written in the block
+// shape editor, and a card, which is what everyone else sees. This form is the card — its picture,
+// its name, what it is for, and whether the editor ships with it. The definition is deliberately
+// not here: it was a JSON text area beside a description field, which is no way to write a drawing.
+//
+// The bundle flag is the part with reach. Which objects a release carries used to be the set of
+// files in scripts/blocks/definitions and a list in the API's source, so adding a shape to the
+// bundle meant a commit in two repositories. It is now this switch: the build reads every object
+// flagged here and generates the editor's bundle from them.
 
 const OBJECT_ENTRY = {
     id: 'obj-1',
     type: 'pendulum-swing',
     title: 'Pendulum',
     description: 'A pendulum whose angle comes from a model variable.',
-    thumbnail_url: '',
+    thumbnail_url: 'https://example.test/pendulum.png',
+    is_bundled: false,
     created_at: '2026-08-01T10:00:00Z'
 };
 
-const VALID_DEFINITION = {
-    schemaVersion: '1.0.0',
-    type: 'pendulum-swing',
-    category: 'component',
-    displayName: 'Pendulum',
-    description: 'A pendulum whose angle comes from a model variable.',
-    icon: 'fa-light fa-circle',
-    tags: ['object'],
-    parameters: [],
-    root: {
-        id: 'pendulum-swing',
-        type: 'group',
-        children: [
-            { id: 'rod', type: 'line', properties: { x1: 60, y1: 10, x2: 90, y2: 88, stroke: '#334155', strokeWidth: 3 } },
-            { id: 'bob', type: 'circle', properties: { centerX: 92, centerY: 95, radius: 10, fill: '#2563eb' } }
-        ]
-    }
-};
-
-// Routes every catalogue request the page makes, and records the writes so a test can read them
-// back. Everything unknown answers with an empty list, which is what an empty catalogue looks like.
-// An object that works out its own size, the way every bundled one does. Without a calculator behind
-// the bindings its formulas fall back to zero and the drawing comes out empty but "valid".
-const FORMULA_DEFINITION = {
-    schemaVersion: '1.0.0',
-    type: 'formula-dial',
-    category: 'component',
-    displayName: 'Formula dial',
-    description: 'A dial that sizes itself from the drawing area.',
-    icon: 'fa-light fa-circle',
-    tags: ['object'],
-    parameters: [],
-    locals: [
-        { id: 'w', value: { parameter: '$width' } },
-        { id: 'h', value: { parameter: '$height' } },
-        { id: 'r', formula: '\\frac{\\min\\left(w,h\\right)}{2}-6' }
-    ],
-    root: {
-        id: 'formula-dial',
-        type: 'circle',
-        bindings: { radius: { parameter: 'r' } },
-        properties: { centerX: 120, centerY: 120, fill: 'none', stroke: '#2563eb', strokeWidth: 4 }
-    }
-};
-
-async function stubCatalogApi(page, state) {
+async function stubCatalogApi(page, state, entry = OBJECT_ENTRY) {
     await page.route(API_GLOB, route => {
         const request = route.request();
         const path = new URL(request.url()).pathname;
         if (path.endsWith('/feature-flags'))
-            return route.fulfill({ json: [{ key: 'can_access_maintenance', is_enabled: 1 }] });
+            return route.fulfill({ json: state.maintenance === false ? [] : [{ key: 'can_access_maintenance', is_enabled: 1 }] });
         if (/^\/users\/[^/]+$/.test(path))
             return route.fulfill({ json: { id: 'user-1', name: 'Tester', role: 'teacher', country: 'PT', preferredLanguage: 'en-US' } });
         if (path === '/objects/facets')
             return route.fulfill({ json: { education: [{ id: 'edu-1', name: 'Secondary', count: 1 }], sciences: [{ id: 'sci-1', name: 'Physics', count: 1 }], total: 1 } });
-        if (path === '/objects' && request.method() === 'POST') {
-            state.created.push(request.postData());
-            return route.fulfill({ json: Object.assign({}, OBJECT_ENTRY, { id: 'obj-new' }) });
-        }
         if (path === '/objects' && request.method() === 'GET')
-            return route.fulfill({ json: { items: [OBJECT_ENTRY], total: 1 } });
-        if (/^\/objects\/[^/]+\/definition$/.test(path))
-            return route.fulfill({ json: VALID_DEFINITION });
+            return route.fulfill({ json: { items: [entry], total: 1 } });
         if (/^\/objects\/[^/]+\/thumbnail$/.test(path)) {
-            state.thumbnails.push(path);
+            state.thumbnails.push(request.postData() ?? '');
             return route.fulfill({ json: { thumbnail_url: 'https://example.test/thumb.png' } });
         }
         if (/^\/objects\/[^/]+$/.test(path) && request.method() === 'PUT') {
-            state.updated.push(request.postData());
-            return route.fulfill({ json: OBJECT_ENTRY });
+            state.updated.push(JSON.parse(request.postData()));
+            return route.fulfill({ json: entry });
         }
         if (path.endsWith('/facets'))
             return route.fulfill({ json: { education: [], sciences: [], categories: [], uncategorized: 0, total: 0 } });
-        if (path === '/models')
-            return route.fulfill({ json: [] });
         return route.fulfill({ json: [] });
     });
 }
@@ -110,25 +70,18 @@ async function openObjectsNode(page) {
     await page.waitForSelector('.card-tile');
 }
 
-async function openObjectEditor(page) {
-    await page.click('#nav-upload');
-    await page.click('.mdl-nav-menu-dropdown .dx-item:has-text("Add Object")');
-    await page.waitForSelector('#object-definition-editor');
+async function openObjectCard(page) {
+    await openObjectsNode(page);
+    await page.hover('.card-tile');
+    await page.click('.edit-button');
+    await page.waitForSelector('#object-title-editor');
 }
 
-async function typeDefinition(page, definitionText) {
-    await page.evaluate(text => window.modelsApp._objectDefinitionEditor.option('value', text), definitionText);
-    await page.waitForFunction(() => {
-        const host = document.getElementById('object-preview-host');
-        return !!host.querySelector('.object-preview-drawing, .object-preview-problems');
-    });
+function createState(overrides = {}) {
+    return { updated: [], thumbnails: [], ...overrides };
 }
 
-function createState() {
-    return { created: [], updated: [], thumbnails: [] };
-}
-
-test.describe('catalogue objects', () => {
+test.describe('the card a shape is listed under', () => {
     test('the Objects branch lists the catalogue objects', async ({ page }) => {
         await stubCatalogApi(page, createState());
         await openCatalog(page);
@@ -145,85 +98,71 @@ test.describe('catalogue objects', () => {
         expect(await page.textContent('.card-desc')).toContain('A pendulum whose angle');
     });
 
-    test('a valid definition previews the object it draws', async ({ page }) => {
+    test('the form edits the card, and the definition is nowhere in it', async ({ page }) => {
         await stubCatalogApi(page, createState());
         await openCatalog(page);
-        await openObjectEditor(page);
-        await page.evaluate(text => window.modelsApp._objectDefinitionEditor.option('value', text), JSON.stringify(VALID_DEFINITION));
-        await page.click('#object-check-button');
-        await page.waitForSelector('.object-preview-drawing svg');
-        expect(await page.locator('.object-preview-drawing svg').count()).toBe(1);
-        expect(await page.evaluate(() => document.querySelectorAll('.object-preview-drawing svg *').length)).toBeGreaterThan(1);
+        await openObjectCard(page);
+
+        await expect(page.locator('#object-title-editor input')).toHaveValue('Pendulum');
+        await expect(page.locator('.shape-image-dropzone, .mdl-image-control, #object-form img').first()).toBeVisible();
+        await expect(page.locator('#object-bundled-switch')).toBeVisible();
+        await expect(page.locator('#object-open-shape-editor-button')).toBeVisible();
+        // The one thing that is not here.
+        await expect(page.locator('#object-definition-editor')).toHaveCount(0);
+        await expect(page.locator('.object-preview-host')).toHaveCount(0);
     });
 
-    test('an object that sizes itself from a formula is drawn, not left empty', async ({ page }) => {
-        await stubCatalogApi(page, createState());
-        await openCatalog(page);
-        await openObjectEditor(page);
-        await typeDefinition(page, JSON.stringify(FORMULA_DEFINITION));
-        const radius = await page.evaluate(() => Number(document.querySelector('.object-preview-drawing svg circle')?.getAttribute('r') ?? 0));
-        expect(radius).toBeGreaterThan(100);
-    });
-
-    test('a definition that is not usable is reported and cannot be saved', async ({ page }) => {
+    test('saving sends what the card is made of, and no definition', async ({ page }) => {
         const state = createState();
         await stubCatalogApi(page, state);
         await openCatalog(page);
-        await openObjectEditor(page);
-        await typeDefinition(page, '{ "schemaVersion": "1.0.0", "type": "broken" }');
-        const problems = await page.textContent('.object-preview-problems');
-        expect(problems).toContain('Only components can be defined as JSON.');
-        expect(problems).toContain('The definition has no root node.');
-        await page.fill('#object-title-editor input', 'Broken');
+        await openObjectCard(page);
+
+        // The description the card already had is what the editor opens on, or saving would quietly
+        // replace it with nothing.
+        await expect.poll(() => page.evaluate(() => window.modelsApp._objectHTMLEditor.option('value')))
+            .toContain('A pendulum whose angle');
+        await page.fill('#object-title-editor input', 'Pendulum swing');
         await page.click('#object-save-button');
-        await page.waitForTimeout(400);
-        expect(state.created).toHaveLength(0);
+        await expect.poll(() => state.updated.length, { timeout: 10000 }).toBe(1);
+
+        expect(state.updated[0].title).toBe('Pendulum swing');
+        expect(state.updated[0].description).toContain('A pendulum whose angle');
+        expect(state.updated[0]).toHaveProperty('is_bundled');
+        // A card edit is not a republication of the drawing.
+        expect(state.updated[0]).not.toHaveProperty('definition');
     });
 
-    test('a definition reading a name it never declared is reported', async ({ page }) => {
-        await stubCatalogApi(page, createState());
-        await openCatalog(page);
-        await openObjectEditor(page);
-        const definition = JSON.parse(JSON.stringify(VALID_DEFINITION));
-        definition.root.children[0].bindings = { x1: { formula: 'wobble\\cdot2' } };
-        await typeDefinition(page, JSON.stringify(definition));
-        expect(await page.textContent('.object-preview-problems')).toContain('"wobble"');
-    });
-
-    test('an object may not take the type of one the editor ships with', async ({ page }) => {
-        await stubCatalogApi(page, createState());
-        await openCatalog(page);
-        await openObjectEditor(page);
-        const definition = Object.assign({}, VALID_DEFINITION, { type: 'clock' });
-        await typeDefinition(page, JSON.stringify(definition));
-        expect(await page.textContent('.object-preview-problems')).toContain('the editor ships with');
-    });
-
-    test('publishing sends the definition and a screenshot drawn from it', async ({ page }) => {
+    // The whole point of the flag: what a release carries is decided here, not by what files happen
+    // to be in the repository.
+    test('switching the bundle flag on is what puts a shape in the next build', async ({ page }) => {
         const state = createState();
         await stubCatalogApi(page, state);
         await openCatalog(page);
-        await openObjectEditor(page);
-        await page.fill('#object-title-editor input', 'Pendulum');
-        await typeDefinition(page, JSON.stringify(VALID_DEFINITION));
+        await openObjectCard(page);
+
+        expect(await page.evaluate(() => $('#object-bundled-switch').dxSwitch('instance').option('value'))).toBe(false);
+        await page.evaluate(() => $('#object-bundled-switch').dxSwitch('instance').option('value', true));
         await page.click('#object-save-button');
-        await expect.poll(() => state.created.length, { timeout: 10000 }).toBe(1);
-        expect(await page.evaluate(() => window.modelsApp.objectPopupInstance.option('visible'))).toBe(false);
-        expect(state.created[0]).toContain('pendulum-swing');
-        expect(state.created[0]).toContain('name="title"');
-        expect(state.created[0]).toContain('name="definition"');
-        expect(state.created[0]).toContain('filename="object.png"');
+        await expect.poll(() => state.updated.length, { timeout: 10000 }).toBe(1);
+        expect(state.updated[0].is_bundled).toBe(true);
     });
 
-    test('editing an object loads its definition and previews it', async ({ page }) => {
-        const state = createState();
-        await stubCatalogApi(page, state);
+    test('an object already in the bundle says so when its form is opened', async ({ page }) => {
+        await stubCatalogApi(page, createState(), { ...OBJECT_ENTRY, is_bundled: true });
         await openCatalog(page);
-        await openObjectsNode(page);
-        await page.hover('.card-tile');
-        await page.click('.edit-button');
-        await page.waitForSelector('.object-preview-drawing svg');
-        const loaded = await page.evaluate(() => window.modelsApp._objectDefinitionEditor.option('value'));
-        expect(JSON.parse(loaded).type).toBe('pendulum-swing');
+        await openObjectCard(page);
+        expect(await page.evaluate(() => $('#object-bundled-switch').dxSwitch('instance').option('value'))).toBe(true);
+    });
+
+    // A shape has no card until it has a drawing, and a drawing is made in the editor.
+    test('adding an object goes straight to the block shape editor', async ({ page }) => {
+        await stubCatalogApi(page, createState());
+        await openCatalog(page);
+        await page.click('#nav-upload');
+        await page.click('.mdl-nav-menu-dropdown .dx-item:has-text("Add Object")');
+        await page.waitForSelector('#object-definition-editor');
+        expect(new URL(page.url()).pathname).toBe('/pages/shape-editor/index.html');
+        expect(new URL(page.url()).searchParams.get('object_id')).toBeNull();
     });
 });

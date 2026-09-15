@@ -1038,6 +1038,9 @@ export class ModelsApiClient {
     formData.append("title", payload.title);
     formData.append("definition", JSON.stringify(payload.definition));
     if (payload.description) formData.append("description", payload.description);
+    // Whether the editor ships with the object. The build reads it off the catalogue, so seeding a
+    // shape that belongs in the bundle says so here rather than anywhere in the source.
+    if (payload.is_bundled) formData.append("is_bundled", "1");
     if (payload.science_id) formData.append("science_id", payload.science_id);
     if (payload.education_level_id) formData.append("education_level_id", payload.education_level_id);
     if (thumbnailFile) formData.append("asset", thumbnailFile);

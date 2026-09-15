@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Block Shape Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../libraries/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+    <script src="../../libraries/scripts/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/25.2.3/css/dx.fluent.blue.light.compact.css">
+    <script src="../../libraries/scripts/dx.all.js"></script>
+    <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Atma:wght@400;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link rel="icon" type="image/svg+xml" href="../../scripts/themes/modellus.svg">
+    <link rel="stylesheet" href="../../common.css">
+    <link rel="stylesheet" href="../../scripts/catalog/objectWorkbench.css">
+    <link rel="stylesheet" href="shapeEditor.css">
+  </head>
+  <body>
+    <header class="shape-editor-bar">
+      <a href="/pages/catalog/index.html" class="shape-editor-logo" aria-label="Modellus">
+        <img src="../../scripts/themes/modellus.svg" alt="" width="24" height="24">
+        <span>Block shape editor</span>
+      </a>
+      <label class="shape-editor-title-field">
+        <span>Title</span>
+        <input id="shape-editor-title" type="text" autocomplete="off" placeholder="What the object is called in the catalogue">
+      </label>
+      <span id="status" class="shape-editor-status"></span>
+      <a id="shape-editor-back" class="shape-editor-button" href="/pages/catalog/index.html">Back to the catalogue</a>
+      <button id="shape-editor-save" class="shape-editor-button shape-editor-button-primary" type="button">Save</button>
+    </header>
+    <main id="shape-editor" class="shape-editor"></main>
+    <script src="../../modellus.js"></script>
+    <script src="../../libraries/types/CalculationEngine.js"></script>
+    <script src="../../scripts/apiConfig.js"></script>
+    <script src="../../scripts/calculator.js"></script>
+    <script src="../../scripts/utils.js"></script>
+    <script src="../../scripts/blocks/designTokens.js"></script>
+    <script src="../../scripts/blocks/blockGeometry.js"></script>
+    <script src="../../scripts/blocks/blockKeyboard.js"></script>
+    <script src="../../scripts/blocks/blockChartGeometry.js"></script>
+    <script src="../../scripts/blocks/blockMemory.js"></script>
+    <script src="../../scripts/blocks/blockBindings.js"></script>
+    <script src="../../scripts/blocks/blockRegistry.js"></script>
+    <script src="../../scripts/blocks/blockPrimitives.js"></script>
+    <script src="../../scripts/blocks/blockModifiers.js"></script>
+    <script src="../../scripts/blocks/blockBehaviours.js"></script>
+    <script src="../../scripts/blocks/blockMigrations.js"></script>
+    <script src="../../scripts/blocks/blockCompiler.js"></script>
+    <script src="../../scripts/blocks/blockRenderer.js"></script>
+    <script src="../../scripts/blocks/blockValidator.js"></script>
+    <script src="../../scripts/blocks/blockComponents.js"></script>
+    <script src="../../scripts/blocks/blockMemoryComponents.js"></script>
+    <script src="../../scripts/blocks/blockChartComponents.js"></script>
+    <script src="../../scripts/blocks/blockDefinitionLoader.js"></script>
+    <script src="../../scripts/blocks/blockSvgImport.js"></script>
+    <script src="../../scripts/blocks/definitions/definitions.generated.js"></script>
+    <script src="../../scripts/blocks/blockObjectLibrary.js"></script>
+    <script src="../../scripts/blocks/blockObjects.js"></script>
+    <script src="../../scripts/catalog/objectDrawing.js"></script>
+    <script src="../../scripts/catalog/objectChecks.js"></script>
+    <script src="../../scripts/catalog/objectDocument.js"></script>
+    <script src="../../scripts/catalog/objectInspector.js"></script>
+    <script src="../../scripts/catalog/objectWorkbench.js"></script>
+    <script type="module" src="shapeEditor.js"></script>
+  </body>
+</html>

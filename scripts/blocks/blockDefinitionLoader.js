@@ -1,6 +1,7 @@
 // Registers a component whose body is a JSON node tree instead of a create() function.
-// The definitions live in scripts/blocks/definitions/*.json and reach the browser through
-// definitions.generated.js, which tests/component-definitions.spec.js keeps in step with them.
+// The definitions live in the catalogue and reach the browser through
+// definitions.generated.js, which electron/build-definitions.js generates from every object the
+// catalogue has flagged as bundled.
 class BlockDefinitionLoader {
     static typePattern = /^[a-z][a-z0-9-]{2,48}$/;
     // The document each registered component was built from, so a component can be inspected,

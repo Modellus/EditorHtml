@@ -1,0 +1,72 @@
+{
+    "type": "clock",
+    "checks": [
+        {
+            "name": "half past three turns the hands to 105°, 180° and 90°",
+            "given": {
+                "model": "h=3\\\\m=30\\\\s=15",
+                "parameters": {
+                    "hourVariable": "h",
+                    "minuteVariable": "m",
+                    "secondVariable": "s"
+                },
+                "width": 180,
+                "height": 180
+            },
+            "expect": [
+                {
+                    "validator": "clean"
+                },
+                {
+                    "local": "hours",
+                    "equals": 3
+                },
+                {
+                    "local": "minutes",
+                    "equals": 30
+                },
+                {
+                    "local": "hourAngle",
+                    "equals": 105
+                },
+                {
+                    "local": "minuteAngle",
+                    "equals": 180
+                },
+                {
+                    "local": "secondAngle",
+                    "equals": 90
+                },
+                {
+                    "local": "readoutText",
+                    "equalsText": "03:30:15"
+                }
+            ]
+        },
+        {
+            "name": "shown as digits it drops the face and keeps the reading",
+            "given": {
+                "model": "h=3\\\\m=30\\\\s=15",
+                "parameters": {
+                    "hourVariable": "h",
+                    "minuteVariable": "m",
+                    "secondVariable": "s",
+                    "shownAs": "digits"
+                }
+            },
+            "expect": [
+                {
+                    "validator": "clean"
+                },
+                {
+                    "local": "shownAsFace",
+                    "equals": 0
+                },
+                {
+                    "local": "readoutText",
+                    "equalsText": "03:30:15"
+                }
+            ]
+        }
+    ]
+}

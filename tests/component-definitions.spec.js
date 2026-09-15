@@ -2,53 +2,60 @@ const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 
-const DEFINITIONS_DIRECTORY = path.join(__dirname, '..', 'scripts', 'blocks', 'definitions');
-const BUNDLE_PATH = path.join(DEFINITIONS_DIRECTORY, 'definitions.generated.js');
+// The objects this build carries.
+//
+// They are no longer files in this repository. Which objects the editor ships with is the
+// `is_bundled` flag on a catalogue row, and `npm run build:definitions` turns that flag into
+// scripts/blocks/definitions/definitions.generated.js — the one script the browser loads, because
+// it cannot fetch a .json file when the offline build runs from file://.
+//
+// So what is left to check here is what the file says rather than where it came from: that it is a
+// bundle at all, and that every document in it is one the registry accepts and can build. A bundle
+// generated from a catalogue that let something through would otherwise be discovered by a board
+// failing to draw.
 
-function listDefinitionFiles() {
-    return fs.readdirSync(DEFINITIONS_DIRECTORY).filter(name => name.endsWith('.json')).sort();
-}
+const BUNDLE_PATH = path.join(__dirname, '..', 'scripts', 'blocks', 'definitions', 'definitions.generated.js');
 
-// The browser cannot fetch a .json file when the offline build runs from file://, so the
-// definitions are delivered as one generated script. The JSON files stay the source of truth
-// and this test fails when the generated file no longer matches them.
-function renderBundle() {
-    const documents = listDefinitionFiles().map(name => JSON.parse(fs.readFileSync(path.join(DEFINITIONS_DIRECTORY, name), 'utf8')));
-    return [
-        '// Generated from scripts/blocks/definitions/*.json by tests/component-definitions.spec.js.',
-        '// Do not edit by hand: change the JSON and run `UPDATE_DEFINITIONS=1 npx playwright test tests/component-definitions.spec.js`.',
-        `BlockDefinitionLoader.registerAll(${JSON.stringify(documents, null, 4)});`,
-        ''
-    ].join('\n');
-}
-
-test('the generated definitions bundle matches the JSON files', async () => {
-    const bundle = renderBundle();
-    if (process.env.UPDATE_DEFINITIONS === '1') {
-        fs.writeFileSync(BUNDLE_PATH, bundle);
-        return;
-    }
-    expect(fs.existsSync(BUNDLE_PATH)).toBe(true);
-    expect(fs.readFileSync(BUNDLE_PATH, 'utf8')).toBe(bundle);
+test('the bundle is a generated file that registers definitions', async () => {
+    expect(fs.existsSync(BUNDLE_PATH), 'run `npm run build:definitions`').toBe(true);
+    const bundle = fs.readFileSync(BUNDLE_PATH, 'utf8');
+    expect(bundle).toContain('BlockDefinitionLoader.registerAll(');
+    // Nobody should be editing it by hand, and the header is what says so.
+    expect(bundle).toContain('Do not edit by hand');
 });
 
-test('every definition file declares a component the registry accepts', async ({ page }) => {
+test('every object in the bundle is one the registry accepts and can build', async ({ page }) => {
     await page.addInitScript(() => {
         localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
     });
     await page.goto('/pages/board/index.html');
     await page.waitForFunction(() => typeof shell !== 'undefined' && shell !== null && shell.board !== null, null, { timeout: 15000 });
-    const documents = listDefinitionFiles().map(name => JSON.parse(fs.readFileSync(path.join(DEFINITIONS_DIRECTORY, name), 'utf8')));
-    const result = await page.evaluate(documents => documents.map(document => ({
+    const result = await page.evaluate(() => [...BlockDefinitionLoader.documents.values()].map(document => ({
         type: document.type,
         problems: BlockDefinitionLoader.inspect(document),
         registered: BlockRegistry.get(document.type)?.category ?? null,
         buildable: typeof BlockRegistry.get(document.type)?.create === 'function'
-    })), documents);
-    expect(result).not.toHaveLength(0);
+    })));
+    expect(result, 'the bundle carries no objects at all').not.toHaveLength(0);
     for (const entry of result) {
         expect(entry.problems, entry.type).toEqual([]);
         expect(entry.registered, entry.type).toBe('component');
         expect(entry.buildable, entry.type).toBe(true);
     }
+});
+
+// The bundle is generated, so the one thing that can go wrong quietly is it being generated from a
+// catalogue nobody had flagged anything in. A release carrying no objects would still boot.
+test('the bundle carries the objects a release is expected to have', async ({ page }) => {
+    await page.addInitScript(() => {
+        localStorage.setItem('mp.session', JSON.stringify({ token: 'test', userId: 'test' }));
+    });
+    await page.goto('/pages/board/index.html');
+    await page.waitForFunction(() => typeof BlockObjectLibrary !== 'undefined', null, { timeout: 15000 });
+    const objects = await page.evaluate(() => [...BlockDefinitionLoader.documents.values()]
+        .filter(document => (document.tags ?? []).includes('object'))
+        .map(document => document.type)
+        .sort());
+    expect(objects.length, 'a build with no objects in it is a build generated from an empty catalogue').toBeGreaterThan(5);
+    expect(objects).toContain('speedometer');
 });

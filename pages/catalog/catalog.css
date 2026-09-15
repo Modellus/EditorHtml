@@ -1660,57 +1660,6 @@ body {
   align-items: start;
 }
 
-.object-preview-host {
-  height: 300px;
-  border: 1px solid var(--c-border);
-  border-radius: 10px;
-  background: #f8fafc;
-  overflow: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-  box-sizing: border-box;
-}
-
-.object-preview-drawing {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.object-preview-drawing svg {
-  width: 100%;
-  height: auto;
-  max-width: 240px;
-}
-
-.object-preview-empty {
-  font-size: 0.8rem;
-  color: #6b7280;
-  text-align: center;
-  padding: 0 12px;
-}
-
-.object-preview-problems {
-  align-self: stretch;
-  width: 100%;
-  font-size: 0.75rem;
-  color: #b91c1c;
-  overflow: auto;
-}
-
-.object-preview-problems ul {
-  margin: 0;
-  padding-left: 1.1rem;
-}
-
-.object-preview-problems li {
-  margin-bottom: 0.35rem;
-  line-height: 1.35;
-}
-
 /* ---- Top bar actions ---------------------------------------------------- */
 .nav-button-content {
   display: inline-flex;
@@ -1957,3 +1906,93 @@ body {
 .card-view--list .card-footer {
   margin-top: auto;
 }
+
+/* ---- what kind of thing you are looking at ------------------------------ */
+
+/* Seven kinds of thing live in this catalogue and a card is a card. Each type has a colour and a
+   mark of its own, and the page wears whichever one is on screen: in the header above the grid, on
+   every card in it, and on the form that opens over it. The colour arrives as --asset-accent, set
+   from the one table in catalog.js, so nothing here has to know which type it is painting. */
+
+.content-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.content-type-mark {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--asset-accent) 14%, transparent);
+  color: var(--asset-accent);
+  font-size: 15px;
+  align-self: center;
+}
+
+[data-asset-type] .content-type-mark,
+.content-header[data-asset-type] .content-type-mark {
+  display: inline-flex;
+}
+
+/* A rule the width of the header, in the type's colour: the quietest possible way to say where you
+   are that is still impossible to miss when you move between two grids of cards. */
+.content-header[data-asset-type] {
+  box-shadow: inset 0 -2px 0 -1px color-mix(in srgb, var(--asset-accent) 35%, transparent);
+}
+
+.content-header[data-asset-type] .content-title {
+  color: color-mix(in srgb, var(--asset-accent) 72%, #111827);
+}
+
+/* On a card the accent is a stripe along the top of the picture rather than a border around
+   everything: the card's own edges already separate it from its neighbours, and a second frame in a
+   strong colour turns a page of them into a page of boxes. */
+.card-view[data-asset-type] .card-thumb-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--asset-accent);
+  border-radius: 10px 10px 0 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.card-view[data-asset-type] .media-thumb-placeholder {
+  color: var(--asset-accent);
+}
+
+.card-view[data-asset-type] .media-thumb-icon {
+  color: var(--asset-accent);
+  opacity: 0.85;
+}
+
+/* The tree keeps the selected branch in its own colour, so the row you came from and the grid you
+   arrived at agree with one another. */
+.drawer-shell[data-asset-type] .dx-treeview-node.dx-state-selected > .dx-treeview-item,
+.drawer-shell[data-asset-type] .dx-treeview-item.dx-state-selected {
+  background: color-mix(in srgb, var(--asset-accent) 12%, transparent);
+  box-shadow: inset 2px 0 0 var(--asset-accent);
+}
+
+/* ---- the forms wear it too ---------------------------------------------- */
+
+.mdl-asset-popup .dx-popup-title {
+  border-top: 3px solid var(--asset-accent, transparent);
+}
+
+.mdl-asset-popup .dx-popup-title .dx-toolbar-label {
+  color: color-mix(in srgb, var(--asset-accent) 72%, #111827);
+}
+
+.mdl-asset-popup--video { --asset-accent: #e11d48; }
+.mdl-asset-popup--audio { --asset-accent: #16a34a; }
+.mdl-asset-popup--image { --asset-accent: #0ea5e9; }
+.mdl-asset-popup--data { --asset-accent: #d97706; }
+.mdl-asset-popup--character { --asset-accent: #7c3aed; }
+.mdl-asset-popup--object { --asset-accent: #0891b2; }

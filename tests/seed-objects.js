@@ -1,4 +1,4 @@
-// Publishes the bundled object definitions to the catalogue, with a screenshot drawn from each one.
+// Publishes the objects this build carries into the catalogue, with a screenshot drawn from each.
 //
 //   npx http-server . -p 8432 -c-1 --silent        (in another terminal)
 //   node tests/seed-objects.js                     dry run: says what it would do
@@ -6,15 +6,15 @@
 //   node tests/seed-objects.js --write --update    also rewrites the ones already there
 //   node tests/seed-objects.js --only=steering-wheel   works on the named objects and no others
 //
-// The definitions stay bundled either way: the editor registers them at load, and a catalogue entry
-// may never replace an object the editor ships with. Seeding is what puts them in the catalogue's
-// own listing, with the screenshot and the description an author would otherwise write by hand.
+// This is the direction the objects travel exactly once: into a catalogue that does not have them
+// yet. After that the catalogue is where an object lives — it is written in the block shape editor
+// and flagged there as bundled — and the traffic runs the other way, with `npm run build:definitions`
+// generating this build's bundle from what the catalogue holds. So what is seeded is whatever the
+// bundle currently registers, and it is seeded already flagged as bundled.
 const { chromium } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
-const ObjectSeeder = require('../scripts/catalog/objectSeeder.js');
 
-const DEFINITIONS_DIRECTORY = path.join(__dirname, '..', 'scripts', 'blocks', 'definitions');
 const HARNESS_URL = '/tests/object-seed-harness.html';
 const DEFAULT_BASE_URL = 'http://localhost:8432';
 const { API_HOST: DEFAULT_API_BASE } = require('./apiHost');
@@ -46,15 +46,6 @@ function readArguments(argv) {
     return options;
 }
 
-function readDefinitions(only = []) {
-    return fs.readdirSync(DEFINITIONS_DIRECTORY)
-        .filter(name => name.endsWith('.json'))
-        .sort()
-        .map(name => JSON.parse(fs.readFileSync(path.join(DEFINITIONS_DIRECTORY, name), 'utf8')))
-        .filter(document => ObjectSeeder.isCatalogueObject(document))
-        .filter(document => only.length === 0 || only.includes(document.type));
-}
-
 function reportLine(result, isDryRun) {
     const verb = { create: isDryRun ? 'would create' : 'created', update: isDryRun ? 'would update' : 'updated', skip: 'already there', failed: 'FAILED' }[result.action];
     const reference = result.error ? ` — ${result.error}` : result.id ? ` (${result.id})` : '';
@@ -73,14 +64,6 @@ function writeDrawings(results, outputDirectory) {
 
 (async () => {
     const options = readArguments(process.argv.slice(2));
-    const definitions = readDefinitions(options.only);
-    if (definitions.length === 0) {
-        console.error(options.only.length ? `No bundled object is named by --only=${options.only.join(',')}.` : 'No bundled objects to seed.');
-        process.exitCode = 1;
-        return;
-    }
-    console.log(`\nSeeding ${definitions.length} bundled objects into ${options.apiBase}`);
-    console.log(options.write ? 'Writing.\n' : 'Dry run: nothing will be written. Pass --write to publish.\n');
     if (options.write && !options.token) {
         console.error('A token is required to write: pass --token=… or set MODELLUS_TOKEN.');
         process.exitCode = 1;
@@ -91,6 +74,19 @@ function writeDrawings(results, outputDirectory) {
     try {
         await page.goto(`${options.baseUrl}${HARNESS_URL}`);
         await page.waitForFunction(() => window.seedHarnessReady === true, null, { timeout: 15000 });
+        // The documents come from the bundle the harness loaded rather than from files on disk:
+        // there are no files any more, and the bundle is what this build actually carries.
+        const definitions = await page.evaluate(only => [...BlockDefinitionLoader.documents.values()]
+            .filter(document => ObjectSeeder.isCatalogueObject(document))
+            .filter(document => only.length === 0 || only.includes(document.type))
+            .sort((left, right) => left.type.localeCompare(right.type)), options.only);
+        if (definitions.length === 0) {
+            console.error(options.only.length ? `No bundled object is named by --only=${options.only.join(',')}.` : 'This build carries no objects to seed.');
+            process.exitCode = 1;
+            return;
+        }
+        console.log(`\nSeeding ${definitions.length} objects into ${options.apiBase}`);
+        console.log(options.write ? 'Writing.\n' : 'Dry run: nothing will be written. Pass --write to publish.\n');
         const seeding = await page.evaluate(async input => {
             const seeder = window.createObjectSeeder(input.apiBase, input.token);
             return await seeder.seed(input.definitions, { write: input.write, update: input.update, includeDrawing: input.includeDrawing });

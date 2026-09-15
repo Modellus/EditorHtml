@@ -14,11 +14,16 @@ class ObjectSeeder {
         return (definitionDocument.tags ?? []).includes("object");
     }
 
+    // What a seeded object arrives in the catalogue as. It is flagged as bundled because seeding is
+    // how the objects a release was built with get into the catalogue in the first place: the build
+    // then reads that flag back out and generates the next release's bundle from it, so the two
+    // agree without a list anywhere saying which is which.
     static describe(definitionDocument) {
         return {
             title: definitionDocument.displayName ?? definitionDocument.type,
             description: definitionDocument.description ?? "",
-            definition: definitionDocument
+            definition: definitionDocument,
+            is_bundled: true
         };
     }
 

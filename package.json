@@ -7,10 +7,11 @@
     "test": "npx playwright test",
     "build:offline": "node electron/build-offline.js",
     "build:catalogue": "node electron/build-catalogue.js",
+    "build:definitions": "node electron/build-definitions.js",
     "icons": "node electron/generate-icons.js",
     "seed:objects": "node tests/seed-objects.js",
     "start": "electron .",
-    "predist": "npm run build:catalogue",
+    "predist": "npm run build:definitions && npm run build:catalogue",
     "dist": "electron-builder"
   },
   "dependencies": {
@@ -49,6 +50,9 @@
       "!pages/catalog/index.html",
       "!pages/catalog/catalog.css",
       "!pages/catalog/catalog.js",
+      "!pages/shape-editor/index.html",
+      "!pages/shape-editor/shapeEditor.css",
+      "!pages/shape-editor/shapeEditor.js",
       "!pages/home/home.html",
       "!CNAME",
       "!AGENTS.md"

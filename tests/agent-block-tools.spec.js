@@ -17,7 +17,7 @@ async function readToolDefinitions(page) {
 }
 
 function renderArtifact(definitions) {
-    return `${JSON.stringify({ generatedFrom: 'scripts/blocks/definitions/*.json', tools: definitions }, null, 4)}\n`;
+    return `${JSON.stringify({ generatedFrom: 'the objects this build carries', tools: definitions }, null, 4)}\n`;
 }
 
 test('the agent block tool artifact matches the registered objects', async ({ page }) => {

@@ -1,0 +1,83 @@
+{
+    "type": "thermometer",
+    "checks": [
+        {
+            "name": "25° stands a third of the way up its own span",
+            "given": {
+                "model": "T=25",
+                "parameters": {
+                    "valueVariable": "T"
+                },
+                "width": 180,
+                "height": 180
+            },
+            "expect": [
+                {
+                    "validator": "clean"
+                },
+                {
+                    "local": "value",
+                    "equals": 25
+                },
+                {
+                    "local": "span",
+                    "equals": 140
+                },
+                {
+                    "local": "ratio",
+                    "equals": 0.3214285714,
+                    "tolerance": 1e-06
+                },
+                {
+                    "local": "readoutText",
+                    "equalsText": "25.0"
+                },
+                {
+                    "local": "readoutUnit",
+                    "equalsText": "°C"
+                }
+            ]
+        },
+        {
+            "name": "the column is drawn, and drawn upwards from the bulb",
+            "given": {
+                "model": "T=25",
+                "parameters": {
+                    "valueVariable": "T"
+                }
+            },
+            "expect": [
+                {
+                    "local": "columnHeight",
+                    "equals": 50.4948214286,
+                    "tolerance": 1e-06
+                },
+                {
+                    "nodes": {
+                        "atLeast": 20
+                    }
+                }
+            ]
+        },
+        {
+            "name": "it still draws in high contrast",
+            "given": {
+                "model": "T=25",
+                "parameters": {
+                    "valueVariable": "T"
+                },
+                "preset": "high-contrast"
+            },
+            "expect": [
+                {
+                    "validator": "clean"
+                },
+                {
+                    "nodes": {
+                        "atLeast": 20
+                    }
+                }
+            ]
+        }
+    ]
+}

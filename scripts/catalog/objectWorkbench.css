@@ -1,0 +1,708 @@
+/* The object workbench: the object standing on a model, at three sizes and in five presets, what
+   its formulas worked out, the checks it has to keep passing, and the rows every one of those is
+   changed in.
+
+   It is shared, because it is used in two places: the catalogue's object popup draws the small
+   preview from the top of this sheet, and the block shape editor at pages/shape-editor builds the
+   whole workbench out of it. */
+
+.object-preview-host {
+  height: 300px;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: #f8fafc;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.object-preview-drawing {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.object-preview-drawing svg {
+  width: 100%;
+  height: auto;
+  max-width: 240px;
+}
+
+.object-preview-empty {
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-align: center;
+  padding: 0 12px;
+}
+
+.object-preview-problems {
+  align-self: stretch;
+  width: 100%;
+  font-size: 0.75rem;
+  color: #b91c1c;
+  overflow: auto;
+}
+
+.object-preview-problems ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.object-preview-problems li {
+  margin-bottom: 0.35rem;
+  line-height: 1.35;
+}
+
+/* The workbench beside the definition: the object standing on a model, at three sizes and in five
+   presets, what its formulas worked out, and the checks it has to keep passing. Three panels
+   rather than one column, because an author is doing one of those three things at a time. */
+
+.object-workbench {
+  border: 1px solid #e6e9ee;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.object-workbench-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 6px 0;
+  border-bottom: 1px solid #e6e9ee;
+  background: #f7f8fa;
+}
+
+.object-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 7px 7px 0 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: #7a8494;
+  cursor: pointer;
+}
+
+.object-tab.is-active {
+  background: #fff;
+  color: #253047;
+  font-weight: 600;
+  box-shadow: 0 -1px 0 #e6e9ee inset;
+}
+
+.object-tab-score {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: #eef1f5;
+  color: #7a8494;
+}
+
+.object-tab-panel {
+  display: none;
+  padding: 12px;
+  max-height: 52vh;
+  overflow: auto;
+}
+
+.object-tab-panel.is-active {
+  display: block;
+}
+
+/* ---- the test bed ---- */
+
+/* Above the tabs, not inside one: the model, the row, the size and the preset govern the drawing,
+   the reading and the checks alike, so they have to be reachable from whichever is on screen. */
+.object-testbed {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e6e9ee;
+  background: #fbfcfd;
+}
+
+.object-testbed-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 0 0 auto;
+  width: 84px;
+}
+
+.object-testbed-wide {
+  flex: 1 1 180px;
+  width: auto;
+}
+
+.object-testbed-field span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9aa3b2;
+}
+
+.object-testbed-field input,
+.object-testbed-field select {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #dde2e9;
+  border-radius: 6px;
+  background: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: #253047;
+}
+
+.object-testbed-field input:focus,
+.object-testbed-field select:focus {
+  outline: none;
+  border-color: #0f6cbd;
+}
+
+.object-drawings {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.object-drawing-figure {
+  margin: 0;
+}
+
+.object-drawing-figure figcaption {
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: #9aa3b2;
+  text-align: center;
+}
+
+.object-testbed-host {
+  display: grid;
+  place-items: center;
+  min-height: 150px;
+  padding: 8px;
+  border: 1px solid #eceef2;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.object-testbed-host svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ---- sizes and presets ---- */
+
+.object-strip-title {
+  margin: 14px 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9aa3b2;
+}
+
+.object-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.object-strip-empty {
+  font-size: 11.5px;
+  color: #9aa3b2;
+}
+
+.object-strip-cell {
+  margin: 0;
+  text-align: center;
+}
+
+.object-strip-drawing {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  padding: 3px;
+  border: 1px solid #eceef2;
+  border-radius: 7px;
+  background: #fff;
+}
+
+.object-strip-drawing svg {
+  width: 100%;
+  height: 100%;
+}
+
+.object-strip-cell figcaption {
+  margin-top: 3px;
+  font-size: 9.5px;
+  color: #9aa3b2;
+}
+
+/* ---- what the object is doing ---- */
+
+.object-inspect {
+  font-size: 12px;
+  color: #253047;
+}
+
+.object-inspect-empty,
+.object-checks-empty {
+  font-size: 11.5px;
+  color: #9aa3b2;
+}
+
+.object-inspect-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+  padding-bottom: 9px;
+  border-bottom: 1px solid #eceef2;
+  font-size: 11px;
+  color: #9aa3b2;
+}
+
+.object-inspect-type {
+  font-weight: 600;
+  color: #253047;
+}
+
+.object-inspect-problems {
+  padding: 9px 0;
+  border-bottom: 1px solid #eceef2;
+}
+
+.object-inspect-clean {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #2f7a5a;
+  font-size: 11.5px;
+}
+
+.object-inspect-problem {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 3px 0;
+  line-height: 1.4;
+}
+
+.object-inspect-error {
+  color: #e03130;
+}
+
+.object-inspect-warning {
+  color: #b57614;
+}
+
+.object-inspect-section {
+  padding: 10px 0;
+  border-bottom: 1px solid #eceef2;
+}
+
+.object-inspect-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9aa3b2;
+}
+
+.object-inspect-count {
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.object-inspect-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.object-inspect-table td {
+  padding: 3px 0;
+  border-bottom: 1px solid #f4f6f8;
+  vertical-align: baseline;
+}
+
+.object-inspect-note td {
+  color: #9aa3b2;
+  font-style: italic;
+  border-bottom: none;
+}
+
+.object-inspect-key {
+  padding-right: 10px;
+  font-weight: 600;
+  color: #0f6cbd;
+  white-space: nowrap;
+}
+
+/* A formula wider than the column is faded at the edge rather than cut with an ellipsis: KaTeX
+   lays out as inline boxes, so an ellipsis never lands on it and the tail of the mathematics is
+   left hanging mid-bracket. The whole of it is on the row's tooltip. */
+.object-inspect-source {
+  width: 100%;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: #9aa3b2;
+  font-size: 11px;
+  mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+}
+
+.object-inspect-source .katex {
+  font-size: 1em;
+}
+
+.object-inspect-value {
+  padding-left: 10px;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.object-inspect-nodes {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.object-inspect-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.object-inspect-node:hover {
+  background: rgba(15, 108, 189, 0.12);
+}
+
+.object-inspect-node.object-inspect-selected {
+  background: rgba(15, 108, 189, 0.18);
+}
+
+.object-inspect-tag {
+  font-weight: 600;
+}
+
+.object-inspect-id {
+  color: #0f6cbd;
+}
+
+.object-inspect-chip {
+  padding: 0 5px;
+  border-radius: 6px;
+  background: #f1f3f6;
+  color: #9aa3b2;
+  font-size: 10px;
+}
+
+.object-inspect-chip-behaviour {
+  background: #e0f0e7;
+  color: #2f7a5a;
+}
+
+/* ---- checks ---- */
+
+.object-checks-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.object-checks-actions button {
+  padding: 5px 11px;
+  border: 1px solid #dde2e9;
+  border-radius: 7px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  color: #253047;
+  cursor: pointer;
+}
+
+.object-checks-actions button:hover {
+  border-color: #0f6cbd;
+  color: #0f6cbd;
+}
+
+.object-check {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid #f4f6f8;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.object-check-mark {
+  flex: none;
+  font-weight: 700;
+}
+
+.object-check-passed .object-check-mark {
+  color: #2f7a5a;
+}
+
+.object-check-failed .object-check-mark {
+  color: #e03130;
+}
+
+.object-check-why {
+  display: block;
+  font-size: 10.5px;
+  color: #e03130;
+}
+
+.object-checks-editor {
+  width: 100%;
+  min-height: 160px;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid #dde2e9;
+  border-radius: 7px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #253047;
+  resize: vertical;
+}
+
+.object-checks-editor:focus {
+  outline: none;
+  border-color: #0f6cbd;
+}
+
+.object-testbed-field input.object-testbed-invalid {
+  border-color: #e03130;
+}
+
+/* ---- changing the object ------------------------------------------------ */
+
+/* The definition's own bar: what it took to get here, and what it could have started from. It
+   stands over the JSON rather than over the panel, because everything on it acts on the whole
+   document while every row in the panel acts on one thing in it. */
+.object-definition-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.object-definition-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.object-definition-gap {
+  flex: 1 1 auto;
+}
+
+.object-definition-bar button,
+.object-definition-bar select {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid #dde2e9;
+  border-radius: 7px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  color: #495468;
+  cursor: pointer;
+}
+
+.object-definition-bar button:hover:not(:disabled),
+.object-definition-bar select:hover {
+  border-color: #b9c2ce;
+  background: #f6f8fa;
+}
+
+.object-definition-bar button:disabled {
+  color: #c2c9d4;
+  cursor: default;
+}
+
+/* A row that can be changed says so by being a place a cursor can land, and nothing more: an
+   inspector where thirty formulas are all drawn as input boxes stops being readable, which is the
+   thing it was built for. */
+.object-inspect-editable {
+  cursor: text;
+  border-radius: 5px;
+}
+
+.object-inspect-editable:hover {
+  background: rgba(15, 108, 189, 0.08);
+  box-shadow: inset 0 -1px 0 #0f6cbd;
+}
+
+.object-inspect-hint {
+  padding: 7px 0 0;
+  font-size: 10.5px;
+  color: #9aa3b2;
+}
+
+.object-inspect-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid #0f6cbd;
+  border-radius: 5px;
+  background: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #253047;
+}
+
+.object-inspect-key .object-inspect-hint {
+  padding: 7px 0 0;
+  font-size: 10.5px;
+  color: #9aa3b2;
+}
+
+.object-inspect-input {
+  min-width: 96px;
+}
+
+.object-inspect-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(15, 108, 189, 0.18);
+}
+
+.object-inspect-add {
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid #dde2e9;
+  border-radius: 5px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1;
+  color: #7a8494;
+  cursor: pointer;
+}
+
+.object-inspect-add:hover {
+  border-color: #0f6cbd;
+  color: #0f6cbd;
+}
+
+/* The row's own buttons stay out of the way until the row is under the pointer: a local is read
+   far more often than it is moved, and three marks on every line would drown the formulas. */
+.object-inspect-actions {
+  width: 54px;
+  padding-left: 6px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.object-inspect-action {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 11px;
+  line-height: 1;
+  color: #b9c2ce;
+  cursor: pointer;
+  visibility: hidden;
+}
+
+.object-inspect-locals tr:hover .object-inspect-action {
+  visibility: visible;
+}
+
+.object-inspect-action:hover {
+  background: #eef1f5;
+  color: #253047;
+}
+
+.object-inspect-new td {
+  padding-top: 4px;
+}
+
+/* What the document says about the part that is marked in the drawing. It is below the tree rather
+   than inside it: the tree scrolls in its own box, and a panel that opened inside it would push
+   the node being read off the top of that box. */
+.object-node-detail:not(:empty) {
+  margin-top: 8px;
+  padding: 8px 9px;
+  border: 1px solid #e6e9ee;
+  border-radius: 7px;
+  background: #fbfcfd;
+}
+
+.object-node-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #eceef2;
+}
+
+.object-node-remove {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid #e6c9c9;
+  border-radius: 6px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 11px;
+  color: #b3413f;
+  cursor: pointer;
+}
+
+.object-node-remove:hover {
+  background: #fdf3f3;
+}
+
+.object-node-detail-section {
+  padding-top: 8px;
+}
+
+.object-node-detail-section .object-inspect-title {
+  margin-bottom: 4px;
+}
+
+.object-node-detail-value {
+  width: 100%;
+  padding-left: 8px;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: #495468;
+}

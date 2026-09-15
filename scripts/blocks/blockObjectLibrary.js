@@ -1,21 +1,29 @@
 class BlockObjectLibrary {
-    static builtInTypes = new Set();
+    // The objects this release was built with, sealed once the generated bundle has registered them
+    // and before anything else can. Which objects those are is decided in the catalogue — the build
+    // reads every object flagged as bundled and generates the file that registers them — so this is
+    // a reading of what arrived, never a list anyone maintains.
+    static bundledTypes = new Set();
 
-    static sealBuiltIns(registry = BlockRegistry) {
-        BlockObjectLibrary.builtInTypes = new Set(registry.list("component", { includeDeprecated: true }).map(registration => registration.type));
-        return BlockObjectLibrary.builtInTypes;
+    static sealBundled(registry = BlockRegistry) {
+        BlockObjectLibrary.bundledTypes = new Set(registry.list("component", { includeDeprecated: true }).map(registration => registration.type));
+        return BlockObjectLibrary.bundledTypes;
     }
 
-    static isBuiltIn(type) {
-        return BlockObjectLibrary.builtInTypes.has(type);
+    static isBundled(type) {
+        return BlockObjectLibrary.bundledTypes.has(type);
     }
 
     static getDocument(type) {
         return BlockDefinitionLoader.getDocument(type);
     }
 
+    // A catalogue copy never replaces what the release was built with. The catalogue is where an
+    // object is written and may well hold a newer version of a bundled one, but what a board draws
+    // changes when a release ships and not when someone saves — otherwise an edit made in the shape
+    // editor would reach every board at once, mistakes included, with no release to hold it back.
     static registerDocument(document, registry = BlockRegistry) {
-        if (BlockObjectLibrary.isBuiltIn(document.type))
+        if (BlockObjectLibrary.isBundled(document.type))
             return null;
         BlockDefinitionLoader.register(document, registry);
         return document.type;
@@ -57,7 +65,7 @@ class BlockObjectLibrary {
     }
 
     static collectType(type, documents) {
-        if (typeof type !== "string" || BlockObjectLibrary.isBuiltIn(type) || documents.has(type))
+        if (typeof type !== "string" || BlockObjectLibrary.isBundled(type) || documents.has(type))
             return;
         const document = BlockObjectLibrary.getDocument(type);
         if (!document)
@@ -68,7 +76,7 @@ class BlockObjectLibrary {
 }
 
 if (typeof BlockRegistry !== "undefined")
-    BlockObjectLibrary.sealBuiltIns();
+    BlockObjectLibrary.sealBundled();
 
 if (typeof module !== "undefined" && module.exports)
     module.exports = BlockObjectLibrary;
