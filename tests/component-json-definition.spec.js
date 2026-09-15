@@ -38,6 +38,10 @@ const BOARD_URL = '/pages/board/index.html';
 // more when that drag gained the length it can stretch as well as turn: every drawing here is byte
 // for byte the one that was captured, and what grew is the five names standing empty in the
 // behaviour beside it.
+// The one gauge given a reading past its maximum was re-recorded when a whole turn stopped emptying
+// out: a gauge filled beyond full drew nothing at all, having swept the circle and started again at
+// nothing, and now marks the whole ring it has filled. The arc that was captured with no path of its
+// own carries the full circle instead, and every other entry is untouched.
 const BASELINES = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'coded-component-baselines.json'), 'utf8'));
 
 const cases = [
